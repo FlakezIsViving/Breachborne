@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:forums.unrealengine.com)",
+      "WebFetch(domain:dev.epicgames.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:gascompanion.github.io)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:beyondunrealwiki.github.io)",
+      "WebFetch(domain:x157.github.io)",
+      "WebFetch(domain:notes.hzfishy.fr)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(ls \"C:\\\\Users\\\\Tavi\\\\Desktop\\\\Breachborne\\\\Breachborne\\\\Binaries\\\\Win64\"\"*.patch_*.dll 2>/dev/null; ls \"C:UsersTaviDesktopBreachborneBreachborneBinariesWin64\"\"*.dll)",
+      "Bash(ls \"C:\\\\Users\\\\Tavi\\\\Desktop\\\\Breachborne\\\\Breachborne\\\\Binaries\"\" 2>/dev/null; ls \"C:UsersTaviDesktopBreachborneBreachborneBinariesWin64\"\")",
+      "Bash(test:*)",
+      "Bash(cmd /c:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(reg query:*)",
+      "Bash(\"C:\\\\Program Files\\\\Epic Games\\\\UE_5.5\\\\Engine\\\\Build\\\\BatchFiles\\\\Build.bat\" BreachborneEditor Win64 Development -project=\"C:\\\\Users\\\\Tavi\\\\Desktop\\\\Breachborne\\\\Breachborne\\\\Breachborne.uproject\" -waitmutex)",
+      "Bash(\"C:\\\\Program Files\\\\Epic Games\\\\UE_5.5\\\\Engine\\\\Build\\\\BatchFiles\\\\Build.bat\" BreachborneEditor Win64 Development -Project=\"C:\\\\Users\\\\Tavi\\\\Desktop\\\\Breachborne\\\\Breachborne\\\\Breachborne.uproject\" -WaitMutex -FromMsBuild)"
+    ]
+  }
+}

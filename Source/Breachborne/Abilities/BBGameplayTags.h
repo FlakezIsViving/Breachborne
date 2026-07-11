@@ -1,0 +1,218 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "NativeGameplayTags.h"
+
+/**
+ * Native GameplayTag declarations for Breachborne.
+ * Using UE_DECLARE_GAMEPLAY_TAG_EXTERN for compile-time safety — no string typos.
+ * Definitions live in BBGameplayTags.cpp.
+ */
+namespace BBGameplayTags
+{
+	// --- Input Tags (map Enhanced Input actions to abilities) ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_R);
+
+	// --- Ability Tags (identify specific abilities) ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Ghost_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Ghost_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Ghost_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Ghost_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Ghost_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Ghost_Passive);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_Passive);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_GroundDash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Eluna_AerialDash);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_Passive);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_GroundDash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Kingpin_AerialDash);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_Passive);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_RMB_Loop);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_R_Reel);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Category_Passive);
+
+	// --- State Tags (block abilities, drive logic) ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Dead);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Stunned);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Spiked);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Gliding);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Mantling);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Wisp);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Charging);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Invulnerable);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_InBrush);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Dazed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hooked);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_MostWanted);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_TrainCircleImmune);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Executing);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Vulnerable);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_AntiHeal);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Slowed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Grounded);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_Firing);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_Spinning);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_SpunUp);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_Hovering);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_Hooked);
+
+	// --- Input Tags (item powers) ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Power1);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Power2);
+
+	// --- Effect Tags ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Damage);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Cooldown);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Buff_MoveSpeed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_StormDamage);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Equipment_Weapon);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Equipment_Helmet);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Equipment_Boots);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Equipment_Armor);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Power);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Consumable_Heal);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Consumable_Buff);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Daze);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Knockup);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_AntiHeal);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_StormShift_BulletTrains);
+
+	// --- Cooldown Tags ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Ghost_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Ghost_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Ghost_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Ghost_R);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Eluna_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Eluna_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Eluna_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Eluna_GroundDash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Eluna_AerialDash);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Kingpin_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Kingpin_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Kingpin_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Kingpin_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Kingpin_GroundDash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Kingpin_AerialDash);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Hudson_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Hudson_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Hudson_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Hudson_R);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Power1);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Power2);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Dash);
+
+	// --- GameplayCue Tags ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Ghost_LMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Ghost_Q_Fire);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_LMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_LMB_Heal);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_RMB_Start);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_RMB_Loop);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_RMB_End);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Shift_Start);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Shift_Loop);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Shift_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Q_Cast);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Q_Active);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Q_Tick);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_R_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_R_Tether);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_R_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_R_Reel);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Passive_Pulse);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_RMB_Cast);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_RMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Shift_Start);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Shift_Trail);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Q_Telegraph);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Q_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Q_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_R_Warning);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_R_Active);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Passive_Pulse);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_LMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_RMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_RMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_Shift_Trail);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_Q_Cast);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_Q_Active);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_R_Beam);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Eluna_Passive_Carry);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_LMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_RMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_RMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_Shift_Start);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_Shift_Trail);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_Q_Telegraph);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_Q_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_R_Start);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_R_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_Passive_Pulse);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_EmergencyPlatform_Preview);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_EmergencyPlatform_Spawn);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_GrapplingHook_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_GrapplingHook_Tether);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_GrapplingHook_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_BungeeShot_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_BungeeShot_Tether);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_BungeeShot_Release);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_TacticalNuke_Warning);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_TacticalNuke_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_TacticalNuke_Burn);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_RegenerativeArmor_Pulse);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_RegenerativeArmor_Loop);
+
+	// --- Event Tags ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Kill);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_CCApplied);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_DamageTaken);
+
+	// --- SetByCaller Tags (parameterize GE magnitudes) ---
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_HealAmount);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_MaxHealth);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_MaxShield);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_AttackPower);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_AbilityPower);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_CritChance);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_CooldownReduction);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_MoveSpeed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_GlideSpeed);
+}

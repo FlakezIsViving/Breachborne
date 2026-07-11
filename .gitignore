@@ -1,0 +1,33 @@
+# UE generated
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+Builds/
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+
+# VS Code
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+nul
+
+# Local archives / packaged binaries
+*.7z
+*.zip
+*.rar
+*.pdb
+*.pch
+
+# Rebuildable Unreal lighting/build data
+*_BuiltData.uasset
+
+# Misc logs
+*.txt
+!devblog.txt

@@ -1,0 +1,703 @@
+================================================================================
+  BREACHBORNE — Dev Blog
+  A Supervive-inspired top-down isometric squad BR
+================================================================================
+
+
+--------------------------------------------------------------------------------
+  v0.6d — Perforce Setup + Two-Person Workflow           2026-03-15
+--------------------------------------------------------------------------------
+
+Moved the project to Perforce for two-person collaboration. Tavi (code) and
+Patri (assets/level design) can now work in tandem. Perforce handles file
+locking on binary assets so we never overwrite each other's work.
+
+WHAT CHANGED:
+
+  [Perforce Server — Local, Self-Hosted]
+  - Installed Helix Core server at C:\Perforce Server (port 1666)
+  - Server version: P4D/NTX64/2025.2
+  - Free tier (up to 5 users)
+  - Two users created: Tavi, patri
+  - Workspace "Breachborne" mapped to C:\Unreal Projects\Breachborne
+
+  [Typemap — UE Binary File Locking]
+  - All binary asset types (.uasset, .umap, .ubulk, .dll, .exe, .png, .jpg,
+    .bmp, .tga, .wav, .mp3, .ogg, .fbx) set to binary+l (exclusive lock)
+  - Text files (.h, .cpp, .cs, .ini, .json, .md, .txt, .xml, .uplugin,
+    .uproject) set to mergeable text
+  - Prevents two people editing the same binary asset simultaneously
+
+  [.p4ignore]
+  - Created .p4ignore to exclude: .git/, .vscode/, Intermediate/, Saved/,
+    Binaries/, DerivedDataCache/, *.generated.h
+
+  [Firewall]
+  - Windows firewall rule added: "Perforce Server" allows TCP 1666 inbound
+  - Required for Patri to connect over Hamachi
+
+  [Network — Hamachi (temporary)]
+  - Patri connects via Hamachi IP 25.18.62.236:1666
+  - Hamachi is slow for bulk transfers — consider Tailscale as replacement
+  - Initial project zip (39MB) sent via file sharing to bootstrap
+
+  [Initial Submit]
+  - Changelist #1: full project submitted (Source/, Content/, Config/, etc.)
+  - Cleaned up: .git/ and .vscode/ removed from changelist before submit
+  - Saved/ folder removed (had locked files from running editor)
+
+STILL NEEDS TESTING / TODO (TOP PRIORITY):
+
+  1. Patri: extract Breachborne.zip, open .uproject in Unreal to regenerate
+     Intermediate/Binaries, set Perforce workspace root to that folder,
+     Get Latest Revision in P4V to mark files as synced
+
+  2. Both: configure Unreal Source Control integration:
+     - Edit > Project Settings > Revision Control > Provider: Perforce
+     - Tavi:  Server=localhost:1666, User=Tavi, Workspace=Breachborne
+     - Patri: Server=25.18.62.236:1666, User=patri, Workspace=<his workspace>
+
+  3. Test round-trip sync:
+     a. Tavi modifies a .cpp file, submit in P4V, Patri syncs, verify file
+     b. Patri modifies/creates a .uasset, submit, Tavi syncs, verify asset
+     c. Patri checks out a level, verify Tavi sees it as locked
+     d. Both open Unreal with Source Control enabled, verify lock icons appear
+
+  4. Test Fab asset workflow:
+     a. Patri imports a Fab asset, check out + submit via Unreal Source Control
+     b. Tavi syncs, verify asset appears in Content Browser
+
+  5. If Hamachi is too slow for ongoing syncs, switch to Tailscale (free,
+     peer-to-peer, faster) — only changes the IP address, nothing else
+
+  6. Consider: set Perforce passwords for both users (currently no passwords
+     set — fine for LAN, risky if exposed)
+
+
+--------------------------------------------------------------------------------
+  v0.6c — Kill Economy Rework + Speed Fix               2026-03-04
+--------------------------------------------------------------------------------
+
+Knock and elimination are now two separate stats with distinct reward timing.
+Equipment speed bonuses finally drive actual movement. Wisps can die in the
+abyss. Storm no longer auto-starts so you can actually test things in peace.
+
+WHAT CHANGED:
+
+  [GAS → CMC Speed Wiring — BUG FIX]
+  - Equipment boots modify GAS MoveSpeed/GlideSpeed attributes, but the
+    CharacterMovementComponent was returning hardcoded base values
+  - Added GetGASMoveSpeed() and GetGASGlideSpeed() helpers to CMC
+  - GetMaxSpeed() now reads from GAS attributes at runtime (with fallback)
+  - PhysGliding() uses GAS GlideSpeed for target velocity + acceleration
+  - Result: DebugEquipTestBoots now actually makes you walk/glide faster
+
+  [Knock vs Elimination — GAMEPLAY CHANGE]
+  - NEW: "Knock" = sending a hunter to wisp form. Separate stat from kills.
+  - NEW: "Elimination" = wisp fully dies (expired, executed, or abyss death)
+  - Knocking a player no longer awards ANY rewards (no gold, no shards, no
+    kill credit). Rewards are deferred to the elimination event.
+  - Added Knocks replicated property to PlayerState (separate from Kills)
+  - Knocker tracked on the wisp via KnockerPlayerState reference
+
+  [Kill Reward Timing — GAMEPLAY CHANGE]
+  - OLD: killer got gold transfer + shard drops + kill count on knock
+  - NEW: rewards only on elimination:
+    * Wisp HP expires → knocker gets kill credit + shard drops at wisp loc
+    * Wisp executed (E key) → executor gets kill credit + heal + shard drops
+    * Abyss death → killer gets knock + kill credit + shards near killer
+  - Gold is NO LONGER transferred on kill (stays with victim for deathbox)
+  - Shards always spawn as world pickups at the death location
+
+  [Abyss Death Edge Cases — NEW]
+  - Direct abyss kill (DebugTriggerSpike over void): counts as BOTH knock
+    and elimination simultaneously (no wisp phase)
+  - Shard pickups spawn near the KILLER's last grounded position (not void)
+  - Wisp walks off map edge: wisp NOW DIES (was previously immune to abyss)
+  - Wisp abyss death: shards spawn at victim's pre-wisp grounded location
+  - Added ServerKillFromAbyss() to BBWispPawn
+  - AbyssKillVolume updated to kill wisps instead of ignoring them
+
+  [Storm Manual Start — CHANGE]
+  - Storm bAutoStart changed from true to false
+  - Added DebugStartStorm console command to start storm on demand
+  - No more racing against storm damage while trying to test equipment
+
+  [Deprecated API Migration — CLEANUP]
+  - Removed InheritableOwnedTagsContainer usage (deprecated in UE 5.3+)
+  - Storm damage and consumable heal GEs now use Spec.DynamicGrantedTags
+  - Fixed in both BBStormManager.cpp and BBInventoryManager.cpp
+
+  [Compile Error Fixes]
+  - Added missing ABreachbornePlayerState forward declaration in GameMode.h
+    (was root cause of 5 cascading errors: C2061, C2660, C2511, C2352)
+
+FILES MODIFIED (11):
+  - Characters/BBCharacterMovementComponent.h  (GetGASMoveSpeed/GlideSpeed)
+  - Characters/BBCharacterMovementComponent.cpp (GAS attribute reads in
+                                      GetMaxSpeed + PhysGliding)
+  - Core/BreachborneGameMode.h        (AwardKillRewards, fwd decl fix)
+  - Core/BreachborneGameMode.cpp      (kill reward pipeline restructured:
+                                      OnHunterKilled, HandleWispTransition,
+                                      HandleWispDied, HandleWispExecuted,
+                                      HandleAbyssDeath, AwardKillRewards)
+  - Core/BreachbornePlayerState.h     (Knocks property, AddKnock/GetKnocks)
+  - Core/BreachbornePlayerState.cpp   (DOREPLIFETIME + AddKnock impl)
+  - Core/BreachbornePlayerController.h  (DebugStartStorm + ServerRPC)
+  - Core/BreachbornePlayerController.cpp (storm debug command impl)
+  - Wisp/BBWispPawn.h                 (KnockerPlayerState, PreWispGroundedLocation,
+                                      bDiedFromAbyss, ServerKillFromAbyss)
+  - Wisp/BBWispPawn.cpp               (ServerKillFromAbyss impl)
+  - World/AbyssKillVolume.cpp         (wisps now killed, not ignored)
+  - Storm/BBStormManager.h            (bAutoStart = false)
+  - Storm/BBStormManager.cpp          (deprecated API fix)
+  - Items/BBInventoryManager.cpp      (deprecated API fix)
+
+NEW CONSOLE COMMAND:
+  - DebugStartStorm — manually starts the storm
+
+
+--------------------------------------------------------------------------------
+  v0.6b — Debug HUD + Wisp Rez Rework                  2026-03-04
+--------------------------------------------------------------------------------
+
+Visual feedback for every gameplay system — health, wisp state, inventory,
+storm, glider heat — all drawn via Canvas with zero UMG dependency. Plus a
+critical rework to wisp proximity rules so rezzing actually feels right.
+
+WHAT'S NEW:
+
+  [Debug Overlay — "DebugHUD" console command]
+  - Semi-transparent panel in the top-left corner
+  - Player info: name, team, life state, level, XP, kills
+  - Health: HP/MaxHP, Shield/MaxShield, Armor
+  - Combat: ATK, AP, CDR%, Crit% (x multiplier)
+  - Movement: MoveSpeed, GlideSpeed, DashDistance
+  - Glider: state + heat bar with blue-to-red color gradient (hunter only)
+  - Wisp: state, wisp HP%, rez bar% (wisp form only)
+  - Inventory: gold, shards, weapon/helmet/boots with tier, armor tier + HP,
+    powers, full backpack contents
+  - Storm: distance to storm center
+  - All data read from replicated client-side state — no RPCs
+
+  [Gameplay HUD — "ToggleHUD" console command, ON by default]
+  - Bottom-center health bar with color shift: green > 60%, yellow > 30%, red
+  - Shield bar (cyan) below health, only shown if MaxShield > 0
+  - Armor bar colored by tier: white/green/blue/purple
+  - Team + Level label left of bars, Gold + Shard count on the right
+  - When in wisp form: health bars replaced by wisp HP bar (orange) + rez
+    bar (green) with percentage readout
+  - Numeric values displayed beside each bar
+
+  [3D Debug Shapes — "DebugShapes" console command]
+  - Green circle (400cm) at each wisp: proximity rez/stomp radius
+  - Red circle (150cm) at each wisp: execute interaction radius
+  - Line from player pawn to storm center (green if close, red if far)
+
+  [Wisp Proximity Rework — GAMEPLAY CHANGE]
+  - OLD: HP always drained every tick. Rez bar filled whenever ally was
+    present, even with enemy contesting. Both happened simultaneously.
+  - NEW priority rules:
+    * Ally only:        HP decay STOPS, rez bar fills
+    * Both ally+enemy:  Enemy takes priority — HP drains at stomp rate,
+                        rez bar STOPS filling and decays
+    * Enemy only:       HP drains at stomp rate, rez bar decays
+    * Nobody:           HP drains at base rate, rez bar decays
+  - Uncontested ally rez is now safe and steady
+  - Enemy arrival completely shuts down the rez and forces a fight
+
+FILES ADDED (2):
+  - UI/BBDebugHUD.h             (HUD class with 3 console commands)
+  - UI/BBDebugHUD.cpp           (Canvas drawing: overlay, bars, 3D shapes)
+
+FILES MODIFIED (4):
+  - Core/BreachbornePlayerState.h  (4 public const getters: GetHealthData,
+                                    GetCombatData, GetMovementData, GetWispData)
+  - Core/BreachborneGameMode.cpp   (HUDClass = ABBDebugHUD, include added)
+  - Wisp/BBWispPawn.h              (2 public getters: GetProximityRadius,
+                                    GetExecuteRadius)
+  - Wisp/BBWispPawn.cpp            (ServerWispTick rewritten: ally-only pauses
+                                    HP drain, enemy contests rez bar)
+
+TESTS NEEDED:
+  1. PIE 3 clients — no crashes on startup (HUD only on clients, not server)
+  2. ToggleHUD — gameplay bars appear/disappear at bottom-center
+  3. DebugHUD — debug panel shows all stats updating in real-time
+  4. Take damage — health bar changes color (green → yellow → red)
+  5. Kill a player → wisp bars appear, health bars hide on the downed player
+  6. Move ally near wisp, no enemy → verify HP decay stops, rez bar fills
+  7. Add enemy near wisp while ally present → verify rez bar stops,
+     HP drain resumes at stomp rate
+  8. Remove enemy, ally stays → verify rez resumes, HP decay stops again
+  9. DebugShapes → verify green/red circles drawn around wisps
+  10. Dedicated server: verify no crash (AHUD never instantiated server-side)
+
+
+--------------------------------------------------------------------------------
+  v0.6.0 — Phase 5: Item System & Match Economy        2026-02-19
+--------------------------------------------------------------------------------
+
+The full Open Beta-style item system is in. Equipment slots with upgrade
+evolutions, powers that grant abilities, consumables, armor in the damage
+pipeline, gold/shard economy, world pickups, shopkeepers, and PvP kill
+loot drops. All server-authoritative, all replicated. Testing is via debug
+console commands — no UI yet.
+
+WHAT'S PLAYABLE:
+
+  [Equipment System — Weapon, Helmet, Boots]
+  - 3 equipment slots: Weapon, Helmet, Boots
+  - Equipping applies Infinite-duration programmatic GEs to the ASC
+    (same NewObject<UGameplayEffect> pattern as StormManager)
+  - Equipment modifies all attributes: AttackPower, AbilityPower, MoveSpeed,
+    GlideSpeed, DashDistance, MaxHealth, MaxShield, CooldownReduction,
+    CritChance, CritMultiplier
+  - Unequipping removes the GE cleanly — attributes revert
+  - GE handles tracked per-slot on PlayerState (server-only, non-replicated)
+
+  [Upgrade & Evolution]
+  - Equipment starts at tier 0, upgradeable with Upgrade Shards
+  - Stats scale with tier: base * (1.0 + tier * 0.5)
+  - At tier 2+, choose 1 of 3 evolution paths (A, B, C)
+  - Evolution adds bonus stats on top of tier scaling
+  - Evolution choice is permanent for the match
+  - Old GE removed and new GE applied on every upgrade/evolve
+
+  [Armor — Damage Pipeline Integration]
+  - Armor attribute added to BBHealthSet (was a Phase 5 placeholder comment)
+  - BBDamageExecution captures target Armor, subtracts flat reduction
+  - Minimum 1 damage floor (armor can't fully negate hits)
+  - 4 armor tiers: White (5), Green (10), Blue (20), Purple (35)
+  - SetArmorTier sets both the Armor attribute value and armor HP/durability
+  - Armor replicates through the existing FRepHealthData proxy struct
+
+  [Powers — 2 Slots]
+  - Powers grant a GameplayAbility via ASC->GiveAbility on equip
+  - Powers also apply stat bonus GEs (same equipment GE pattern)
+  - Unequip clears the ability and removes the stat GE
+  - Passive powers auto-activate; activatable powers bind to input tags
+  - Ability spec handles tracked per-slot on PlayerState
+
+  [Consumables — Backpack]
+  - 4-slot backpack (TArray<FConsumableStack>)
+  - Stacking: same consumable type stacks up to MaxStackSize
+  - Food heals instantly (applies IncomingHealing meta attribute)
+  - ArmorShards repair +50 armor HP
+  - UseConsumable decrements count, removes empty stacks
+  - Hotkeys 1-4 mapped to backpack slots
+
+  [Gold & Shard Economy]
+  - Gold: earned from PvE/PvP, spent at shopkeepers
+  - Upgrade Shards: collected from kills and objectives, spent on upgrades
+  - PvP kill: killer gets 50% of victim's gold (server transfers automatically)
+  - PvP kill: 3 shard pickups spawn at death location
+
+  [World Item Pickups]
+  - ABBWorldItem: replicated pickup actor with sphere collision
+  - Supports equipment, gold, shards, consumables, and powers
+  - E key interaction: traces for nearest world item, server validates
+  - Items hide on pickup for all clients via OnRep_IsPickedUp
+  - FBBWorldItemSpawner: static helpers to spawn any pickup type
+
+  [Shopkeeper]
+  - ABBShopkeeper: fixed-location actor with configurable shop listings
+  - Server validates: proximity, gold balance, listing validity
+  - Purchase deducts gold and equips item in one transaction
+
+  [Item Registry]
+  - UBBItemRegistry: GameInstanceSubsystem (persists across level loads)
+  - Scans UAssetManager for all BBEquipment, BBPower, BBConsumable assets
+  - Lookup by ID, random drop generation for future PvE loot tables
+  - Manual registration methods for testing
+
+  [Data Asset Architecture]
+  - UBBEquipmentDefinition: ItemID, SlotType, BaseStats, 3 evolutions,
+    shard costs per tier. UPrimaryDataAsset with asset type "BBEquipment"
+  - UBBPowerDefinition: PowerID, GrantedAbilityClass, bIsPassive,
+    StatBonuses, bDropsOnDeath. Asset type "BBPower"
+  - UBBConsumableDefinition: ConsumableID, ConsumableType, MaxStackSize,
+    heal/repair amounts, OnUseEffectClass. Asset type "BBConsumable"
+
+  [Debug Commands (all via console)]
+  - DebugAddGold <N>          — add gold to inventory
+  - DebugAddShards <N>        — add upgrade shards
+  - DebugEquipTestWeapon      — equip a test weapon (+15 AP, +10 AbP)
+  - DebugEquipTestHelmet      — equip a test helmet (+50 MaxHP, +25 MaxShield)
+  - DebugEquipTestBoots       — equip test boots (+100 MoveSpeed, +50 GlideSpeed)
+  - DebugUnequip <Slot>       — unequip from Weapon/Helmet/Boots
+  - DebugUpgrade <Slot>       — upgrade equipment tier (costs 5 shards)
+  - DebugEvolve <Slot> <Path> — evolve equipment (A/B/C)
+  - DebugSetArmor <Tier>      — set armor tier (White/Green/Blue/Purple)
+  - DebugAddConsumable <Name> <Count> — add Food/ArmorShard consumables
+  - DebugPrintInventory       — dump full inventory to output log
+
+FILES ADDED (21):
+  - Items/BBItemTypes.h               (all enums + structs for item system)
+  - Items/BBEquipmentDefinition.h/.cpp (equipment data asset)
+  - Items/BBPowerDefinition.h/.cpp     (power data asset)
+  - Items/BBConsumableDefinition.h/.cpp (consumable data asset)
+  - Items/BBInventoryTypes.h/.cpp      (FRepInventoryData replicated struct)
+  - Items/BBEquipmentGEHelper.h/.cpp   (programmatic GE creation/removal)
+  - Items/BBInventoryManager.h/.cpp    (server-authoritative inventory mutation)
+  - Items/BBWorldItem.h/.cpp           (world pickup actor)
+  - Items/BBWorldItemSpawner.h/.cpp    (static spawn helpers)
+  - Items/BBShopkeeper.h/.cpp          (shopkeeper actor)
+  - Items/BBItemRegistry.h/.cpp        (GameInstanceSubsystem registry)
+
+FILES MODIFIED (11):
+  - Abilities/BBHealthSet.h/.cpp       (Armor attribute added)
+  - Abilities/BBGameplayTags.h/.cpp    (7 new tags: equipment, power,
+                                        consumable, InputTag_Power1/2)
+  - Combat/BBDamageExecution.cpp       (Armor capture + flat reduction)
+  - Core/BreachbornePlayerState.h/.cpp (FRepInventoryData, Armor proxy,
+                                        GE handle tracking, OnRep)
+  - Core/BreachbornePlayerController.h/.cpp (interact input, consumable
+                                        hotkeys, 13 debug commands, 11 RPCs)
+  - Core/BreachborneGameMode.cpp       (PvP gold transfer + shard drops)
+
+TESTS NEEDED:
+  1. Compile test — build succeeds with zero errors
+  2. PIE 3-client dedicated server — basic startup, no crashes
+  3. DebugEquipTestWeapon → ShowDebug AbilitySystem → verify AttackPower
+     increased by 15 on server and all clients
+  4. DebugUnequip Weapon → verify AttackPower reverts to base value
+  5. DebugEquipTestHelmet → verify MaxHealth +50, MaxShield +25
+  6. DebugEquipTestBoots → verify MoveSpeed +100, GlideSpeed +50
+  7. DebugAddShards 10 → DebugUpgrade Weapon → verify stats scaled up
+     (tier 1 = base * 1.5), shard count decremented by 5
+  8. DebugUpgrade Weapon again (tier 2) → DebugEvolve Weapon A → verify
+     evolution bonus stats applied on top of tier scaling
+  9. DebugSetArmor Green → shoot target → verify damage reduced by 10
+     in output log (BBDamageExecution armor subtraction)
+  10. DebugSetArmor Purple → verify 35 flat reduction, minimum 1 damage
+  11. DebugAddGold 500 → DebugPrintInventory → verify gold shows 500
+  12. DebugAddConsumable Food 3 → DebugPrintInventory → verify 3 Food
+      in backpack slot 0
+  13. Press 1 key (consumable hotkey) → verify health increases if damaged
+  14. DebugAddConsumable ArmorShard 2 → use hotkey → verify armor HP +50
+  15. Kill another player → verify killer gains 50% of victim's gold
+      (check output log for "Gold transfer: X gold from Y to Z")
+  16. Kill another player → verify 3 shard pickups spawn at death location
+  17. Walk over shard pickup → press E → verify shards added to inventory
+  18. Equip all 3 slots → die → dev respawn → verify equipment GEs
+      persist across respawn (ASC on PlayerState survives pawn death)
+  19. Multi-client: equip on client 1 → verify attribute changes visible
+      on client 2 and 3 via proxy replication
+
+KNOWN ISSUES / TODO:
+  - No UI (all testing via debug commands + output log + ShowDebug)
+  - Shopkeeper Listings array not replicated to clients (server-only validation
+    works, but client can't display shop contents until UI pass)
+  - FEquipmentEvolution missing passive GE class reference (design gap —
+    evolutions only provide stat bonuses, not passive effects yet)
+  - FShopListing can't distinguish consumables from powers (SlotType=None
+    is ambiguous — needs a separate EShopItemCategory)
+  - Item data assets must be created in editor Content Browser to use
+    the real ItemRegistry (currently only test placeholders via debug cmds)
+  - InputActions (InteractAction, Consumable1-4) need to be created as
+    UInputAction assets in editor and added to InputMappingContext
+  - InheritableOwnedTagsContainer usage is deprecated in UE 5.3+ (shared
+    with StormManager — all 3 usages need updating together in future)
+  - UseConsumable identifies items by string prefix ("Food_*", "ArmorShard_*")
+    — needs proper ConsumableDefinition lookup via ItemRegistry
+
+WHAT'S NEXT:
+  - Phase 5E-F polish: create actual data assets in editor, wire up
+    InputActions, test real shopkeeper flow
+  - Phase 6: Wisp system — downed state, proximity revive, enemy execute,
+    deathbox, respawn beacons
+  - Or: Additional hunters (Kingpin, Elluna) to test team compositions
+
+
+--------------------------------------------------------------------------------
+  v0.5.0 — Phase 4: Storm System                       2026-02-14
+--------------------------------------------------------------------------------
+
+The storm is in. A shrinking safe zone now forces squads toward each other —
+the fundamental BR pacing mechanic. Hunters outside the green circle take
+escalating DOT damage that flows through the existing GAS pipeline, meaning
+storm damage automatically triggers spiking on gliders with zero extra code.
+
+WHAT'S PLAYABLE:
+
+  [Storm — Shrinking Safe Zone]
+  - 4-phase storm with escalating damage (5 -> 10 -> 20 -> 40 per tick)
+  - Circle shrinks toward map center over time, then holds, then shrinks again
+  - Final phase collapses to zero radius — nowhere is safe
+  - Damage ticks faster in later phases (1.0s -> 0.5s interval)
+  - Storm damage flows through BBDamageExecution — shield absorbs first,
+    then health, exactly like combat damage
+  - Gliding outside the storm = spiked (storm damage triggers the spike
+    check in BBHealthSet automatically)
+  - Dead characters are not damaged (State_Dead skip)
+  - All characters with IAbilitySystemInterface take storm damage
+    (hunters, GlideBots, target dummies — anything damageable)
+
+  [Debug Visualization]
+  - Green debug circle = current safe zone boundary
+  - Yellow debug circle = target zone (where the circle is shrinking toward)
+  - Circles drawn on both server and all clients via replicated state
+  - Output log banners: "=== STORM PHASE 2 ===" etc.
+
+  [Storm Shift Architecture]
+  - Pluggable storm shift mutators via UStormShiftBase UObject
+  - Default shift: 4 phases, shrinks to center, linear damage escalation
+  - Adding new shifts (Nomadic, BulletTrains, GlobalOracle) = subclass
+    UStormShiftBase, override GetPhaseConfigs/PickNextCenter/ModifyDamage
+  - StormShiftClass configurable on the StormManager in editor
+
+  [Architecture]
+  - ABBStormManager: replicated actor with own ASC (actor-owned, like
+    TargetDummy/GlideBot pattern)
+  - Programmatic UGameplayEffect with BBDamageExecution — no Blueprint
+    assets needed
+  - Spawned automatically by GameMode in InitGameState
+  - bAlwaysRelevant so all clients receive storm circle state
+
+FILES ADDED (5):
+  - Storm/StormTypes.h              (EStormPhaseState, FStormPhaseConfig)
+  - Storm/StormShiftBase.h          (abstract base for shift mutators)
+  - Storm/StormShift_Default.h/.cpp (4-phase default shift)
+  - Storm/BBStormManager.h/.cpp     (main storm actor + damage + debug draw)
+
+FILES MODIFIED (4):
+  - Abilities/BBGameplayTags.h/.cpp   (Effect_StormDamage tag)
+  - Core/BreachborneGameMode.h/.cpp   (spawn StormManager in InitGameState)
+
+KNOWN ISSUES / TODO:
+  - No storm VFX (just debug circles — visual wall/fog deferred to art pass)
+  - No storm UI indicator (minimap circle, damage warning)
+  - No storm shift mutators beyond Default (Nomadic, BulletTrains planned)
+  - Storm doesn't pause during drop phase (needs match phase integration)
+  - No day/night cycle interaction yet
+
+WHAT'S NEXT:
+  - Phase 5: Item system — equipment slots, upgrade shards, shopkeepers,
+    powers, consumables, gold economy
+  - Or: Additional storm shifts (Nomadic, BulletTrains, GlobalOracle)
+  - Or: Wisp system (Phase 6) for the downed-state revival chain
+
+
+--------------------------------------------------------------------------------
+  v0.4.0 — Ghost Combat + Spiking Fully Playable       2026-02-13
+--------------------------------------------------------------------------------
+
+Ghost is a real character now. All five abilities deal damage, projectiles fly,
+grenades explode, napalm burns. Spiking — the signature "hit them while they're
+gliding and they plummet" mechanic — is fully testable end-to-end for the first
+time. Shoot a gliding target, watch them spike, watch them fall into the abyss.
+
+WHAT'S PLAYABLE:
+
+  [Ghost — Full Combat Kit]
+  - LMB: Auto-rifle. Single projectile per click, 25 damage, 3500 speed.
+    Projectiles replicate, server validates hits.
+  - RMB: Spike Grenade. Arcs toward cursor, detonates on enemy contact or
+    after 3s fuse. 400-unit AoE, 80 damage to all enemies in radius.
+  - Q: Piercing Laser. Instant line trace in cursor direction, pierces through
+    all targets in the line. Damage via GAS pipeline.
+  - R: Napalm Strike. Drops a 500-unit radius fire zone at cursor location.
+    Ticks 40 damage every 0.5s for 5 seconds. Server-spawned, DOT via GAS.
+  - Passive: Kill resets Shift cooldown. Wired through OnHealthDepleted.
+  - Shift: Combat Slide (unchanged from v0.3.0).
+
+  [Spiking — Now Testable]
+  - Shoot a gliding hunter or bot = instant SPIKE (was untestable in v0.3.0)
+  - Spiked target stunned, fast-falls straight down for 1.5 seconds
+  - Spike over the abyss = instant kill with kill credit to the spiker
+  - AbyssKillVolume fully functional with spike vs. fall-off distinction
+  - Output log banners: "=== SPIKED ===" / "=== ABYSS SPIKE KILL ==="
+
+  [Damage Pipeline]
+  - BBDamageExecution calculates final damage (armor/shield absorption)
+  - Shield absorbs first, overflow goes to health
+  - Health depletion fires OnHealthDepleted delegate (feeds kill tracking,
+    respawn, future wisp system)
+  - SetByCaller_Damage tag for flexible per-ability damage values
+  - All damage server-authoritative, replicated via GAS attribute system
+
+  [Test Actors]
+  - BBTargetDummy: stationary damage sponge. Place in level, shoot it,
+    watch the full damage pipeline in the output log. Auto-resets health
+    after 3 seconds. Team 99 (always targetable by players).
+  - BBGlideBot: gliding patrol target. Flies between two editor-draggable
+    waypoints with glider open. Shoot it to test spiking. Place over ground
+    for spike-then-recover, place over the abyss for spike-kill.
+    Auto-respawns after 3 seconds. Configurable patrol speed and team ID.
+
+  [Architecture Improvements]
+  - GliderComponent decoupled from AHunterCharacter — now works on any
+    ACharacter that implements IAbilitySystemInterface
+  - ForceOpenGlider/ForceCloseGlider for server-side bot/AI control
+    (bypasses RPCs that require an owning client connection)
+  - AbyssKillVolume uses IAbilitySystemInterface + FindComponentByClass
+    instead of hardcoded AHunterCharacter casts
+  - BBHealthSet spike detection uses FindComponentByClass<UGliderComponent>
+  - All damage sources (projectile, grenade, napalm) recognize
+    HunterCharacter, TargetDummy, and GlideBot as valid targets
+
+FILES ADDED (10):
+  - Combat/BBProjectile.h/.cpp        (base projectile with GAS damage)
+  - Combat/BBGrenade.h/.cpp           (AoE grenade, fuse timer, contact det)
+  - Combat/BBNapalmZone.h/.cpp        (DOT zone, tick timer, self-destruct)
+  - Combat/BBTargetDummy.h/.cpp       (stationary damage test target)
+  - Combat/BBGlideBot.h/.cpp          (gliding patrol test target)
+
+FILES MODIFIED (19):
+  - Abilities/BBGameplayTags.h/.cpp    (SetByCaller_Damage, new ability tags)
+  - Abilities/BBHealthSet.h/.cpp       (OnHealthDepleted delegate, spike via
+                                        FindComponentByClass, shield absorb)
+  - Abilities/BBGameplayAbility.cpp    (ability blocking updates)
+  - Abilities/Hunters/Ghost/GA_Ghost_LMB.h/.cpp   (real projectile fire)
+  - Abilities/Hunters/Ghost/GA_Ghost_RMB.h/.cpp    (grenade spawn)
+  - Abilities/Hunters/Ghost/GA_Ghost_Q.cpp         (piercing line trace)
+  - Abilities/Hunters/Ghost/GA_Ghost_R.h/.cpp      (napalm zone spawn)
+  - Abilities/Hunters/Ghost/GA_Ghost_Passive.h/.cpp (kill resets Shift CD)
+  - Abilities/Hunters/Ghost/GA_Ghost_Shift.cpp      (minor updates)
+  - Characters/GliderComponent.h/.cpp  (decoupled from HunterCharacter,
+                                        ForceOpen/Close, OnSpikeRecovered)
+  - Characters/BBCharacterMovementComponent.cpp (minor)
+  - Combat/BBDamageExecution.cpp       (damage calc updates)
+  - Core/BreachborneGameMode.h/.cpp    (death handling, dev respawn)
+  - Core/BreachbornePlayerController.h/.cpp (ability input routing)
+  - World/AbyssKillVolume.cpp          (generic IAbilitySystemInterface)
+
+KNOWN ISSUES / TODO:
+  - No VFX or SFX (GameplayCues deferred to polish pass)
+  - Projectiles are white spheres, grenades are white spheres, napalm is
+    a white cylinder — all placeholder visuals
+  - No hit feedback (damage numbers, flash, knockback)
+  - Ghost Q has no visual beam — just an invisible instant trace
+  - No ammo system for LMB (fires as fast as you can click)
+  - No kill feed UI
+  - Team assignment is basic (GameMode assigns sequentially)
+
+WHAT'S NEXT:
+  - Phase 4: Storm system — shrinking safe zone, storm damage DOT,
+    storm shift mutators (Nomadic, BulletTrains, GlobalOracle)
+
+
+--------------------------------------------------------------------------------
+  v0.3.0 — Phase 3: Gliding & Spiking System          2026-02-09
+--------------------------------------------------------------------------------
+
+The core aerial movement system is in. Hunters can now glide across the map
+and dash through the air. The floating-island fantasy is starting to come
+together.
+
+WHAT'S PLAYABLE:
+
+  [Gliding]
+  - Hold Space while airborne to open the glider
+  - Glider always flies toward the mouse cursor (not WASD)
+  - Gradual linear acceleration: takes ~1 second to reach full glide speed
+  - Sharp turns (>90 degrees) cause a braking effect — you slow down before
+    picking up speed in the new direction. Feels like real inertia.
+  - Reduced gravity while gliding (15% of normal) — floaty and smooth
+  - Heat builds while gliding. Hit 100% heat = auto-close (overheat)
+  - Heat decays when grounded
+  - Minimum altitude check prevents opening glider too close to the ground
+  - Landing auto-closes the glider and resets heat
+  - Abilities blocked while gliding (must close glider to use them)
+  - Glider indicator (flat plane) appears above character while gliding
+
+  [Dash (Ghost Shift)]
+  - Press Shift to dash in the cursor direction
+  - Works on ground and in air
+  - Dash then immediately glide = momentum carries over (speed decays
+    gradually from dash speed down to normal glide speed)
+  - Instant velocity burst (2000 units) with slight upward lift
+  - 6 second cooldown via GAS
+  - Blocked while gliding, spiked, or stunned
+
+  [Visual Indicators]
+  - Cone mesh on each character shows facing direction (cursor aim)
+  - Flat plane hovers above the character while gliding — visible to all players
+  - Glider indicator appears/disappears on state change for all clients
+
+CODE COMPLETE BUT NOT YET TESTABLE:
+
+  [Spiking] (needs damage-dealing abilities to trigger)
+  - Taking ANY damage while gliding = SPIKED
+  - Spiked = stunned, no input, fast-fall straight down
+  - All abilities blocked while spiked (State_Spiked tag)
+  - Spike lasts 1.5 seconds, then auto-recovers
+  - Damage hook wired in BBHealthSet — will activate once Ghost's combat
+    abilities (LMB/Q) deal real damage
+
+  [Abyss Kill Volume] (needs to be placed in editor)
+  - AbyssKillVolume actor class created — kills on overlap, server-only
+  - Must be manually placed below the map in the level editor to function
+  - Deathbox spawning stubbed until Phase 6 (Wisp system)
+
+  [Infrastructure]
+  - Custom CharacterMovementComponent (UBBCharacterMovementComponent)
+    with Gliding and Spiked custom movement modes
+  - GliderComponent: server-authoritative replicated state machine
+    (Closed <-> Open -> Spiked -> Closed)
+  - Server RPCs for open/close requests, server validates everything
+  - Movement mode replication handled automatically by CMC
+
+TUNING VALUES (all EditDefaultsOnly, tweak in editor):
+  - GlidingGravityScale:       0.15
+  - GlidingMaxSpeed:           800 units/sec
+  - GlidingAccelerationTime:   1.0 sec (0 to max speed)
+  - GlidingSharpTurnBraking:   1200 units/sec decel
+  - SharpTurnSpeedThreshold:   50 units/sec
+  - SpikedDownwardBoost:       -800 units/sec
+  - HeatBuildRate:             0.15/sec
+  - HeatDecayRate:             0.5/sec
+  - SpikeDuration:             1.5 sec
+  - MinAltitudeForGlide:       50 units
+  - DashSpeed:                 2000 units
+  - DashCooldown:              6 sec
+
+FILES ADDED (6):
+  - Characters/BBCharacterMovementComponent.h/.cpp
+  - Characters/GliderComponent.h/.cpp
+  - World/AbyssKillVolume.h/.cpp
+
+FILES MODIFIED (7):
+  - Core/BreachborneTypes.h        (EGliderState, EBBCustomMovementMode enums)
+  - Characters/HunterCharacter.h   (CMC swap, GliderComponent, visual meshes)
+  - Characters/HunterCharacter.cpp (constructor setup for all new components)
+  - Core/BreachbornePlayerController.cpp (hold-to-glide input routing)
+  - Core/BreachbornePlayerController.h   (bJumpInputHeld tracking)
+  - Abilities/BBGameplayAbility.cpp (State_Spiked blocks abilities)
+  - Abilities/Hunters/Ghost/GA_Ghost_Shift.h/.cpp (real dash, not speed buff stub)
+
+KNOWN ISSUES / TODO:
+  - No VFX or SFX yet (GameplayCues deferred to polish pass)
+  - Glider visual is a basic plane mesh — placeholder for real art
+  - No dash animation — instant velocity change only
+  - Ghost's combat abilities (LMB, RMB, Q, R) are stubs — no damage yet
+  - Need a working damage source before spiking can be playtested
+
+WHAT'S NEXT:
+  - Phase 4: Storm system with shrinking zones and storm shift mutators
+  - Or: polish pass on gliding feel + test with multiple hunters
+
+
+--------------------------------------------------------------------------------
+  v0.2.0 — Phase 2: GAS + Ghost Abilities             (previous build)
+--------------------------------------------------------------------------------
+
+GAS foundation complete. ASC on PlayerState with Mixed replication.
+HealthSet, CombatSet, MovementSet all working with attribute replication.
+Ghost's 5 abilities stubbed (LMB, RMB, Shift, Q, R) with input routing
+through Enhanced Input -> PlayerController -> ASC -> GameplayAbility.
+Damage execution pipeline via BBDamageExecution.
+All multiplayer — tested with 3 PIE clients.
+
+
+--------------------------------------------------------------------------------
+  v0.1.0 — Phase 1: Networked Movement Foundation     (initial build)
+--------------------------------------------------------------------------------
+
+Base multiplayer movement working. 3 clients + dedicated server in PIE.
+Top-down isometric camera, WASD movement, cursor aiming with replicated
+aim location. PlayerController, GameMode, GameState, PlayerState all set up.
+Enhanced Input System for all input. Character faces cursor, not movement
+direction. Placeholder cylinder mesh for characters.
+
+================================================================================

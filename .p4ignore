@@ -1,0 +1,7 @@
+.git/
+.vscode/
+Intermediate/
+Saved/
+Binaries/
+DerivedDataCache/
+*.generated.h

@@ -25,7 +25,7 @@ Last updated: July 12, 2026.
 - Latest main package summary: current source-toolchain client/server archives pass the freshness-aware verifier: executables, TestMap, 17/17 Hudson cues, handshake 2/2 plus transport 4/4, normal/impaired roster smoke 6/6, authoritative LMB hits 6/6, reconnect attempt, death/wisp/healing/revive, and zero critical/cue-overflow findings.
 - Networking/performance cleanup: removed the final legacy DrawDebug multicast API and callers; disabled no-op observer ticks on server-only gameplay actors; made Grappling Hook collision/attachment/destruction server authoritative while replicating latch state for observer visuals; guarded replicated burst fallbacks against pre-initialization world-origin flashes.
 - Manual-test tooling: packaged server plus 1-4 visible clients now launch as one recorded session with isolated logs, exact PIDs, safe cleanup, and automatic critical/cue-overflow review under `Saved/Logs/InteractivePlaytest`.
-- Source control: latest green automated combat checkpoint is `f38164f`; baseline `d425cd9`, full-roster smoke `9fcec64`, impaired-network/reconnect `765f27a`, death/wisp `e09646a`, and healed-revive `9b92d0a` are also committed.
+- Source control: latest green packaged-network checkpoint is `16103ad`; authoritative combat `f38164f`, baseline `d425cd9`, full-roster smoke `9fcec64`, impaired-network/reconnect `765f27a`, death/wisp `e09646a`, and healed-revive `9b92d0a` are also committed.
 
 ## Gate board
 

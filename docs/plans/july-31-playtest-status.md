@@ -8,9 +8,9 @@ Last updated: July 12, 2026.
 
 ## Current headline
 
-- Current gate: July 12 Green Baseline
+- Current gate: July 13 Listen-Server Combat
 - Overall status: YELLOW
-- Primary blocker: create a named source-control checkpoint for the green baseline.
+- Primary blocker: execute the four-session owner/observer ability acceptance matrix.
 - PureLogic baseline: 44 passed, 0 failed on July 12.
 - GameSystems baseline: 28 passed, 0 failed on July 12, including six primitive-VFX geometry/lifecycle checks. The previous crash is fixed.
 - Build baseline: Editor, Game, and source-engine Server targets succeeded on July 12.
@@ -25,7 +25,7 @@ Last updated: July 12, 2026.
 - Latest package summary: current six-hunter source-toolchain client/server archives pass the automated candidate verifier: executables, TestMap, 17/17 Hudson cues, packaged handshake 2/2, and zero critical log findings at `Saved/Logs/PackagedHandshake/20260712-191726`.
 - Networking/performance cleanup: removed the final legacy DrawDebug multicast API and callers; disabled no-op observer ticks on server-only gameplay actors; made Grappling Hook collision/attachment/destruction server authoritative while replicating latch state for observer visuals; guarded replicated burst fallbacks against pre-initialization world-origin flashes.
 - Manual-test tooling: packaged server plus 1-4 visible clients now launch as one recorded session with isolated logs, exact PIDs, safe cleanup, and automatic critical/cue-overflow review under `Saved/Logs/InteractivePlaytest`.
-- Source control: extensive uncommitted Crysta/Void and shared changes; checkpoint needed.
+- Source control: green engineering baseline committed at `d425cd9` (`playtest: checkpoint six-hunter VFX and networking baseline`).
 
 ## Gate board
 
@@ -33,7 +33,7 @@ Use `RED`, `YELLOW`, or `GREEN`. A date passing does not make a gate green.
 
 | Date | Gate | Status | Evidence | Blocker/next action |
 | --- | --- | --- | --- | --- |
-| Jul 12 | Green baseline | YELLOW | Current Editor/Game/Server build; PureLogic 44/44; GameSystems 28/28; source and packaged handshakes 2/2 | Named checkpoint still required |
+| Jul 12 | Green baseline | GREEN | Checkpoint `d425cd9`; Editor/Game/Server build; PureLogic 44/44; GameSystems 28/28; source and packaged handshakes 2/2 | Complete |
 | Jul 13 | Listen-server combat | YELLOW | Jul 12 lobby/spawn log | Full roster ability/damage smoke not run |
 | Jul 14 | Dedicated server | YELLOW | Two source-built clients welcomed and joined dedicated server; repeatable headless smoke PASS | Lobby, combat, and death flow not run |
 | Jul 15 | Packaged networking | YELLOW | `Builds/PlaytestCandidateVerification.txt` PASS: executables, TestMap, cues 17/17, handshake 2/2, critical logs 0 | Interactive lobby/combat test and second-machine direct-IP evidence pending |
@@ -117,6 +117,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Current package: source-toolchain client and server archives rebuilt after the final lifecycle/network audit; packaged dedicated handshake 2/2 PASS at `Saved/Logs/PackagedHandshake/20260712-191726`; interactive combat and second-machine evidence remain pending
 - Candidate verifier: added `Scripts/Playtest/VerifyPlaytestCandidate.ps1`; current result PASS for client/server executables, cooked TestMap, Hudson cues 17/17, latest handshake 2/2, and zero critical packaged-log findings; summary at `Builds/PlaytestCandidateVerification.txt`
 - Interactive acceptance tooling: upgraded `StartPackagedLocalSmoke.ps1` to launch a hidden packaged server and side-by-side clients with isolated timestamped logs and exact PID metadata; added safe stop plus automatic review scripts; parser checks PASS and reviewer PASS against `Saved/Logs/PackagedHandshake/20260712-191726` with 2 joins, zero critical matches, and zero cue-overflow matches
+- Source-control checkpoint: committed the green six-hunter VFX/network/wisp/range/tooling baseline as `d425cd9`; Jul 12 gate is GREEN
 - Two-client result: previous Jul 12 listen session reached gameplay; full ability smoke remains Jul 13
 - Packaged/dedicated result: source Game/Server build PASS; raw and packaged headless handshakes both 2/2 PASS; interactive lobby/combat/death and second-machine direct-IP remain pending
 - Evidence and log paths: `Saved/Logs/Breachborne.log` and

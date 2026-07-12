@@ -233,10 +233,14 @@ private:
 	const UBBGameplayAbility* FindAbilityForRangePreview(const FGameplayTag& InputTag) const;
 	void InitializeAbilitySmoke();
 	void UpdateAbilitySmoke(float DeltaTime);
+	void UpdateDeathSmoke(float DeltaTime);
 	bool ActivateAbilitySmokeInput(const FGameplayTag& InputTag, const TCHAR* ActionName);
 
 	UFUNCTION(Server, Reliable)
 	void ServerPrepareAbilitySmoke(int32 SmokeIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerTriggerDeathSmoke();
 
 	bool IsTacticalNukeEquippedForInput(const FGameplayTag& InputTag) const;
 	void BeginTacticalNukeTargeting(const FGameplayTag& InputTag);
@@ -506,7 +510,11 @@ private:
 	bool bAbilitySmokeEnabled = false;
 	bool bAbilitySmokePrepared = false;
 	bool bAbilitySmokeComplete = false;
+	bool bDeathSmokeEnabled = false;
+	bool bDeathSmokeTriggered = false;
+	bool bDeathSmokeObserved = false;
 	int32 AbilitySmokeIndex = 0;
+	int32 AbilitySmokeServerIndex = 0;
 	int32 AbilitySmokeHunterID = 0;
 	int32 AbilitySmokeStep = 0;
 	float AbilitySmokeElapsed = 0.0f;
@@ -514,6 +522,7 @@ private:
 	float AbilitySmokeActionDelay = 0.0f;
 	float AbilitySmokeAimAccumulator = 0.0f;
 	float AbilitySmokeLobbyRetry = 0.0f;
+	float DeathSmokeTriggerDelay = 0.0f;
 	EMatchPhase AbilitySmokeLastPhase = EMatchPhase::Ended;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|UI|RangeIndicator")

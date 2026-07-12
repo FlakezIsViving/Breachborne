@@ -173,3 +173,13 @@ Exercise one disconnect/reconnect attempt after a packaged two-player match reac
 The current contract distinguishes a successful transport reconnect from restoration to the
 disconnected hunter. A replacement connection currently enters as a spectator; the script records
 that limitation explicitly under `Saved\Logs\PackagedReconnect` instead of reporting a full pass.
+
+Verify the authoritative lethal-damage to wisp-possession path in a packaged two-client match:
+
+```powershell
+.\Scripts\Playtest\TestPackagedDeathWispSmoke.ps1
+```
+
+The opt-in test completes a normal Ghost/Kingpin ability lifecycle, applies lethal damage through
+the shared GAS damage effect, and requires HealthSet depletion, server wisp spawn/possession, and
+replicated victim-client wisp possession. Evidence is written under `Saved\Logs\PackagedDeathWisp`.

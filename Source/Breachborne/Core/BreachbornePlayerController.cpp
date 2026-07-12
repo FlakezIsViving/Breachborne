@@ -28,6 +28,7 @@
 #include "Breachborne/Abilities/BBGameplayAbility.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Abilities/BBHealthSet.h"
+#include "Breachborne/Combat/BBDamageEffect.h"
 #include "Breachborne/Items/BBInventoryManager.h"
 #include "Breachborne/Items/BBEquipmentDefinition.h"
 #include "Breachborne/Items/BBConsumableDefinition.h"
@@ -245,6 +246,7 @@ void ABreachbornePlayerController::PlayerTick(float DeltaTime)
 		if (bAbilitySmokeEnabled)
 		{
 			UpdateAbilitySmoke(DeltaTime);
+			UpdateDeathSmoke(DeltaTime);
 		}
 		else
 		{
@@ -274,9 +276,42 @@ void ABreachbornePlayerController::InitializeAbilitySmoke()
 	}
 
 	bAbilitySmokeEnabled = true;
+	bDeathSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBDeathSmoke"));
 	UE_LOG(LogBreachborne, Warning,
-		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d"),
-		AbilitySmokeIndex, AbilitySmokeHunterID);
+		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d death=%d"),
+		AbilitySmokeIndex, AbilitySmokeHunterID, bDeathSmokeEnabled ? 1 : 0);
+}
+
+void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
+{
+	if (!bDeathSmokeEnabled || bDeathSmokeObserved)
+	{
+		return;
+	}
+
+	if (AbilitySmokeIndex == 1 && bAbilitySmokeComplete && !bDeathSmokeTriggered)
+	{
+		DeathSmokeTriggerDelay += DeltaTime;
+		if (DeathSmokeTriggerDelay >= 1.5f)
+		{
+			bDeathSmokeTriggered = true;
+			ServerTriggerDeathSmoke();
+			UE_LOG(LogBreachborne, Warning, TEXT("BB_DEATH_SMOKE|CLIENT_TRIGGER|index=1"));
+		}
+		return;
+	}
+
+	if (AbilitySmokeIndex == 2)
+	{
+		if (ABBWispPawn* Wisp = Cast<ABBWispPawn>(GetPawn()))
+		{
+			bDeathSmokeObserved = true;
+			UE_LOG(LogBreachborne, Warning,
+				TEXT("BB_DEATH_SMOKE|CLIENT_WISP|index=2 pawn=%s owner=%s hp=%.1f rez=%.3f"),
+				*GetNameSafe(Wisp), *GetNameSafe(Wisp->GetOwningPlayerState()),
+				Wisp->GetCurrentWispHP(), Wisp->GetRezBarProgress());
+		}
+	}
 }
 
 void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
@@ -452,6 +487,7 @@ void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int3
 	{
 		return;
 	}
+	AbilitySmokeServerIndex = SmokeIndex;
 
 	const float X = SmokeIndex == 1 ? -350.0f : 350.0f;
 	const FVector TraceStart(X, 0.0f, 5000.0f);
@@ -478,6 +514,59 @@ void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int3
 	UE_LOG(LogBreachborne, Warning,
 		TEXT("BB_ABILITY_SMOKE|SERVER_PREPARED|index=%d hunter=%d location=%s ground=%d"),
 		SmokeIndex, PS->GetHunterID(), *TargetLocation.ToCompactString(), bGroundHit ? 1 : 0);
+}
+
+void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBDeathSmoke"))
+		|| AbilitySmokeServerIndex != 1 || !GetWorld())
+	{
+		return;
+	}
+
+	ABreachbornePlayerController* VictimController = nullptr;
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ABreachbornePlayerController* Candidate = Cast<ABreachbornePlayerController>(It->Get());
+		if (Candidate && Candidate->AbilitySmokeServerIndex == 2)
+		{
+			VictimController = Candidate;
+			break;
+		}
+	}
+
+	UBBAbilitySystemComponent* KillerASC = GetBBASC();
+	UBBAbilitySystemComponent* VictimASC = VictimController ? VictimController->GetBBASC() : nullptr;
+	ABreachbornePlayerState* VictimPS = VictimController
+		? VictimController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
+	UBBHealthSet* VictimHealth = VictimPS ? VictimPS->GetHealthSet() : nullptr;
+	if (!KillerASC || !VictimASC || !VictimPS || !VictimHealth || !VictimPS->GetIsAlive())
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_DEATH_SMOKE|SERVER_FAIL|killer=%s victim=%s asc=%s health=%s alive=%d"),
+			*GetNameSafe(this), *GetNameSafe(VictimController), *GetNameSafe(VictimASC),
+			*GetNameSafe(VictimHealth), VictimPS && VictimPS->GetIsAlive() ? 1 : 0);
+		return;
+	}
+
+	const float HealthBefore = VictimHealth->GetHealth();
+	FGameplayEffectContextHandle Context = KillerASC->MakeEffectContext();
+	Context.AddInstigator(GetPawn(), GetPawn());
+	FGameplayEffectSpecHandle Spec = KillerASC->MakeOutgoingSpec(UBBDamageEffect::StaticClass(), 1.0f, Context);
+	if (!Spec.IsValid())
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("BB_DEATH_SMOKE|SERVER_FAIL|reason=invalid_damage_spec"));
+		return;
+	}
+
+	Spec.Data->SetSetByCallerMagnitude(BBGameplayTags::SetByCaller_Damage, 100000.0f);
+	KillerASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), VictimASC);
+	ABBWispPawn* Wisp = Cast<ABBWispPawn>(VictimController->GetPawn());
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_DEATH_SMOKE|SERVER_RESULT|victim=%s health_before=%.1f health_after=%.1f alive=%d pawn=%s wisp=%d"),
+		*GetNameSafe(VictimPS), HealthBefore, VictimHealth->GetHealth(), VictimPS->GetIsAlive() ? 1 : 0,
+		*GetNameSafe(VictimController->GetPawn()), Wisp ? 1 : 0);
 }
 
 void ABreachbornePlayerController::NetFlowDump()

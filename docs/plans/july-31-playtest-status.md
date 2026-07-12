@@ -14,7 +14,7 @@ Last updated: July 12, 2026.
 - PureLogic baseline: 44 passed, 0 failed on July 12.
 - GameSystems baseline: 28 passed, 0 failed on July 12, including six primitive-VFX geometry/lifecycle checks. The previous crash is fixed.
 - Build baseline: Editor, Game, and source-engine Server targets succeeded on July 12.
-- Latest network evidence: three packaged two-client matches selected and granted hunters 1-6; every hunter activated LMB/RMB/Shift/Q/R, routed held-input releases and Q recasts, then completed cleanup without critical or cue-overflow findings. Damage/CC/death and visual acceptance remain pending.
+- Latest network evidence: three packaged two-client matches selected and granted hunters 1-6; every hunter activated LMB/RMB/Shift/Q/R, routed held-input releases and Q recasts, then completed cleanup without critical or cue-overflow findings. Core lethal damage-to-wisp possession also passes; ability hit/damage/CC, persistent-death cleanup, and visual acceptance remain pending.
 - Wisp lifecycle: repeated multiplayer spawn/revive tests pass; invisible WidgetTree implementation replaced with direct Slate painting and first-paint diagnostics, visual retest pending.
 - Ability range indicators: shared owner-only hover and active previews cover all six hunters and F/G powers; visual/network retest pending.
 - GameplayCue networking: targeted cue scan paths configured; Hudson minigun cues use one cosmetic multicast per shot with local primitive rendering and no per-shot debug RPCs; live firing overflow retest pending.
@@ -22,10 +22,10 @@ Last updated: July 12, 2026.
 - Ghost VFX: replicated primitive warning, projectile, trail, beam, impact, active-zone, and passive-pulse fallbacks compile; live owner/observer readability remains unverified.
 - Eluna VFX: replicated primitive projectile, root/heal zone, dash, passive, and revive-channel fallbacks compile; live owner/observer readability remains unverified.
 - Kingpin VFX: replicated primitive wedge, tether, trail, impact, chain, shell, and passive fallbacks compile; live owner/observer readability remains unverified.
-- Latest package summary: current six-hunter source-toolchain client/server archives pass the automated candidate verifier: executables, TestMap, 17/17 Hudson cues, packaged handshake 2/2, full-roster packaged ability smoke 6/6 across three matches, and zero critical/cue-overflow findings.
+- Latest main package summary: the prior six-hunter archive passed executables, TestMap, 17/17 Hudson cues, handshake 2/2, and roster smoke 6/6, but is now intentionally STALE after the death/wisp harness change. An isolated current-source package passes death/wisp smoke; refresh the main archive after the open interactive session.
 - Networking/performance cleanup: removed the final legacy DrawDebug multicast API and callers; disabled no-op observer ticks on server-only gameplay actors; made Grappling Hook collision/attachment/destruction server authoritative while replicating latch state for observer visuals; guarded replicated burst fallbacks against pre-initialization world-origin flashes.
 - Manual-test tooling: packaged server plus 1-4 visible clients now launch as one recorded session with isolated logs, exact PIDs, safe cleanup, and automatic critical/cue-overflow review under `Saved/Logs/InteractivePlaytest`.
-- Source control: green engineering baseline committed at `d425cd9` (`playtest: checkpoint six-hunter VFX and networking baseline`).
+- Source control: green baseline `d425cd9`, full-roster smoke `9fcec64`, and impaired-network/reconnect checkpoint `765f27a` are committed.
 
 ## Gate board
 
@@ -35,8 +35,8 @@ Use `RED`, `YELLOW`, or `GREEN`. A date passing does not make a gate green.
 | --- | --- | --- | --- | --- |
 | Jul 12 | Green baseline | GREEN | Checkpoint `d425cd9`; Editor/Game/Server build; PureLogic 44/44; GameSystems 28/28; source and packaged handshakes 2/2 | Complete |
 | Jul 13 | Listen-server combat | YELLOW | Packaged automated roster smoke selects/spawns hunters 1-6 and activates all five inputs | Basic damage plus interactive movement/aim pass pending |
-| Jul 14 | Dedicated server | YELLOW | Three dedicated packaged matches complete lobby, select, spawn, ability activation, releases/recasts, and cleanup for hunters 1-6; replacement transport reconnect also passes | Damage, CC, death, and disconnected-player match restoration pending |
-| Jul 15 | Packaged networking | YELLOW | `Builds/PlaytestCandidateVerification.txt` PASS: executables, TestMap, cues 17/17, handshake 2/2, ability smoke 6/6, critical/cue-overflow logs 0 | Interactive visual test and second-machine direct-IP evidence pending |
+| Jul 14 | Dedicated server | YELLOW | Roster activation, replacement transport reconnect, and lethal GAS damage through server wisp spawn/client possession pass in packaged dedicated runs | Ability hit/damage/CC agreement, persistent-ability death cleanup, and disconnected-player restoration pending |
+| Jul 15 | Packaged networking | YELLOW | Prior archive passed executable/map/cue/handshake/roster gates; isolated current-source death/wisp archive passes | Main archive is correctly rejected as stale until interactive Session 1 ends and it can be refreshed; second-machine direct-IP pending |
 | Jul 16 | VFX foundation lock | YELLOW | Cue roots, template enum, palettes, parameter schema, budgets, fallbacks, and narrow cue always-cook root locked; all 17 Hudson cue packages present in client IoStore | Eight Niagara master assets and live ability-level cue invocation pending |
 | Jul 17 | Ghost VFX | YELLOW | Replicated primitive fallbacks cover LMB/RMB/Shift/Q/R/passive; Editor build and automation green | Two-client readability, timing, cleanup, and Low/Medium pass required |
 | Jul 18 | Eluna VFX | YELLOW | Replicated primitive fallbacks cover LMB/RMB/Shift/Q/R/passive; exact zone geometry and server-only Q/R resolution compiled | Two-client readability, timing, cleanup, and Low/Medium pass required |
@@ -73,7 +73,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | --- | --- | --- | --- | --- | --- | --- |
 | BB-PT-001 | P0 | Automation | GameSystems access violation at test line 449 | Codex | Resolved | GameSystems 28/28; no crash/ensure on Jul 12 |
 | BB-PT-002 | P1 | Packaging | Packaged candidate must match current source | Codex | Resolved | `Scripts/Playtest/VerifyPlaytestCandidate.ps1` PASS; evidence in `Builds/PlaytestCandidateVerification.txt` |
-| BB-PT-003 | P1 | Networking | Full ability/death/dedicated/package matrix untested | User + Codex | Partially automated; damage/death/visual and reconnect-restoration matrix open | Normal and 100 ms/2% loss packaged ability smoke PASS 6/6; replacement transport reconnect PASS; four-session manual matrix ready |
+| BB-PT-003 | P1 | Networking | Full ability/death/dedicated/package matrix untested | User + Codex | Partially automated; ability damage/CC, death cleanup, visual, and reconnect-restoration matrix open | Normal and impaired roster smoke PASS 6/6; packaged lethal-damage-to-wisp path PASS; four-session manual matrix ready |
 | BB-PT-004 | P2 | GameplayCues | No targeted GameplayCueNotifyPaths configured | Codex | Resolved | `/Game/GameplayCues` configured; clean Jul 12 editor startup initialization |
 | BB-PT-005 | P2 | Environment | UDP Messaging cannot bind 25.18.80.222 | Unassigned | Open | Jul 12 log; GameNetDriver still worked |
 | BB-PT-006 | P0 | Wisp | PvP death did not spawn or possess a wisp because GameMode lifecycle wiring was absent | Codex | Resolved | User retest plus `Saved/Logs/Breachborne-backup-2026.07.12-00.26.01.log`: three successful spawn/possession/revive cycles |
@@ -87,6 +87,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | BB-PT-014 | P1 | Crysta/Void VFX | Empowered/charged mesh state and several zone radii did not match on observers | Codex | Fix compiled; visual retest pending | Replicated visual flags, corrected radius scaling, bounded resolution effects; full source build and handshake PASS |
 | BB-PT-015 | P1 | Roster | Ghost and Eluna lacked native hunter definitions, so missing/unloadable DataAssets made their IDs unselectable on dedicated runtime | Codex | Resolved | Native definitions now cover IDs 1-6; source and packaged full-roster ability smoke PASS |
 | BB-PT-016 | P1 | Networking | A client can reconnect to the server during Playing but is not restored to the disconnected hunter | Codex | Open; restart-match fallback documented | `Saved/Logs/PackagedReconnect/20260712-201340`: initial gameplay PASS, transport reconnect PASS, replacement assigned late-join spectator, 0 critical/cue-overflow findings |
+| BB-PT-017 | P1 | Death/Wisp | Packaged lethal-damage-to-wisp lifecycle lacked deterministic evidence | Codex | Resolved for core lifecycle; visual bars/revive and persistent-ability death cleanup remain manual | `Saved/Logs/PackagedDeathWisp/20260712-202616`: GAS depletion, server wisp spawn/possession, victim-client wisp observation PASS; 0 critical/cue overflow; PureLogic 44/44, GameSystems 28/28 |
 
 ## Daily updates
 
@@ -121,10 +122,11 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Interactive acceptance tooling: upgraded `StartPackagedLocalSmoke.ps1` to launch a hidden packaged server and side-by-side clients with isolated timestamped logs and exact PID metadata; added safe stop plus automatic review scripts; parser checks PASS and reviewer PASS against `Saved/Logs/PackagedHandshake/20260712-191726` with 2 joins, zero critical matches, and zero cue-overflow matches
 - Source-control checkpoint: committed the green six-hunter VFX/network/wisp/range/tooling baseline as `d425cd9`; Jul 12 gate is GREEN
 - Automated roster gameplay: added opt-in `-BBAbilitySmoke` flow plus packaged single-pair/full-roster scripts; fixed nondeterministic lobby-owner startup, isolated activation checks from enemy CC, and added native Ghost/Eluna definitions; source and packaged runs PASS for hunter pairs 1/2, 3/4, and 5/6 with all initial inputs successful and cleanup complete
-- Current candidate verifier: PASS at `Builds/PlaytestCandidateVerification.txt`; packaged handshake evidence `Saved/Logs/PackagedHandshake/20260712-195515`; packaged ability evidence `Saved/Logs/PackagedAbilitySmoke/20260712-195257`, `20260712-195339`, and `20260712-195421`; all three log reviews report zero critical and zero GameplayCue overflow findings
+- Candidate verifier: prior package evidence passed at `Builds/PlaytestCandidateVerification.txt`, but the verifier now rejects any archive older than source/config/content/plugin inputs; the main package needs refresh after the interactive session before this gate returns GREEN
 - Network impairment: repeatable packaged gate applies and verifies `PktLag=100` plus `PktLoss=2` on server and clients; activation lifecycle PASS for hunters 1-6 at `Saved/Logs/PackagedNetworkImpairment/20260712-200720`, `20260712-200809`, and `20260712-200858`; manual sustained-fire/zone-overlap visual checks remain open
-- Two-client result: automated packaged dedicated smoke selects and activates all five inputs for hunters 1-6; replacement reconnect reaches the server but match-state restoration is unsupported; manual visuals, aim/movement, damage, CC, and death remain
-- Packaged/dedicated result: source Game/Server build PASS; raw and packaged headless handshakes both 2/2 PASS; interactive lobby/combat/death and second-machine direct-IP remain pending
+- Death/wisp automation: added opt-in `-BBDeathSmoke` plus `TestPackagedDeathWispSmoke.ps1`; shared GAS lethal damage triggered HealthSet depletion, authoritative wisp spawn/possession, and replicated victim-client possession in isolated package `Builds/DeathWispCandidate`; PASS at `Saved/Logs/PackagedDeathWisp/20260712-202616`
+- Two-client result: roster activation and core death-to-wisp possession are automated; replacement reconnect reaches the server but match-state restoration is unsupported; manual visuals, aim/movement, ability damage/CC, and death cleanup remain
+- Packaged/dedicated result: Editor/Game/Server build PASS; PureLogic 44/44 and GameSystems 28/28; isolated current-source death/wisp package PASS; main candidate refresh awaits completion of the open interactive session; second-machine direct-IP remains pending
 - Evidence and log paths: `Saved/Logs/Breachborne.log` and
   `Saved/Logs/Breachborne-backup-2026.07.11-23.47.36.log`
 - Open P0/P1 issues: disconnected-player restoration, unexecuted manual network/visual matrix, plus Hudson, wisp UI, and range-indicator live retests

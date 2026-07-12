@@ -38,6 +38,20 @@ Require-Path $ResolvedNetworkImpairmentRoot "packaged network-impairment logs ro
 Require-Path $ResolvedReconnectRoot "packaged reconnect logs root"
 
 $BuildCompletedAt = (Get-Item -LiteralPath $BuildSummary).LastWriteTime
+$ProjectRoot = Split-Path -Parent $PSScriptRoot | Split-Path -Parent
+$InputExtensions = @('.h', '.cpp', '.cs', '.ini', '.uproject', '.uplugin', '.uasset', '.umap')
+$CandidateInputs = @(
+	Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'Source') -Recurse -File
+	Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'Config') -Recurse -File
+	Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'Content') -Recurse -File
+	Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'Plugins') -Recurse -File |
+		Where-Object { $_.FullName -notmatch '\\(Binaries|Intermediate|Saved)\\' }
+	Get-Item -LiteralPath (Join-Path $ProjectRoot 'Breachborne.uproject')
+) | Where-Object { $InputExtensions -contains $_.Extension.ToLowerInvariant() }
+$NewestInput = $CandidateInputs | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if ($NewestInput -and $NewestInput.LastWriteTime -gt $BuildCompletedAt) {
+	throw "Packaged candidate is stale. Newest input '$($NewestInput.FullName)' at $($NewestInput.LastWriteTime.ToString('o')) is newer than build summary $($BuildCompletedAt.ToString('o'))."
+}
 $AbilityEvidence = @()
 foreach ($Pair in @("1, 2", "3, 4", "5, 6")) {
 	$MatchingRun = Get-ChildItem -LiteralPath $ResolvedAbilitySmokeRoot -Directory |

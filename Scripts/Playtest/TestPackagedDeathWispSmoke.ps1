@@ -60,6 +60,15 @@ if ($ServerText -notmatch "BB_DEATH_SMOKE\|SERVER_RESULT\|.*health_after=0\.0 al
 if ($Client2Text -notmatch "BB_DEATH_SMOKE\|CLIENT_WISP\|index=2 pawn=.* owner=.* hp=.* rez=") {
 	$Failures += "The victim client did not observe possession of its replicated wisp."
 }
+if ($ServerText -notmatch "Wisp: REVIVE COMPLETE") {
+	$Failures += "Repeated healing did not complete the wisp revive bar."
+}
+if ($ServerText -notmatch "WispRevive: player=.* health=") {
+	$Failures += "The server did not restore the downed hunter."
+}
+if ($Client2Text -notmatch "BB_DEATH_SMOKE\|CLIENT_REVIVED\|index=2 pawn=.* health=.* alive=1") {
+	$Failures += "The victim client did not observe restored hunter possession."
+}
 
 $Result = if ($Failures.Count -eq 0) { "PASS" } else { "FAIL" }
 $Summary = @(
@@ -68,6 +77,8 @@ $Summary = @(
 	"Lethal GAS damage: $(if ($ServerText -match 'HealthSet: >>> HEALTH DEPLETED') { 'PASS' } else { 'FAIL' })",
 	"Server wisp spawn/possession: $(if ($ServerText -match 'BB_DEATH_SMOKE\|SERVER_RESULT\|.*wisp=1') { 'PASS' } else { 'FAIL' })",
 	"Victim client wisp observation: $(if ($Client2Text -match 'BB_DEATH_SMOKE\|CLIENT_WISP') { 'PASS' } else { 'FAIL' })",
+	"Healing-driven revive: $(if ($ServerText -match 'Wisp: REVIVE COMPLETE') { 'PASS' } else { 'FAIL' })",
+	"Victim client hunter repossession: $(if ($Client2Text -match 'BB_DEATH_SMOKE\|CLIENT_REVIVED') { 'PASS' } else { 'FAIL' })",
 	"Evidence: $($RunDirectory.FullName)"
 )
 if ($Failures.Count -gt 0) {

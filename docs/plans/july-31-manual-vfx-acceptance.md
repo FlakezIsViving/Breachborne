@@ -37,9 +37,9 @@ also pass. It proves the same activation lifecycle survives confirmed 100 ms lag
 does not replace the manual sustained-fire, persistent-zone, cleanup, or readability checks.
 
 Core death precondition: `.\Scripts\Playtest\TestPackagedDeathWispSmoke.ps1` must pass. It proves
-lethal GAS damage reaches HealthSet depletion and replicated wisp possession; it does not prove
-the two bars are visible, proximity priority is readable, revive succeeds, or ability visuals
-clean up when their caster dies.
+lethal GAS damage reaches HealthSet depletion, replicated wisp possession, capped healing-driven
+revive, and victim-client hunter repossession; it does not prove the two bars are visible,
+proximity priority is readable, or ability visuals clean up when their caster dies.
 
 1. Ghost versus Eluna: complete both six-item hunter sections.
 2. Kingpin versus Hudson: complete both six-item hunter sections, including Hudson's ten-second

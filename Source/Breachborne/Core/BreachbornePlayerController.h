@@ -242,6 +242,11 @@ private:
 	UFUNCTION(Server, Reliable)
 	void ServerTriggerDeathSmoke();
 
+	UFUNCTION(Server, Reliable)
+	void ServerBeginWispHealSmoke();
+
+	void ApplyWispHealSmokeTick();
+
 	bool IsTacticalNukeEquippedForInput(const FGameplayTag& InputTag) const;
 	void BeginTacticalNukeTargeting(const FGameplayTag& InputTag);
 	void ConfirmTacticalNukeTargeting();
@@ -513,6 +518,8 @@ private:
 	bool bDeathSmokeEnabled = false;
 	bool bDeathSmokeTriggered = false;
 	bool bDeathSmokeObserved = false;
+	bool bDeathSmokeWispObserved = false;
+	bool bDeathSmokeHealRequested = false;
 	int32 AbilitySmokeIndex = 0;
 	int32 AbilitySmokeServerIndex = 0;
 	int32 AbilitySmokeHunterID = 0;
@@ -523,6 +530,7 @@ private:
 	float AbilitySmokeAimAccumulator = 0.0f;
 	float AbilitySmokeLobbyRetry = 0.0f;
 	float DeathSmokeTriggerDelay = 0.0f;
+	FTimerHandle DeathSmokeHealTimerHandle;
 	EMatchPhase AbilitySmokeLastPhase = EMatchPhase::Ended;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|UI|RangeIndicator")

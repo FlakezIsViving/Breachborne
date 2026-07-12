@@ -4,6 +4,7 @@ param(
 	[string]$AbilitySmokeRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedAbilitySmoke",
 	[string]$NetworkImpairmentRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedNetworkImpairment",
 	[string]$ReconnectRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedReconnect",
+	[string]$DeathWispRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedDeathWisp",
 	[string]$UnrealPak = "C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealPak.exe",
 	[int]$ExpectedHudsonCueCount = 17
 )
@@ -21,6 +22,7 @@ $ResolvedLogsRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPat
 $ResolvedAbilitySmokeRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($AbilitySmokeRoot)
 $ResolvedNetworkImpairmentRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($NetworkImpairmentRoot)
 $ResolvedReconnectRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ReconnectRoot)
+$ResolvedDeathWispRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($DeathWispRoot)
 $ClientExe = Join-Path $ResolvedBuildsRoot "WindowsClient\Breachborne\Binaries\Win64\Breachborne.exe"
 $ServerExe = Join-Path $ResolvedBuildsRoot "WindowsServer\Breachborne\Binaries\Win64\BreachborneServer.exe"
 $ClientUtoc = Join-Path $ResolvedBuildsRoot "WindowsClient\Breachborne\Content\Paks\Breachborne-Windows.utoc"
@@ -36,6 +38,7 @@ Require-Path $ResolvedLogsRoot "packaged handshake logs root"
 Require-Path $ResolvedAbilitySmokeRoot "packaged ability-smoke logs root"
 Require-Path $ResolvedNetworkImpairmentRoot "packaged network-impairment logs root"
 Require-Path $ResolvedReconnectRoot "packaged reconnect logs root"
+Require-Path $ResolvedDeathWispRoot "packaged death/wisp logs root"
 
 $BuildCompletedAt = (Get-Item -LiteralPath $BuildSummary).LastWriteTime
 $ProjectRoot = Split-Path -Parent $PSScriptRoot | Split-Path -Parent
@@ -149,6 +152,38 @@ if ((Get-Item -LiteralPath $ReconnectSummaryPath).LastWriteTime -lt $BuildComple
 	throw "Reconnect-attempt evidence predates the current package."
 }
 
+$LatestDeathWisp = Get-ChildItem -LiteralPath $ResolvedDeathWispRoot -Directory |
+	Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "DeathWispSummary.txt") } |
+	Sort-Object LastWriteTime -Descending |
+	Select-Object -First 1
+if (-not $LatestDeathWisp) {
+	throw "No packaged death/wisp evidence found under $ResolvedDeathWispRoot."
+}
+$DeathWispSummaryPath = Join-Path $LatestDeathWisp.FullName "DeathWispSummary.txt"
+$DeathWispReviewPath = Join-Path $LatestDeathWisp.FullName "ReviewSummary.txt"
+$DeathWispText = Get-Content -LiteralPath $DeathWispSummaryPath -Raw
+Require-Path $DeathWispReviewPath "death/wisp log review"
+$DeathWispReviewText = Get-Content -LiteralPath $DeathWispReviewPath -Raw
+foreach ($RequiredResult in @(
+	'death/wisp smoke:\s+PASS',
+	'Lethal GAS damage:\s+PASS',
+	'Server wisp spawn/possession:\s+PASS',
+	'Victim client wisp observation:\s+PASS',
+	'Healing-driven revive:\s+PASS',
+	'Victim client hunter repossession:\s+PASS')) {
+	if ($DeathWispText -notmatch $RequiredResult) {
+		throw "Death/wisp evidence is incomplete: $DeathWispSummaryPath"
+	}
+}
+if ($DeathWispReviewText -notmatch 'log review:\s+PASS' -or
+	$DeathWispReviewText -notmatch 'Critical findings:\s+0' -or
+	$DeathWispReviewText -notmatch 'GameplayCue overflow findings:\s+0') {
+	throw "Death/wisp log review failed: $DeathWispReviewPath"
+}
+if ((Get-Item -LiteralPath $DeathWispSummaryPath).LastWriteTime -lt $BuildCompletedAt) {
+	throw "Death/wisp evidence predates the current package."
+}
+
 $LatestHandshake = Get-ChildItem -LiteralPath $ResolvedLogsRoot -Directory |
 	Sort-Object LastWriteTime -Descending |
 	Select-Object -First 1
@@ -214,6 +249,8 @@ $Summary = @(
 	"Network-impairment evidence: $($NetworkEvidence -join '; ')",
 	"Reconnect attempt: TRANSPORT PASS; match-state restoration UNSUPPORTED",
 	"Reconnect evidence: $($LatestReconnect.FullName)",
+	"Death/wisp/revive: PASS (GAS death, wisp possession, healing revive, hunter repossession)",
+	"Death/wisp evidence: $($LatestDeathWisp.FullName)",
 	"Critical log findings: 0"
 )
 $Summary | Set-Content -LiteralPath $VerificationSummary -Encoding UTF8

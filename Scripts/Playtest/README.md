@@ -130,9 +130,9 @@ The script launches the inner packaged binaries directly, captures separate logs
 server welcomes and joins, and terminates only the processes it started. Evidence is written under
 `Saved/Logs/PackagedHandshake/<timestamp>`.
 
-After the handshake and full-roster ability smoke, verify that the package contains the required
-executables, `TestMap`, all current Hudson cue packages, a 2/2 handshake, passing post-build smoke
-evidence for all six hunters, and no critical network/runtime log errors:
+After the handshake and smoke runs, verify source freshness plus required executables, `TestMap`,
+all current Hudson cue packages, a 2/2 handshake, normal/impaired post-build evidence for all six
+hunters, reconnect-attempt evidence, death/wisp/revive evidence, and clean runtime log reviews:
 
 ```powershell
 .\Scripts\Playtest\VerifyPlaytestCandidate.ps1
@@ -181,5 +181,6 @@ Verify the authoritative lethal-damage to wisp-possession path in a packaged two
 ```
 
 The opt-in test completes a normal Ghost/Kingpin ability lifecycle, applies lethal damage through
-the shared GAS damage effect, and requires HealthSet depletion, server wisp spawn/possession, and
-replicated victim-client wisp possession. Evidence is written under `Saved\Logs\PackagedDeathWisp`.
+the shared GAS damage effect, and requires HealthSet depletion, server wisp spawn/possession,
+replicated victim-client wisp possession, repeated healing through the capped revive path, server
+revive, and victim-client hunter repossession. Evidence is under `Saved\Logs\PackagedDeathWisp`.

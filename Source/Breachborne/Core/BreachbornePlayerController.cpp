@@ -295,6 +295,7 @@ void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
 		if (DeathSmokeTriggerDelay >= 1.5f)
 		{
 			bDeathSmokeTriggered = true;
+			bDeathSmokeObserved = true;
 			ServerTriggerDeathSmoke();
 			UE_LOG(LogBreachborne, Warning, TEXT("BB_DEATH_SMOKE|CLIENT_TRIGGER|index=1"));
 		}
@@ -305,11 +306,32 @@ void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
 	{
 		if (ABBWispPawn* Wisp = Cast<ABBWispPawn>(GetPawn()))
 		{
-			bDeathSmokeObserved = true;
-			UE_LOG(LogBreachborne, Warning,
-				TEXT("BB_DEATH_SMOKE|CLIENT_WISP|index=2 pawn=%s owner=%s hp=%.1f rez=%.3f"),
-				*GetNameSafe(Wisp), *GetNameSafe(Wisp->GetOwningPlayerState()),
-				Wisp->GetCurrentWispHP(), Wisp->GetRezBarProgress());
+			if (!bDeathSmokeWispObserved)
+			{
+				bDeathSmokeWispObserved = true;
+				UE_LOG(LogBreachborne, Warning,
+					TEXT("BB_DEATH_SMOKE|CLIENT_WISP|index=2 pawn=%s owner=%s hp=%.1f rez=%.3f"),
+					*GetNameSafe(Wisp), *GetNameSafe(Wisp->GetOwningPlayerState()),
+					Wisp->GetCurrentWispHP(), Wisp->GetRezBarProgress());
+			}
+			if (!bDeathSmokeHealRequested)
+			{
+				bDeathSmokeHealRequested = true;
+				ServerBeginWispHealSmoke();
+				UE_LOG(LogBreachborne, Warning, TEXT("BB_DEATH_SMOKE|CLIENT_HEAL_REQUEST|index=2"));
+			}
+		}
+		else if (bDeathSmokeWispObserved)
+		{
+			ABreachbornePlayerState* PS = GetPlayerState<ABreachbornePlayerState>();
+			if (AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn()); Hunter && PS && PS->GetIsAlive())
+			{
+				bDeathSmokeObserved = true;
+				const UBBHealthSet* HealthSet = PS->GetHealthSet();
+				UE_LOG(LogBreachborne, Warning,
+					TEXT("BB_DEATH_SMOKE|CLIENT_REVIVED|index=2 pawn=%s health=%.1f alive=1"),
+					*GetNameSafe(Hunter), HealthSet ? HealthSet->GetHealth() : -1.0f);
+			}
 		}
 	}
 }
@@ -567,6 +589,44 @@ void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()
 		TEXT("BB_DEATH_SMOKE|SERVER_RESULT|victim=%s health_before=%.1f health_after=%.1f alive=%d pawn=%s wisp=%d"),
 		*GetNameSafe(VictimPS), HealthBefore, VictimHealth->GetHealth(), VictimPS->GetIsAlive() ? 1 : 0,
 		*GetNameSafe(VictimController->GetPawn()), Wisp ? 1 : 0);
+}
+
+void ABreachbornePlayerController::ServerBeginWispHealSmoke_Implementation()
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBDeathSmoke"))
+		|| AbilitySmokeServerIndex != 2)
+	{
+		return;
+	}
+
+	if (!Cast<ABBWispPawn>(GetPawn()))
+	{
+		return;
+	}
+	if (!GetWorldTimerManager().IsTimerActive(DeathSmokeHealTimerHandle))
+	{
+		GetWorldTimerManager().SetTimer(
+			DeathSmokeHealTimerHandle, this, &ABreachbornePlayerController::ApplyWispHealSmokeTick,
+			0.2f, true, 0.0f);
+		UE_LOG(LogBreachborne, Warning, TEXT("BB_DEATH_SMOKE|SERVER_HEAL_STARTED|controller=%s"), *GetName());
+	}
+}
+
+void ABreachbornePlayerController::ApplyWispHealSmokeTick()
+{
+	ABBWispPawn* Wisp = Cast<ABBWispPawn>(GetPawn());
+	if (!Wisp)
+	{
+		GetWorldTimerManager().ClearTimer(DeathSmokeHealTimerHandle);
+		UE_LOG(LogBreachborne, Warning, TEXT("BB_DEATH_SMOKE|SERVER_HEAL_STOPPED|pawn=%s"), *GetNameSafe(GetPawn()));
+		return;
+	}
+
+	Wisp->ApplyHeal(20.0f);
+	UE_LOG(LogBreachborne, Verbose,
+		TEXT("BB_DEATH_SMOKE|SERVER_HEAL|wisp=%s hp=%.1f rez=%.3f"),
+		*GetNameSafe(Wisp), Wisp->GetCurrentWispHP(), Wisp->GetRezBarProgress());
 }
 
 void ABreachbornePlayerController::NetFlowDump()

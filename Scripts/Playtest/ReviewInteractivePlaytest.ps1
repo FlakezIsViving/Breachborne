@@ -59,3 +59,5 @@ $Summary | ForEach-Object { Write-Host $_ }
 if ($Result -ne "PASS") {
 	exit 1
 }
+
+$global:LASTEXITCODE = 0

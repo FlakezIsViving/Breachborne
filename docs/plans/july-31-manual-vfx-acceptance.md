@@ -28,6 +28,10 @@ Run these as four separate packaged sessions. Start each session with
 `.\Scripts\Playtest\StartPackagedLocalSmoke.ps1`, then stop and review its isolated logs with
 `.\Scripts\Playtest\StopPackagedLocalSmoke.ps1` before changing hunter pairs.
 
+Automated precondition: `.\Scripts\Playtest\TestPackagedFullRosterAbilitySmoke.ps1` must pass
+before these sessions. It proves grants and input lifecycle only; do not use it to check off any
+visual, hit, damage, CC, movement-agreement, or readability item below.
+
 1. Ghost versus Eluna: complete both six-item hunter sections.
 2. Kingpin versus Hudson: complete both six-item hunter sections, including Hudson's ten-second
    sustained-fire check.

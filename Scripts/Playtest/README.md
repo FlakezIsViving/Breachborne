@@ -130,9 +130,25 @@ The script launches the inner packaged binaries directly, captures separate logs
 server welcomes and joins, and terminates only the processes it started. Evidence is written under
 `Saved/Logs/PackagedHandshake/<timestamp>`.
 
-After the handshake, verify that the package contains the required executables, `TestMap`, all
-current Hudson cue packages, a 2/2 handshake, and no critical network/runtime log errors:
+After the handshake and full-roster ability smoke, verify that the package contains the required
+executables, `TestMap`, all current Hudson cue packages, a 2/2 handshake, passing post-build smoke
+evidence for all six hunters, and no critical network/runtime log errors:
 
 ```powershell
 .\Scripts\Playtest\VerifyPlaytestCandidate.ps1
 ```
+
+## Automated Packaged Ability Smoke
+
+After the normal candidate verifier passes, drive all six hunters through LMB press/release, RMB
+press/release, Shift, Q/recast, and R in three two-client packaged matches:
+
+```powershell
+.\Scripts\Playtest\TestPackagedFullRosterAbilitySmoke.ps1
+```
+
+This opt-in Development-build harness moves clients through lobby and hunter selection, places
+opponents near each other, grants a large test health pool, records every activation, and rejects
+crashes, failed grants, failed initial activations, missing releases, or incomplete cleanup.
+Evidence is written under `Saved\Logs\PackagedAbilitySmoke`. It does not judge visual readability,
+hitbox alignment, or effect quality; those remain in the manual acceptance matrix.

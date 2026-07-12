@@ -40,6 +40,8 @@
 #include "Breachborne/UI/BBHunterSelectWidget.h"
 #include "Breachborne/UI/BBPostMatchWidget.h"
 #include "Breachborne/Breachborne.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 ABreachbornePlayerController::ABreachbornePlayerController()
 {
@@ -119,6 +121,7 @@ void ABreachbornePlayerController::BeginPlay()
 		{
 			GI->HandleLocalPlayerControllerReady(this);
 		}
+		InitializeAbilitySmoke();
 	}
 }
 
@@ -239,11 +242,242 @@ void ABreachbornePlayerController::PlayerTick(float DeltaTime)
 
 	if (IsLocalController())
 	{
-		UpdateCursorAim(DeltaTime);
+		if (bAbilitySmokeEnabled)
+		{
+			UpdateAbilitySmoke(DeltaTime);
+		}
+		else
+		{
+			UpdateCursorAim(DeltaTime);
+		}
 		UpdateGliderFromHeldJump();
 		UpdateTacticalNukeTargeting(DeltaTime);
 		UpdateAbilityRangePreview();
 	}
+}
+
+void ABreachbornePlayerController::InitializeAbilitySmoke()
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke")))
+	{
+		return;
+	}
+
+	FParse::Value(FCommandLine::Get(), TEXT("BBAbilitySmokeIndex="), AbilitySmokeIndex);
+	FParse::Value(FCommandLine::Get(), TEXT("BBAbilitySmokeHunter="), AbilitySmokeHunterID);
+	if (AbilitySmokeIndex < 1 || AbilitySmokeIndex > 2 || AbilitySmokeHunterID < 1 || AbilitySmokeHunterID > 6)
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_ABILITY_SMOKE|CONFIG_FAIL|index=%d hunter=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID);
+		return;
+	}
+
+	bAbilitySmokeEnabled = true;
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d"),
+		AbilitySmokeIndex, AbilitySmokeHunterID);
+}
+
+void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
+{
+	if (!bAbilitySmokeEnabled || bAbilitySmokeComplete || !GetWorld())
+	{
+		return;
+	}
+
+	AbilitySmokeElapsed += DeltaTime;
+	AbilitySmokePhaseElapsed += DeltaTime;
+	AbilitySmokeLobbyRetry -= DeltaTime;
+	AbilitySmokeActionDelay -= DeltaTime;
+
+	ABreachborneGameState* GS = GetWorld()->GetGameState<ABreachborneGameState>();
+	ABreachbornePlayerState* PS = GetPlayerState<ABreachbornePlayerState>();
+	if (!GS || !PS)
+	{
+		return;
+	}
+
+	const EMatchPhase Phase = GS->GetMatchPhase();
+	if (Phase != AbilitySmokeLastPhase)
+	{
+		AbilitySmokeLastPhase = Phase;
+		AbilitySmokePhaseElapsed = 0.0f;
+		AbilitySmokeLobbyRetry = 0.0f;
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_ABILITY_SMOKE|PHASE|index=%d hunter=%d phase=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID, static_cast<int32>(Phase));
+	}
+
+	if (Phase == EMatchPhase::WaitingForPlayers)
+	{
+		const int32 DesiredTeam = AbilitySmokeIndex - 1;
+		if (AbilitySmokeLobbyRetry <= 0.0f)
+		{
+			if (PS->GetTeamID() != DesiredTeam || PS->GetLobbySlotIndex() != 0)
+			{
+				RequestJoinLobbySlot(DesiredTeam, 0);
+			}
+			else if (AbilitySmokeIndex == 1 && AbilitySmokePhaseElapsed >= 2.5f
+				&& GS->GetLobbyActivePlayerCount() >= 2)
+			{
+				RequestStartLobbyMatch();
+			}
+			AbilitySmokeLobbyRetry = 0.75f;
+		}
+		return;
+	}
+
+	if (Phase == EMatchPhase::HunterSelect)
+	{
+		if (AbilitySmokeLobbyRetry <= 0.0f)
+		{
+			if (PS->GetHunterID() != AbilitySmokeHunterID)
+			{
+				RequestHunterSelection(AbilitySmokeHunterID);
+			}
+			else if (!PS->IsReadyForMatch())
+			{
+				RequestReadyState(true);
+			}
+			AbilitySmokeLobbyRetry = 0.5f;
+		}
+		return;
+	}
+
+	if (Phase != EMatchPhase::Playing || !PS->GetIsAlive())
+	{
+		return;
+	}
+
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
+	UBBAbilitySystemComponent* ASC = GetBBASC();
+	if (!Hunter || !ASC || ASC->GetActivatableAbilities().Num() < 5)
+	{
+		return;
+	}
+
+	if (!bAbilitySmokePrepared)
+	{
+		bAbilitySmokePrepared = true;
+		ServerPrepareAbilitySmoke(AbilitySmokeIndex);
+		AbilitySmokeActionDelay = 2.0f;
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_ABILITY_SMOKE|READY|index=%d hunter=%d abilities=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID, ASC->GetActivatableAbilities().Num());
+	}
+
+	AbilitySmokeAimAccumulator += DeltaTime;
+	if (AbilitySmokeAimAccumulator >= 0.05f)
+	{
+		AbilitySmokeAimAccumulator = 0.0f;
+		// Fire away from the other smoke client so enemy CC cannot invalidate later activation checks.
+		const float TargetX = AbilitySmokeIndex == 1 ? -1700.0f : 1700.0f;
+		Hunter->ServerSetAimLocation(FVector(TargetX, 0.0f, Hunter->GetActorLocation().Z));
+	}
+
+	if (AbilitySmokeActionDelay > 0.0f)
+	{
+		return;
+	}
+
+	switch (AbilitySmokeStep++)
+	{
+	case 0:
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_LMB, TEXT("LMB_PRESS"));
+		AbilitySmokeActionDelay = 1.0f;
+		break;
+	case 1:
+		ASC->InputTagReleased(BBGameplayTags::InputTag_LMB);
+		UE_LOG(LogBreachborne, Warning, TEXT("BB_ABILITY_SMOKE|RELEASE|index=%d hunter=%d input=LMB"), AbilitySmokeIndex, AbilitySmokeHunterID);
+		AbilitySmokeActionDelay = 0.5f;
+		break;
+	case 2:
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_RMB, TEXT("RMB_PRESS"));
+		AbilitySmokeActionDelay = 1.5f;
+		break;
+	case 3:
+		ASC->InputTagReleased(BBGameplayTags::InputTag_RMB);
+		UE_LOG(LogBreachborne, Warning, TEXT("BB_ABILITY_SMOKE|RELEASE|index=%d hunter=%d input=RMB"), AbilitySmokeIndex, AbilitySmokeHunterID);
+		AbilitySmokeActionDelay = 0.75f;
+		break;
+	case 4:
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_Shift, TEXT("SHIFT"));
+		AbilitySmokeActionDelay = 1.0f;
+		break;
+	case 5:
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_Q, TEXT("Q_PRESS"));
+		AbilitySmokeActionDelay = 1.0f;
+		break;
+	case 6:
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_Q, TEXT("Q_REPRESS"));
+		AbilitySmokeActionDelay = 1.0f;
+		break;
+	case 7:
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_R, TEXT("R"));
+		AbilitySmokeActionDelay = 4.0f;
+		break;
+	default:
+		ASC->InputTagReleased(BBGameplayTags::InputTag_LMB);
+		ASC->InputTagReleased(BBGameplayTags::InputTag_RMB);
+		ASC->CancelAllAbilities();
+		bAbilitySmokeComplete = true;
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_ABILITY_SMOKE|COMPLETE|index=%d hunter=%d abilities=%d elapsed=%.2f"),
+			AbilitySmokeIndex, AbilitySmokeHunterID, ASC->GetActivatableAbilities().Num(), AbilitySmokeElapsed);
+		break;
+	}
+}
+
+bool ABreachbornePlayerController::ActivateAbilitySmokeInput(const FGameplayTag& InputTag, const TCHAR* ActionName)
+{
+	UBBAbilitySystemComponent* ASC = GetBBASC();
+	const bool bActivated = ASC && ASC->TryActivateAbilityByInputTag(InputTag);
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_ABILITY_SMOKE|ACTIVATE|index=%d hunter=%d action=%s tag=%s success=%d"),
+		AbilitySmokeIndex, AbilitySmokeHunterID, ActionName, *InputTag.ToString(), bActivated ? 1 : 0);
+	return bActivated;
+}
+
+void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int32 SmokeIndex)
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke")) || SmokeIndex < 1 || SmokeIndex > 2)
+	{
+		return;
+	}
+
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
+	ABreachbornePlayerState* PS = GetPlayerState<ABreachbornePlayerState>();
+	if (!Hunter || !PS || !PS->GetIsAlive())
+	{
+		return;
+	}
+
+	const float X = SmokeIndex == 1 ? -350.0f : 350.0f;
+	const FVector TraceStart(X, 0.0f, 5000.0f);
+	const FVector TraceEnd(X, 0.0f, -5000.0f);
+	FHitResult GroundHit;
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BBAbilitySmokeGround), false, Hunter);
+	const bool bGroundHit = GetWorld()->LineTraceSingleByChannel(
+		GroundHit, TraceStart, TraceEnd, ECC_Visibility, QueryParams);
+	const float GroundZ = bGroundHit ? GroundHit.ImpactPoint.Z + 110.0f : 200.0f;
+	const FVector TargetLocation(X, 0.0f, GroundZ);
+	Hunter->SetActorLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	if (UCharacterMovementComponent* Movement = Hunter->GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+	if (UBBHealthSet* HealthSet = PS->GetHealthSet())
+	{
+		HealthSet->InitMaxHealth(50000.0f);
+		HealthSet->InitHealth(50000.0f);
+		PS->UpdateHealthProxy();
+	}
+	Hunter->ForceNetUpdate();
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_ABILITY_SMOKE|SERVER_PREPARED|index=%d hunter=%d location=%s ground=%d"),
+		SmokeIndex, PS->GetHunterID(), *TargetLocation.ToCompactString(), bGroundHit ? 1 : 0);
 }
 
 void ABreachbornePlayerController::NetFlowDump()

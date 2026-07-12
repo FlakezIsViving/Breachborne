@@ -6,7 +6,9 @@ param(
 	[int]$ClientCount = 2,
 	[int]$ServerStartupSeconds = 5,
 	[int]$ConnectionSeconds = 20,
-	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedHandshake"
+	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedHandshake",
+	[switch]$AbilitySmoke,
+	[int[]]$SmokeHunterIDs = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,6 +36,8 @@ $HandshakeScript = Join-Path $PSScriptRoot "..\Networking\TestHeadlessDedicatedH
 	-OutputRoot $OutputRoot `
 	-ServerExePath $ServerExe.FullName `
 	-ClientExePath $ClientExe.FullName `
-	-Packaged
+	-Packaged `
+	-AbilitySmoke:$AbilitySmoke `
+	-SmokeHunterIDs $SmokeHunterIDs
 
 exit $LASTEXITCODE

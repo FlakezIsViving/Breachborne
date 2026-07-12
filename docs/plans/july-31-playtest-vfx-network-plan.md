@@ -79,8 +79,9 @@ Success means:
 
 ### Remaining risks
 
-- No automated multiplayer ability suite exists. Headless source and packaged handshakes
-  prove two-client joins, but they do not prove ability replication or visual readability.
+- An opt-in packaged multiplayer smoke now proves lobby flow, hunter selection/grants, initial
+  LMB/RMB/Shift/Q/R activations, held-input releases, Q recasts, and cleanup for IDs 1-6. It does
+  not prove damage/CC outcomes, visual replication/readability, or hitbox alignment.
 - The current packaged candidate is fresh and passes the automated verifier, but interactive
   combat, death, reconnect, second-machine, latency, and cleanup evidence remains outstanding.
 - Most new hunter and shared VFX source files are uncommitted. Create a named checkpoint
@@ -131,6 +132,8 @@ Success means:
   attachment state replicates so owner and observer chain visuals use the authoritative endpoint.
 - Replicated primitive bursts remain hidden until initialized state arrives, avoiding a transient
   white fallback sphere at world origin.
+- Native hunter definitions cover all six roster IDs, so a missing or unloadable optional
+  DataAsset cannot make Ghost or Eluna unselectable on dedicated/package test paths.
 
 ### GameplayCue content path task
 

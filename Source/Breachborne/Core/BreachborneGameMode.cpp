@@ -15,6 +15,18 @@
 #include "Breachborne/Abilities/BBCombatSet.h"
 #include "Breachborne/Abilities/BBMovementSet.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
+#include "Breachborne/Abilities/Hunters/Ghost/GA_Ghost_LMB.h"
+#include "Breachborne/Abilities/Hunters/Ghost/GA_Ghost_Passive.h"
+#include "Breachborne/Abilities/Hunters/Ghost/GA_Ghost_Q.h"
+#include "Breachborne/Abilities/Hunters/Ghost/GA_Ghost_R.h"
+#include "Breachborne/Abilities/Hunters/Ghost/GA_Ghost_RMB.h"
+#include "Breachborne/Abilities/Hunters/Ghost/GA_Ghost_Shift.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_LMB.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_Passive.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_Q.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_R.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_RMB.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_Shift.h"
 #include "Breachborne/Abilities/Hunters/Kingpin/GA_Kingpin_LMB.h"
 #include "Breachborne/Abilities/Hunters/Kingpin/GA_Kingpin_Passive.h"
 #include "Breachborne/Abilities/Hunters/Kingpin/GA_Kingpin_Q.h"
@@ -47,6 +59,8 @@
 #include "Breachborne/Breachborne.h"
 #include "Engine/Blueprint.h"
 #include "EngineUtils.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
 namespace
@@ -494,7 +508,25 @@ void ABreachborneGameMode::RequestSetStormShiftPreset(APlayerController* PlayerC
 void ABreachborneGameMode::RequestStartLobbyMatch(APlayerController* PlayerController)
 {
 	FString Reason;
-	if (!BBGameState || !IsLobbyOwner(PlayerController) || BBGameState->GetMatchPhase() != EMatchPhase::WaitingForPlayers || !CanStartLobbyMatch(Reason))
+	const bool bAbilitySmoke = FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"));
+	if (!BBGameState)
+	{
+		Reason = TEXT("missing_gamestate");
+	}
+	else if (BBGameState->GetMatchPhase() != EMatchPhase::WaitingForPlayers)
+	{
+		Reason = TEXT("wrong_phase");
+	}
+	else if (!bAbilitySmoke && !IsLobbyOwner(PlayerController))
+	{
+		Reason = TEXT("not_lobby_owner");
+	}
+	else if (!CanStartLobbyMatch(Reason))
+	{
+		// CanStartLobbyMatch supplies the rejection reason.
+	}
+
+	if (!Reason.IsEmpty() && Reason != TEXT("ok"))
 	{
 		UE_LOG(LogBreachborne, Warning, TEXT("BB_LOBBY|SERVER|StartRejected pc=%s reason=%s"),
 			*GetNameSafe(PlayerController),
@@ -827,6 +859,49 @@ const UBBHunterDefinition* ABreachborneGameMode::ResolveHunterDefinition(int32 H
 
 void ABreachborneGameMode::BuildNativeHunterDefinitions()
 {
+	if (!NativeHunterDefinitions.Contains(1))
+	{
+		UBBHunterDefinition* GhostDef = NewObject<UBBHunterDefinition>(this, TEXT("Native_DA_Ghost"));
+		GhostDef->HunterName = FText::FromString(TEXT("Ghost"));
+		GhostDef->Role = EHunterRole::Fighter;
+		GhostDef->BaseHealth = 500.0f;
+		GhostDef->BaseAttackPower = 55.0f;
+		GhostDef->BaseAbilityPower = 45.0f;
+		GhostDef->BaseMoveSpeed = 600.0f;
+		GhostDef->AbilitiesToGrant = {
+			UGA_Ghost_LMB::StaticClass(),
+			UGA_Ghost_RMB::StaticClass(),
+			UGA_Ghost_Shift::StaticClass(),
+			UGA_Ghost_Q::StaticClass(),
+			UGA_Ghost_R::StaticClass(),
+			UGA_Ghost_Passive::StaticClass()
+		};
+
+		NativeHunterDefinitions.Add(1, GhostDef);
+	}
+
+	if (!NativeHunterDefinitions.Contains(3))
+	{
+		UBBHunterDefinition* ElunaDef = NewObject<UBBHunterDefinition>(this, TEXT("Native_DA_Eluna"));
+		ElunaDef->HunterName = FText::FromString(TEXT("Eluna"));
+		ElunaDef->Role = EHunterRole::Protector;
+		ElunaDef->BaseHealth = 525.0f;
+		ElunaDef->BaseAttackPower = 45.0f;
+		ElunaDef->BaseAbilityPower = 65.0f;
+		ElunaDef->BaseMoveSpeed = 590.0f;
+		ElunaDef->AbilitiesToGrant = {
+			UGA_Eluna_LMB::StaticClass(),
+			UGA_Eluna_RMB::StaticClass(),
+			UGA_Eluna_AerialDash::StaticClass(),
+			UGA_Eluna_GroundDash::StaticClass(),
+			UGA_Eluna_Q::StaticClass(),
+			UGA_Eluna_R::StaticClass(),
+			UGA_Eluna_Passive::StaticClass()
+		};
+
+		NativeHunterDefinitions.Add(3, ElunaDef);
+	}
+
 	if (!NativeHunterDefinitions.Contains(2))
 	{
 		UBBHunterDefinition* KingpinDef = NewObject<UBBHunterDefinition>(this, TEXT("Native_DA_Kingpin"));

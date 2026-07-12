@@ -8,10 +8,16 @@ param(
 	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\DedicatedHandshake",
 	[string]$ServerExePath = "",
 	[string]$ClientExePath = "",
-	[switch]$Packaged
+	[switch]$Packaged,
+	[switch]$AbilitySmoke,
+	[int[]]$SmokeHunterIDs = @()
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($AbilitySmoke -and $SmokeHunterIDs.Count -ne $ClientCount) {
+	throw "AbilitySmoke requires one SmokeHunterIDs entry per client."
+}
 
 $ResolvedProject = (Resolve-Path -LiteralPath $ProjectPath).ProviderPath
 $ProjectRoot = Split-Path -Parent $ResolvedProject
@@ -56,6 +62,9 @@ try {
 	if (-not $Packaged) {
 		$ServerArgs = @("`"$ResolvedProject`"") + $ServerArgs
 	}
+	if ($AbilitySmoke) {
+		$ServerArgs += "-BBAbilitySmoke"
+	}
 	$Server = Start-Process -FilePath $ServerExe -ArgumentList $ServerArgs -WindowStyle Hidden `
 		-RedirectStandardOutput (Join-Path $RunDirectory "Server.log") `
 		-RedirectStandardError (Join-Path $RunDirectory "Server.err") `
@@ -80,6 +89,13 @@ try {
 		)
 		if (-not $Packaged) {
 			$ClientArgs = @("`"$ResolvedProject`"") + $ClientArgs
+		}
+		if ($AbilitySmoke) {
+			$ClientArgs += @(
+				"-BBAbilitySmoke",
+				"-BBAbilitySmokeIndex=$Index",
+				"-BBAbilitySmokeHunter=$($SmokeHunterIDs[$Index - 1])"
+			)
 		}
 		$Client = Start-Process -FilePath $ClientExe -ArgumentList $ClientArgs -WindowStyle Hidden `
 			-RedirectStandardOutput (Join-Path $RunDirectory "Client$Index.log") `

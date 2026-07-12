@@ -195,3 +195,12 @@ This runs three sequential two-client matches, repositions opponents after the n
 lifecycle, fires each hunter at close range, and requires server-observed health loss. Evidence is
 written under `Saved\Logs\PackagedHitSmoke`. Other abilities and visual hitbox agreement remain in
 the manual matrix.
+
+Verify that the packaged dedicated server accepts four simultaneous client transports:
+
+```powershell
+.\Scripts\Playtest\TestPackagedFourClientHandshake.ps1
+```
+
+This requires four welcomes/joins and a clean five-log review under
+`Saved\Logs\PackagedFourClientHandshake`. It does not prove 2v2 lobby assignment or combat.

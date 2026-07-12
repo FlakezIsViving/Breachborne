@@ -6,6 +6,7 @@ param(
 	[string]$ReconnectRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedReconnect",
 	[string]$DeathWispRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedDeathWisp",
 	[string]$HitSmokeRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedHitSmoke",
+	[string]$FourClientRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedFourClientHandshake",
 	[string]$UnrealPak = "C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealPak.exe",
 	[int]$ExpectedHudsonCueCount = 17
 )
@@ -25,6 +26,7 @@ $ResolvedNetworkImpairmentRoot = $ExecutionContext.SessionState.Path.GetUnresolv
 $ResolvedReconnectRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ReconnectRoot)
 $ResolvedDeathWispRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($DeathWispRoot)
 $ResolvedHitSmokeRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($HitSmokeRoot)
+$ResolvedFourClientRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FourClientRoot)
 $ClientExe = Join-Path $ResolvedBuildsRoot "WindowsClient\Breachborne\Binaries\Win64\Breachborne.exe"
 $ServerExe = Join-Path $ResolvedBuildsRoot "WindowsServer\Breachborne\Binaries\Win64\BreachborneServer.exe"
 $ClientUtoc = Join-Path $ResolvedBuildsRoot "WindowsClient\Breachborne\Content\Paks\Breachborne-Windows.utoc"
@@ -42,6 +44,7 @@ Require-Path $ResolvedNetworkImpairmentRoot "packaged network-impairment logs ro
 Require-Path $ResolvedReconnectRoot "packaged reconnect logs root"
 Require-Path $ResolvedDeathWispRoot "packaged death/wisp logs root"
 Require-Path $ResolvedHitSmokeRoot "packaged LMB hit-smoke logs root"
+Require-Path $ResolvedFourClientRoot "packaged four-client handshake logs root"
 
 $BuildCompletedAt = (Get-Item -LiteralPath $BuildSummary).LastWriteTime
 $ProjectRoot = Split-Path -Parent $PSScriptRoot | Split-Path -Parent
@@ -219,6 +222,31 @@ foreach ($Pair in @("1, 2", "3, 4", "5, 6")) {
 	$HitEvidence += $MatchingRun.FullName
 }
 
+$LatestFourClient = Get-ChildItem -LiteralPath $ResolvedFourClientRoot -Directory |
+	Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "FourClientSummary.txt") } |
+	Sort-Object LastWriteTime -Descending |
+	Select-Object -First 1
+if (-not $LatestFourClient) {
+	throw "No packaged four-client handshake evidence found under $ResolvedFourClientRoot."
+}
+$FourClientSummaryPath = Join-Path $LatestFourClient.FullName "FourClientSummary.txt"
+$FourClientReviewPath = Join-Path $LatestFourClient.FullName "ReviewSummary.txt"
+$FourClientText = Get-Content -LiteralPath $FourClientSummaryPath -Raw
+Require-Path $FourClientReviewPath "four-client handshake log review"
+$FourClientReviewText = Get-Content -LiteralPath $FourClientReviewPath -Raw
+if ($FourClientText -notmatch 'four-client handshake:\s+PASS' -or
+	$FourClientText -notmatch 'Successful joins:\s+4/4') {
+	throw "Latest packaged four-client handshake did not pass 4/4: $FourClientSummaryPath"
+}
+if ($FourClientReviewText -notmatch 'log review:\s+PASS' -or
+	$FourClientReviewText -notmatch 'Critical findings:\s+0' -or
+	$FourClientReviewText -notmatch 'GameplayCue overflow findings:\s+0') {
+	throw "Four-client handshake log review failed: $FourClientReviewPath"
+}
+if ((Get-Item -LiteralPath $FourClientSummaryPath).LastWriteTime -lt $BuildCompletedAt) {
+	throw "Four-client handshake evidence predates the current package."
+}
+
 $LatestHandshake = Get-ChildItem -LiteralPath $ResolvedLogsRoot -Directory |
 	Sort-Object LastWriteTime -Descending |
 	Select-Object -First 1
@@ -288,6 +316,8 @@ $Summary = @(
 	"Death/wisp evidence: $($LatestDeathWisp.FullName)",
 	"Authoritative LMB hits: PASS (6/6 hunters, 3 matches)",
 	"LMB hit evidence: $($HitEvidence -join '; ')",
+	"Four-client transport handshake: PASS (4/4 joins)",
+	"Four-client evidence: $($LatestFourClient.FullName)",
 	"Critical log findings: 0"
 )
 $Summary | Set-Content -LiteralPath $VerificationSummary -Encoding UTF8

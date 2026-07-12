@@ -85,9 +85,10 @@ Success means:
   separate packaged gate proves authoritative LMB health loss for all six hunters.
 - The current packaged candidate is fresh and passes normal plus 100 ms/2% loss activation,
   six-hunter LMB damage, and lethal GAS damage through healed wisp revive/re-possession gates.
-  Interactive non-LMB damage/CC, persistent-ability death cleanup, second-machine, and visual
-  evidence remains outstanding. A reconnect attempt reaches the server, but the replacement is a
-  spectator instead of regaining the disconnected hunter.
+  Four-client transport also passes 4/4. Interactive 2v2 team/combat, non-LMB damage/CC,
+  persistent-ability death cleanup, second-machine, and visual evidence remains outstanding. A
+  reconnect attempt reaches the server, but the replacement is a spectator instead of regaining
+  the disconnected hunter.
 - The green hunter/shared-VFX baseline and full-roster smoke harness have named checkpoints; keep
   subsequent green network batches checkpointed before broad manual testing.
 - The eight reusable Niagara master assets remain editor work. Compiled primitive fallbacks

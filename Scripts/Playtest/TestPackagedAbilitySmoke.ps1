@@ -3,7 +3,9 @@ param(
 	[int]$HunterB = 2,
 	[int]$Port = 7801,
 	[int]$ConnectionSeconds = 38,
-	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedAbilitySmoke"
+	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedAbilitySmoke",
+	[string[]]$ServerExtraArgs = @(),
+	[string[]]$ClientExtraArgs = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +24,9 @@ $HandshakeScript = Join-Path $PSScriptRoot "TestPackagedHeadlessHandshake.ps1"
 	-ConnectionSeconds $ConnectionSeconds `
 	-OutputRoot $OutputRoot `
 	-AbilitySmoke `
-	-SmokeHunterIDs @($HunterA, $HunterB)
+	-SmokeHunterIDs @($HunterA, $HunterB) `
+	-ServerExtraArgs $ServerExtraArgs `
+	-ClientExtraArgs $ClientExtraArgs
 if ($LASTEXITCODE -ne 0) {
 	exit $LASTEXITCODE
 }
@@ -72,6 +76,8 @@ $Summary = @(
 	"Timestamp: $(Get-Date -Format o)",
 	"Hunters: $HunterA, $HunterB",
 	"Port: $Port",
+	"Server extra args: $($ServerExtraArgs -join ' ')",
+	"Client extra args: $($ClientExtraArgs -join ' ')",
 	"Server-prepared players: $PreparedCount",
 	"Evidence: $($RunDirectory.FullName)"
 )

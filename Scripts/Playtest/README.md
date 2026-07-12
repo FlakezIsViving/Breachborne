@@ -152,3 +152,24 @@ opponents near each other, grants a large test health pool, records every activa
 crashes, failed grants, failed initial activations, missing releases, or incomplete cleanup.
 Evidence is written under `Saved\Logs\PackagedAbilitySmoke`. It does not judge visual readability,
 hitbox alignment, or effect quality; those remain in the manual acceptance matrix.
+
+Run the same six-hunter activation lifecycle under the playtest packet impairment settings:
+
+```powershell
+.\Scripts\Playtest\TestPackagedNetworkImpairment.ps1
+```
+
+This applies `Net PktLag=100` and `Net PktLoss=2` to the server and both clients. The gate requires
+all three roster matches to pass and every process log to confirm both settings. Evidence is
+written under `Saved\Logs\PackagedNetworkImpairment`. This remains an activation test; the manual
+persistent-zone overlap and visual-readability checks are separate.
+
+Exercise one disconnect/reconnect attempt after a packaged two-player match reaches gameplay:
+
+```powershell
+.\Scripts\Playtest\TestPackagedReconnectAttempt.ps1
+```
+
+The current contract distinguishes a successful transport reconnect from restoration to the
+disconnected hunter. A replacement connection currently enters as a spectator; the script records
+that limitation explicitly under `Saved\Logs\PackagedReconnect` instead of reporting a full pass.

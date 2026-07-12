@@ -82,10 +82,12 @@ Success means:
 - An opt-in packaged multiplayer smoke now proves lobby flow, hunter selection/grants, initial
   LMB/RMB/Shift/Q/R activations, held-input releases, Q recasts, and cleanup for IDs 1-6. It does
   not prove damage/CC outcomes, visual replication/readability, or hitbox alignment.
-- The current packaged candidate is fresh and passes the automated verifier, but interactive
-  combat, death, reconnect, second-machine, latency, and cleanup evidence remains outstanding.
-- Most new hunter and shared VFX source files are uncommitted. Create a named checkpoint
-  before broad manual testing so the green engineering baseline is recoverable.
+- The current packaged candidate is fresh and passes normal plus 100 ms/2% loss automated
+  activation gates. Interactive combat, death, second-machine, visual, and cleanup evidence remains
+  outstanding. A reconnect attempt reaches the server, but the replacement is a spectator instead
+  of regaining the disconnected hunter.
+- The green hunter/shared-VFX baseline and full-roster smoke harness have named checkpoints; keep
+  subsequent green network batches checkpointed before broad manual testing.
 - The eight reusable Niagara master assets remain editor work. Compiled primitive fallbacks
   cover the roster and are the accepted deadline fallback.
 - A UDP Messaging plugin socket bind error exists for `25.18.80.222`. GameNetDriver still
@@ -466,6 +468,16 @@ Then validate the packaged artifacts themselves:
 ```
 
 ### Network emulation
+
+Automated packaged activation gate:
+
+```powershell
+.\Scripts\Playtest\TestPackagedNetworkImpairment.ps1
+```
+
+Current evidence passes hunters 1-6 across three matches with server and both clients confirming
+the configured values in their logs. This does not replace manual hit, damage, persistent-zone,
+cleanup, or visual-agreement testing.
 
 In each relevant client console:
 

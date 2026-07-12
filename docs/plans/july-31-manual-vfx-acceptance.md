@@ -32,6 +32,10 @@ Automated precondition: `.\Scripts\Playtest\TestPackagedFullRosterAbilitySmoke.p
 before these sessions. It proves grants and input lifecycle only; do not use it to check off any
 visual, hit, damage, CC, movement-agreement, or readability item below.
 
+Automated impairment precondition: `.\Scripts\Playtest\TestPackagedNetworkImpairment.ps1` must
+also pass. It proves the same activation lifecycle survives confirmed 100 ms lag and 2% loss; it
+does not replace the manual sustained-fire, persistent-zone, cleanup, or readability checks.
+
 1. Ghost versus Eluna: complete both six-item hunter sections.
 2. Kingpin versus Hudson: complete both six-item hunter sections, including Hudson's ten-second
    sustained-fire check.

@@ -1,6 +1,9 @@
 param(
 	[int]$BasePort = 7801,
-	[int]$ConnectionSeconds = 38
+	[int]$ConnectionSeconds = 38,
+	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedAbilitySmoke",
+	[string[]]$ServerExtraArgs = @(),
+	[string[]]$ClientExtraArgs = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,7 +18,10 @@ for ($Index = 0; $Index -lt $Pairs.Count; $Index++) {
 		-HunterA $Pair[0] `
 		-HunterB $Pair[1] `
 		-Port $Port `
-		-ConnectionSeconds $ConnectionSeconds
+		-ConnectionSeconds $ConnectionSeconds `
+		-OutputRoot $OutputRoot `
+		-ServerExtraArgs $ServerExtraArgs `
+		-ClientExtraArgs $ClientExtraArgs
 	if ($LASTEXITCODE -ne 0) {
 		$Failures += "Hunters $($Pair[0])/$($Pair[1]) failed on UDP $Port."
 	}

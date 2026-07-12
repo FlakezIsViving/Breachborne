@@ -10,7 +10,9 @@ param(
 	[string]$ClientExePath = "",
 	[switch]$Packaged,
 	[switch]$AbilitySmoke,
-	[int[]]$SmokeHunterIDs = @()
+	[int[]]$SmokeHunterIDs = @(),
+	[string[]]$ServerExtraArgs = @(),
+	[string[]]$ClientExtraArgs = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -65,6 +67,7 @@ try {
 	if ($AbilitySmoke) {
 		$ServerArgs += "-BBAbilitySmoke"
 	}
+	$ServerArgs += $ServerExtraArgs
 	$Server = Start-Process -FilePath $ServerExe -ArgumentList $ServerArgs -WindowStyle Hidden `
 		-RedirectStandardOutput (Join-Path $RunDirectory "Server.log") `
 		-RedirectStandardError (Join-Path $RunDirectory "Server.err") `
@@ -97,6 +100,7 @@ try {
 				"-BBAbilitySmokeHunter=$($SmokeHunterIDs[$Index - 1])"
 			)
 		}
+		$ClientArgs += $ClientExtraArgs
 		$Client = Start-Process -FilePath $ClientExe -ArgumentList $ClientArgs -WindowStyle Hidden `
 			-RedirectStandardOutput (Join-Path $RunDirectory "Client$Index.log") `
 			-RedirectStandardError (Join-Path $RunDirectory "Client$Index.err") `
@@ -153,6 +157,8 @@ $Summary = @(
 	"Expected clients: $ClientCount",
 	"Successful joins: $JoinCount",
 	"Mode: $(if ($Packaged) { 'Packaged' } else { 'Local binaries' })",
+	"Server extra args: $($ServerExtraArgs -join ' ')",
+	"Client extra args: $($ClientExtraArgs -join ' ')",
 	"Server executable: $ServerExe",
 	"Client executable: $ClientExe",
 	"Evidence: $RunDirectory"

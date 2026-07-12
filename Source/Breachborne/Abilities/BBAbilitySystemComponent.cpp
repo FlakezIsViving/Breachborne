@@ -91,6 +91,9 @@ void UBBAbilitySystemComponent::InputTagReleased(const FGameplayTag& InputTag)
 			{
 				if (Spec.DynamicAbilityTags.HasTagExact(InputTag) || BBAbility->GetAbilityInputTag().MatchesTagExact(InputTag))
 				{
+					AbilitySpecInputReleased(const_cast<FGameplayAbilitySpec&>(Spec));
+					InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+
 					// Notify all active instances of this ability that input was released
 					TArray<UGameplayAbility*> Instances = Spec.GetAbilityInstances();
 					for (UGameplayAbility* Instance : Instances)

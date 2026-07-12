@@ -8,6 +8,9 @@
 class ABBStormManager;
 class ABreachborneGameState;
 class ABreachbornePlayerState;
+class ABBWispPawn;
+class ABBDeathboxActor;
+class AHunterCharacter;
 class UBBHunterDefinition;
 class UAbilitySystemComponent;
 
@@ -69,6 +72,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Dev", meta = (EditCondition = "bDevAutoRespawn"))
 	float DevRespawnDelay = 3.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Wisp")
+	TSubclassOf<ABBWispPawn> WispPawnClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Wisp")
+	TSubclassOf<ABBDeathboxActor> DeathboxClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Wisp", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+	float WispReviveHealthFraction = 0.5f;
+
 private:
 	/** Tracks how many players have been assigned so far for round-robin team assignment */
 	int32 NextPlayerIndex = 0;
@@ -113,12 +125,32 @@ private:
 	/** Grant all abilities from a HunterDefinition to a player's ASC */
 	void GrantHunterAbilities(APlayerController* PlayerController, const UBBHunterDefinition* HunterDef);
 
-	/** Called when any hunter's health reaches 0. Disables victim pawn, tracks kills, triggers dev respawn. */
+	/** Called when any hunter's health reaches 0. Tracks the kill and enters wisp/deathbox or dev-respawn flow. */
 	UFUNCTION()
 	void OnHunterKilled(UAbilitySystemComponent* VictimASC, UAbilitySystemComponent* KillerASC);
 
 	/** Dev respawn: reset health, re-enable pawn, teleport to spawn point */
 	void DevRespawnHunter(UAbilitySystemComponent* VictimASC);
+
+	bool EnterWispState(ABreachbornePlayerState* VictimPS, AHunterCharacter* VictimHunter,
+		ABreachbornePlayerState* KnockerPS);
+	bool ReviveDownedHunter(ABreachbornePlayerState* VictimPS, const FVector& ReviveLocation,
+		float HealthFraction);
+	ABBDeathboxActor* SpawnDeathbox(ABreachbornePlayerState* VictimPS, const FVector& Location);
+
+	UFUNCTION()
+	void HandleWispRevive(ABBWispPawn* Wisp);
+
+	UFUNCTION()
+	void HandleWispDied(ABBWispPawn* Wisp, bool bWasExecuted);
+
+	UFUNCTION()
+	void HandleWispExecuted(ABBWispPawn* Wisp, AHunterCharacter* Executor);
+
+	UFUNCTION()
+	void HandleDeathboxReviveComplete(ABBDeathboxActor* Deathbox, AHunterCharacter* Reviver);
+
+	TMap<TWeakObjectPtr<ABreachbornePlayerState>, TWeakObjectPtr<AHunterCharacter>> DownedHunters;
 
 public:
 	void HandleTrainDeath(class AHunterCharacter* Hunter, const FVector& Location);

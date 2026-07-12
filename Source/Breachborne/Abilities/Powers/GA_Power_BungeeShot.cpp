@@ -13,6 +13,7 @@
 UGA_Power_BungeeShot::UGA_Power_BungeeShot()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, MaxRange);
 }
 
 void UGA_Power_BungeeShot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

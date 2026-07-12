@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystemComponent.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Breachborne/Characters/HunterCharacter.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBHealthSet.h"
@@ -26,6 +27,12 @@ ABBDeathboxActor::ABBDeathboxActor()
 	DeathboxMesh->SetupAttachment(InteractSphere);
 	DeathboxMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DeathboxMesh->SetIsReplicated(true);
+	DeathboxMesh->SetRelativeScale3D(FVector(0.65f, 0.45f, 0.35f));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube"));
+	if (CubeMesh.Succeeded())
+	{
+		DeathboxMesh->SetStaticMesh(CubeMesh.Object);
+	}
 }
 
 void ABBDeathboxActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

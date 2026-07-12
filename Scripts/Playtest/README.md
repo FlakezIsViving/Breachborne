@@ -46,6 +46,24 @@ Expected flow:
 6. Hunter select appears.
 7. Players spawn/drop and can move.
 
+The launcher starts the dedicated server hidden, opens clients in a side-by-side grid, records
+the exact process IDs, and writes isolated logs under
+`Saved\Logs\InteractivePlaytest\<timestamp>`. Stop only that recorded session and run the
+automatic log review with:
+
+```powershell
+.\Scripts\Playtest\StopPackagedLocalSmoke.ps1
+```
+
+To review a still-running session without stopping it:
+
+```powershell
+.\Scripts\Playtest\ReviewInteractivePlaytest.ps1
+```
+
+Use `docs\plans\july-31-manual-vfx-acceptance.md` during the session. A clean automated log
+review does not replace the owner/observer visual checks.
+
 Useful log filters:
 
 - `BB_BUILD`
@@ -99,3 +117,22 @@ For bug reports, ask testers to send:
 ## 6. Firewall Note
 
 Unreal direct IP uses UDP `7777` by default. Windows may prompt on first launch. Allow private network for LAN tests and public network for VPS/remote tests.
+## Headless Packaged Handshake
+
+After packaging both targets, validate that two packaged clients can join the packaged dedicated
+server without opening windows:
+
+```powershell
+.\Scripts\Playtest\TestPackagedHeadlessHandshake.ps1 -ClientCount 2
+```
+
+The script launches the inner packaged binaries directly, captures separate logs, validates the
+server welcomes and joins, and terminates only the processes it started. Evidence is written under
+`Saved/Logs/PackagedHandshake/<timestamp>`.
+
+After the handshake, verify that the package contains the required executables, `TestMap`, all
+current Hudson cue packages, a 2/2 handshake, and no critical network/runtime log errors:
+
+```powershell
+.\Scripts\Playtest\VerifyPlaytestCandidate.ps1
+```

@@ -20,6 +20,8 @@ void ABreachborneGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(ABreachborneGameState, AliveTeamCount);
 	DOREPLIFETIME(ABreachborneGameState, PhaseTimeRemaining);
 	DOREPLIFETIME(ABreachborneGameState, WinningTeamID);
+	DOREPLIFETIME(ABreachborneGameState, DayNightPhase);
+	DOREPLIFETIME(ABreachborneGameState, DayNightCycle);
 	DOREPLIFETIME(ABreachborneGameState, Teams);
 	DOREPLIFETIME(ABreachborneGameState, LobbyTeams);
 	DOREPLIFETIME(ABreachborneGameState, SpectatorSlots);
@@ -97,6 +99,24 @@ void ABreachborneGameState::ResetMatchClock()
 		PhaseTimeRemaining = 0.0f;
 		WinningTeamID = -1;
 	}
+}
+
+void ABreachborneGameState::AdvanceDayNightPhase()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	DayNightPhase = DayNightPhase == EBBDayNightPhase::Day
+		? EBBDayNightPhase::Night
+		: EBBDayNightPhase::Day;
+	++DayNightCycle;
+	ForceNetUpdate();
+
+	UE_LOG(LogBreachborne, Log, TEXT("DayNight: phase=%s cycle=%d"),
+		DayNightPhase == EBBDayNightPhase::Night ? TEXT("Night") : TEXT("Day"),
+		DayNightCycle);
 }
 
 void ABreachborneGameState::InitLobby(const FBBLobbySettings& NewSettings)

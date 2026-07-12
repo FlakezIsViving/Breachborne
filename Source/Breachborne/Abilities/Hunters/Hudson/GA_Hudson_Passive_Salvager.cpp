@@ -4,6 +4,7 @@
 #include "Breachborne/Abilities/BBHealthSet.h"
 #include "Breachborne/Characters/HunterCharacter.h"
 #include "Breachborne/Combat/BBHealEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Items/BBInventoryManager.h"
 
@@ -85,8 +86,17 @@ void UGA_Hudson_Passive_Salvager::OnKillEvent(FGameplayTag Tag, const FGameplayE
 	{
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_Passive, EBBAbilityAnimationPhase::PassivePulse);
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_Passive_Pulse, Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 120.0f));
-		Hunter->Multicast_DrawDebugSphere(Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 120.0f), 70.0f, FColor::Green, 0.5f);
-		Hunter->Multicast_DrawDebugCircle(Hunter->GetActorLocation(), 155.0f, FColor::Blue, 0.5f, 5.0f);
+		const FVector PulseLocation = Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 80.0f);
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), PulseLocation, FRotator::ZeroRotator, Params))
+		{
+			Pulse->InitBurst(PulseLocation, 155.0f, 0.35f,
+				FLinearColor(1.0f, 0.82f, 0.4f, 1.0f));
+		}
 	}
 }
 
@@ -122,7 +132,16 @@ void UGA_Hudson_Passive_Salvager::ArmorRegenTick()
 		{
 			PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_Passive, EBBAbilityAnimationPhase::PassivePulse);
 			ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_Passive_Pulse, Hunter->GetActorLocation());
-			Hunter->Multicast_DrawDebugCircle(Hunter->GetActorLocation(), 135.0f, FColor::Blue, 0.35f, 3.0f);
+			FActorSpawnParameters Params;
+			Params.Owner = Hunter;
+			Params.Instigator = Hunter;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+				ABBPrimitiveBurstActor::StaticClass(), Hunter->GetActorLocation(), FRotator::ZeroRotator, Params))
+			{
+				Pulse->InitBurst(Hunter->GetActorLocation(), 135.0f, 0.24f,
+					FLinearColor(0.31f, 0.64f, 0.78f, 1.0f), true);
+			}
 		}
 	}
 }

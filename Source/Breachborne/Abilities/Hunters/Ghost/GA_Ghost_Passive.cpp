@@ -1,6 +1,7 @@
 #include "GA_Ghost_Passive.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Characters/HunterCharacter.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Breachborne/Breachborne.h"
@@ -14,6 +15,7 @@ UGA_Ghost_Passive::UGA_Ghost_Passive()
 	FGameplayTagContainer AssetTags;
 	AssetTags.AddTag(BBGameplayTags::Ability_Hunter_Ghost_Passive);
 	SetAssetTags(AssetTags);
+	PulseVisualClass = ABBPrimitiveBurstActor::StaticClass();
 }
 
 void UGA_Ghost_Passive::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -75,6 +77,19 @@ void UGA_Ghost_Passive::OnKillEvent(FGameplayEventData Payload)
 	{
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Passive, EBBAbilityAnimationPhase::PassivePulse);
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Passive_Pulse, Hunter->GetActorLocation(), FVector::UpVector);
+		if (Hunter->HasAuthority() && PulseVisualClass)
+		{
+			const FVector PulseLocation = Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 90.0f);
+			FActorSpawnParameters VisualParams;
+			VisualParams.Owner = Hunter;
+			VisualParams.Instigator = Hunter;
+			VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+				PulseVisualClass, PulseLocation, FRotator::ZeroRotator, VisualParams))
+			{
+				Pulse->InitBurst(PulseLocation, 85.0f, 0.32f, FLinearColor(0.90f, 1.0f, 1.0f, 1.0f));
+			}
+		}
 	}
 
 	// Re-register to listen for the next kill (WaitGameplayEvent is one-shot)

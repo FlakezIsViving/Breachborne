@@ -11,9 +11,22 @@
 #include "Breachborne/Combat/BBTargetDummy.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 
+namespace
+{
+	FBBLocalGameplayCue MakeHudsonCue(const FGameplayTag& CueTag, const FVector& Location, const FVector& Normal)
+	{
+		FBBLocalGameplayCue Cue;
+		Cue.CueTag = CueTag;
+		Cue.Location = Location;
+		Cue.Normal = Normal.GetSafeNormal();
+		return Cue;
+	}
+}
+
 UGA_Hudson_LMB_Minigun::UGA_Hudson_LMB_Minigun()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_LMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, SpunUpRange);
 	bActivateOnInputHeld = true;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
@@ -105,16 +118,24 @@ void UGA_Hudson_LMB_Minigun::FireShot()
 
 	const FVector Start = Hunter->GetActorLocation() + AimDir * 70.0f + FVector(0.0f, 0.0f, 45.0f);
 	const FVector End = Start + AimDir * Range;
-	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Fire, Start, AimDir);
+	if (!Hunter->HasAuthority())
+	{
+		// Preserve immediate owner feedback. The server batch skips this first cue on the remote owner.
+		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Fire, Start, AimDir);
+		Hunter->PlayLocalPrimitiveCueFallback(MakeHudsonCue(
+			BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Fire, Start, AimDir));
+	}
+	TArray<FBBLocalGameplayCue> CueBatch;
+	if (Hunter->HasAuthority())
+	{
+		CueBatch.Add(MakeHudsonCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Fire, Start, AimDir));
+	}
 
 	TArray<FHitResult> Hits;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(HudsonMinigun), false, Hunter);
 	FCollisionObjectQueryParams ObjParams;
 	ObjParams.AddObjectTypesToQuery(ECC_Pawn);
 	Hunter->GetWorld()->SweepMultiByObjectType(Hits, Start, End, FQuat::Identity, ObjParams, FCollisionShape::MakeSphere(22.0f), Params);
-
-	const FColor TraceColor = bSpunUp ? FColor::Red : FColor::Yellow;
-	Hunter->Multicast_DrawDebugLine(Start, End, TraceColor, 0.12f, bSpunUp ? 5.0f : 2.5f);
 
 	if (Hunter->HasAuthority())
 	{
@@ -138,9 +159,7 @@ void UGA_Hudson_LMB_Minigun::FireShot()
 			ApplyDamage(SourceASC, TargetASC, BaseDamage);
 			DamagedActors.Add(HitActor);
 			++ValidHits;
-			ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Impact, Hit.ImpactPoint, Hit.ImpactNormal);
-			Hunter->Multicast_DrawDebugSphere(Hit.ImpactPoint, 18.0f, TraceColor, 0.18f);
-
+			CueBatch.Add(MakeHudsonCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Impact, Hit.ImpactPoint, Hit.ImpactNormal));
 			if (!bSpunUp)
 			{
 				break;
@@ -152,10 +171,12 @@ void UGA_Hudson_LMB_Minigun::FireShot()
 			if (const UBBHealthSet* HealthSet = GetBBPlayerState() ? GetBBPlayerState()->GetHealthSet() : nullptr)
 			{
 				ApplySelfHeal(SourceASC, HealthSet->GetMaxHealth() * SpunUpHealMaxHealthFraction * ValidHits);
-				ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Heal, Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 115.0f));
-				Hunter->Multicast_DrawDebugSphere(Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 115.0f), 34.0f, FColor::Green, 0.22f);
+				CueBatch.Add(MakeHudsonCue(BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Heal,
+					Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 115.0f), FVector::UpVector));
 			}
 		}
+
+		Hunter->Multicast_InvokeLocalGameplayCueBatch(CueBatch, true);
 	}
 
 	if (IsActive())

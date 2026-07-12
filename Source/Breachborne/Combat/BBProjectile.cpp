@@ -8,6 +8,8 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBTargetDummy.h"
 #include "Breachborne/Combat/BBGlideBot.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Breachborne.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
@@ -40,6 +42,7 @@ ABBProjectile::ABBProjectile()
 	{
 		ProjectileMesh->SetStaticMesh(SphereMesh.Object);
 	}
+	BBPrimitiveVisuals::ApplyColor(ProjectileMesh, FLinearColor(0.13f, 0.90f, 0.72f, 1.0f));
 
 	// --- Projectile movement ---
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
@@ -164,6 +167,11 @@ void ABBProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AAc
 			DamageEffectClass ? TEXT("valid") : TEXT("NULL"));
 	}
 
+	const FVector ImpactLocation = SweepResult.ImpactPoint.IsNearlyZero()
+		? GetActorLocation()
+		: FVector(SweepResult.ImpactPoint);
+	ExecuteImpactFeedback(ImpactLocation, SweepResult.ImpactNormal);
+
 	if (!bPiercing)
 	{
 		Destroy();
@@ -176,6 +184,8 @@ void ABBProjectile::OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherA
 	if (HasAuthority())
 	{
 		UE_LOG(LogBreachborne, Verbose, TEXT("BBProjectile: Hit wall, destroying"));
+		const FVector ImpactLocation = Hit.ImpactPoint.IsNearlyZero() ? GetActorLocation() : FVector(Hit.ImpactPoint);
+		ExecuteImpactFeedback(ImpactLocation, Hit.ImpactNormal);
 		Destroy();
 	}
 }
@@ -184,4 +194,33 @@ void ABBProjectile::OnLifetimeExpired()
 {
 	UE_LOG(LogBreachborne, Verbose, TEXT("BBProjectile: Lifetime expired, destroying"));
 	Destroy();
+}
+
+void ABBProjectile::ExecuteImpactFeedback(const FVector& Location, const FVector& Normal)
+{
+	if (!HasAuthority() || !ImpactCueTag.IsValid())
+	{
+		return;
+	}
+
+	if (SourceASC.IsValid())
+	{
+		FGameplayCueParameters Params;
+		Params.Instigator = GetInstigator();
+		Params.EffectCauser = this;
+		Params.SourceObject = this;
+		Params.Location = Location;
+		Params.Normal = Normal.IsNearlyZero() ? FVector::UpVector : Normal.GetSafeNormal();
+		SourceASC->ExecuteGameplayCue(ImpactCueTag, Params);
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = GetOwner();
+	SpawnParams.Instigator = GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBurstActor* Burst = GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+		ABBPrimitiveBurstActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams))
+	{
+		Burst->InitBurst(Location, ImpactVisualRadius, 0.18f, ImpactVisualColor);
+	}
 }

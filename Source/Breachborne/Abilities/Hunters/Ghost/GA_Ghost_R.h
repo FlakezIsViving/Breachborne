@@ -5,6 +5,7 @@
 #include "GA_Ghost_R.generated.h"
 
 class ABBNapalmZone;
+class ABBPrimitiveBurstActor;
 
 /**
  * Ghost's R — Napalm Strike.
@@ -40,7 +41,13 @@ protected:
 	float DamagePerTick = 40.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|R")
+	float MaxRange = 5000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|R")
 	TSubclassOf<ABBNapalmZone> NapalmZoneClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|R|Visual")
+	TSubclassOf<ABBPrimitiveBurstActor> WarningVisualClass;
 
 private:
 	UPROPERTY()

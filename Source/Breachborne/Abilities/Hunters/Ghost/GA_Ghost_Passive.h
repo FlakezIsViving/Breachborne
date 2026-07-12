@@ -5,6 +5,7 @@
 #include "GA_Ghost_Passive.generated.h"
 
 class UAbilityTask_WaitGameplayEvent;
+class ABBPrimitiveBurstActor;
 
 /**
  * Ghost's Passive — Kill Resets Shift Cooldown.
@@ -29,4 +30,7 @@ private:
 
 	/** Start (or restart) listening for the next kill event */
 	void WaitForNextKill();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|Passive|Visual")
+	TSubclassOf<ABBPrimitiveBurstActor> PulseVisualClass;
 };

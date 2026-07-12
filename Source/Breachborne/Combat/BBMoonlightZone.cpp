@@ -5,16 +5,22 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBHealEffect.h"
 #include "Breachborne/Combat/BBTestAlly.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Breachborne.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/OverlapResult.h"
+#include "Net/UnrealNetwork.h"
 
 ABBMoonlightZone::ABBMoonlightZone()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	SetReplicatingMovement(true);
+	SetNetUpdateFrequency(20.0f);
 
 	HealSphere = CreateDefaultSubobject<USphereComponent>(TEXT("HealSphere"));
 	RootComponent = HealSphere;
@@ -37,18 +43,20 @@ ABBMoonlightZone::ABBMoonlightZone()
 		GroundRing->SetStaticMesh(CylinderMesh.Object);
 	}
 
-	static ConstructorHelpers::FObjectFinder<UMaterial> BasicMat(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
-	if (BasicMat.Succeeded())
-	{
-		UMaterialInstanceDynamic* WhiteMat = UMaterialInstanceDynamic::Create(BasicMat.Object, this);
-		if (WhiteMat)
-		{
-			WhiteMat->SetVectorParameterValue(TEXT("Color"), FLinearColor(2.0f, 2.0f, 2.5f));
-			GroundRing->SetMaterial(0, WhiteMat);
-		}
-	}
+	BBPrimitiveVisuals::ApplyColor(GroundRing, FLinearColor(0.86f, 0.92f, 1.0f, 1.0f));
+	GroundRing->SetVisibility(false, true);
 
 	HealEffectClass = UBBHealEffect::StaticClass();
+}
+
+void ABBMoonlightZone::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABBMoonlightZone, HealRadius);
+	DOREPLIFETIME(ABBMoonlightZone, ZoneDuration);
+	DOREPLIFETIME(ABBMoonlightZone, bVisualInitialized);
+	DOREPLIFETIME(ABBMoonlightZone, bTossed);
+	DOREPLIFETIME(ABBMoonlightZone, bIsTraveling);
 }
 
 AHunterCharacter* ABBMoonlightZone::GetAttachedAlly() const
@@ -66,14 +74,30 @@ void ABBMoonlightZone::InitZone(AHunterCharacter* InSourceHunter, float InHealPe
 	SelfHealFraction = InSelfHealFraction;
 	WispHealMultiplier = InWispHealMultiplier;
 	BurstHeal = InBurstHeal;
+	bVisualInitialized = true;
 	bInitialized = true;
 
-	HealSphere->SetSphereRadius(HealRadius);
+	RefreshVisualState();
+	ForceNetUpdate();
 }
 
 void ABBMoonlightZone::BeginPlay()
 {
 	Super::BeginPlay();
+	SetActorTickEnabled(HasAuthority());
+}
+
+void ABBMoonlightZone::OnRep_VisualState()
+{
+	RefreshVisualState();
+}
+
+void ABBMoonlightZone::RefreshVisualState()
+{
+	bInitialized = bVisualInitialized;
+	HealSphere->SetSphereRadius(HealRadius);
+	GroundRing->SetVisibility(bVisualInitialized, true);
+	GroundRing->SetRelativeScale3D(FVector(HealRadius / 50.0f, HealRadius / 50.0f, 0.02f));
 }
 
 void ABBMoonlightZone::Tick(float DeltaTime)
@@ -97,6 +121,10 @@ void ABBMoonlightZone::Tick(float DeltaTime)
 			UpdateTravel(DeltaTime);
 		}
 	}
+	else
+	{
+		return;
+	}
 
 	ElapsedTime += DeltaTime;
 	TickAccumulator += DeltaTime;
@@ -104,13 +132,36 @@ void ABBMoonlightZone::Tick(float DeltaTime)
 	if (TickAccumulator >= TickInterval)
 	{
 		TickHeal();
+		SpawnPulse(false);
 		TickAccumulator = 0.0f;
 	}
 
 	if (ElapsedTime >= ZoneDuration)
 	{
 		ApplyBurstHeal();
+		SpawnPulse(true);
 		DestroyZone();
+	}
+}
+
+void ABBMoonlightZone::SpawnPulse(bool bFinalBurst)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = GetOwner();
+	Params.Instigator = GetInstigator();
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBurstActor* Burst = GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+		ABBPrimitiveBurstActor::StaticClass(), GetActorLocation(), FRotator::ZeroRotator, Params))
+	{
+		const float PulseRadius = bFinalBurst ? HealRadius * 1.08f : HealRadius;
+		const float Lifetime = bFinalBurst ? 0.35f : 0.16f;
+		Burst->InitBurst(GetActorLocation(), PulseRadius, Lifetime,
+			bFinalBurst ? FLinearColor::White : FLinearColor(0.43f, 0.78f, 1.0f, 1.0f), true);
 	}
 }
 
@@ -310,10 +361,22 @@ void ABBMoonlightZone::TossToLocation(const FVector& TargetLocation)
 	ThrowTargetLocation = TargetLocation;
 	bTossed = true;
 	bIsTraveling = true;
+	ForceNetUpdate();
 
 	// Boost healing by 50% when tossed
 	HealPerTick *= 1.5f;
 	BurstHeal *= 1.5f;
+
+	FActorSpawnParameters TrailParams;
+	TrailParams.Owner = GetOwner();
+	TrailParams.Instigator = GetInstigator();
+	TrailParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBeamActor* Trail = GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+		ABBPrimitiveBeamActor::StaticClass(), ThrowStartLocation, FRotator::ZeroRotator, TrailParams))
+	{
+		Trail->InitBeam(ThrowStartLocation, ThrowTargetLocation, 7.0f, 0.4f,
+			FLinearColor(0.43f, 0.78f, 1.0f, 1.0f));
+	}
 
 	UE_LOG(LogBreachborne, Warning, TEXT("[Q_TOSS] Zone::TossToLocation | Start=%s | Target=%s | Speed=%.0f | HasAuthority=%s"),
 		*ThrowStartLocation.ToCompactString(), *ThrowTargetLocation.ToCompactString(), TossSpeed,
@@ -332,6 +395,7 @@ void ABBMoonlightZone::UpdateTravel(float DeltaTime)
 		// Reached max distance — land here
 		SetActorLocation(ThrowTargetLocation);
 		bIsTraveling = false;
+		ForceNetUpdate();
 		// One last attach attempt at landing point
 		TryAttachToAlly();
 		UE_LOG(LogBreachborne, Warning, TEXT("[Q_TOSS] Travel LANDED at max distance %s"), *ThrowTargetLocation.ToCompactString());
@@ -402,6 +466,7 @@ void ABBMoonlightZone::TryAttachToAlly()
 			{
 				AttachedAlly = Actor;
 				bIsTraveling = false;
+				ForceNetUpdate();
 				UE_LOG(LogBreachborne, Warning, TEXT("[Q_TOSS] Zone ATTACHED to %s at %s"),
 					*Actor->GetName(), *GetActorLocation().ToCompactString());
 				break;
@@ -498,6 +563,7 @@ bool ABBMoonlightZone::TryAttachAlongPath(const FVector& From, const FVector& To
 	SetActorLocation(AttachLoc);
 	AttachedAlly = BestAlly;
 	bIsTraveling = false;
+	ForceNetUpdate();
 
 	UE_LOG(LogBreachborne, Warning, TEXT("[Q_TOSS] Zone ATTACHED along path to %s at %s (dist=%.1f)"),
 		*BestAlly->GetName(), *AttachLoc.ToCompactString(), Candidates[0].DistAlongPath);

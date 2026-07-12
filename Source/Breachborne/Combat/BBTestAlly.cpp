@@ -46,6 +46,7 @@ ABBTestAlly::ABBTestAlly()
 void ABBTestAlly::BeginPlay()
 {
 	Super::BeginPlay();
+	SetActorTickEnabled(HasAuthority());
 
 	if (!HasAuthority())
 	{

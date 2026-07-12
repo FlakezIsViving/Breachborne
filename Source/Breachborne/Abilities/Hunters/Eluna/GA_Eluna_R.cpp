@@ -6,6 +6,7 @@
 #include "Breachborne/Abilities/BBHealthSet.h"
 #include "Breachborne/Combat/BBHealEffect.h"
 #include "Breachborne/Combat/BBElunaReviveBeam.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Wisp/BBWispPawn.h"
 #include "Breachborne/Breachborne.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -14,6 +15,7 @@
 UGA_Eluna_R::UGA_Eluna_R()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_R;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, MaxChannelRange);
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
 	FGameplayTagContainer AssetTags;
@@ -245,6 +247,12 @@ void UGA_Eluna_R::OnChannelTick()
 
 void UGA_Eluna_R::ApplyHealTick(float DeltaTime)
 {
+	AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		return;
+	}
+
 	AActor* Target = ChannelTarget.Get();
 	if (!Target)
 	{
@@ -287,7 +295,8 @@ void UGA_Eluna_R::OnChannelComplete()
 		ChannelTarget.IsValid() ? *ChannelTarget->GetName() : TEXT("NULL"), ChannelElapsed);
 
 	// Revive if target is a wisp
-	if (TargetWisp.IsValid())
+	AHunterCharacter* Hunter = GetHunterCharacter();
+	if (Hunter && Hunter->HasAuthority() && TargetWisp.IsValid())
 	{
 		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: REVIVING wisp of %s"),
 			TargetWisp->GetOwningPlayerState() ? *TargetWisp->GetOwningPlayerState()->GetPlayerName() : TEXT("Unknown"));
@@ -296,6 +305,20 @@ void UGA_Eluna_R::OnChannelComplete()
 	else if (ChannelTarget.IsValid())
 	{
 		UE_LOG(LogBreachborne, Log, TEXT("Eluna R: Heal channel complete on %s"), *ChannelTarget->GetName());
+	}
+
+	if (Hunter && Hunter->HasAuthority() && ChannelTarget.IsValid())
+	{
+		const FVector TargetLocation = ChannelTarget->GetActorLocation();
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Burst = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), TargetLocation, FRotator::ZeroRotator, Params))
+		{
+			Burst->InitBurst(TargetLocation, 140.0f, 0.35f, FLinearColor::White);
+		}
 	}
 
 	EndChannel(false);
@@ -338,7 +361,7 @@ void UGA_Eluna_R::PlayChannelLoopMontage()
 void UGA_Eluna_R::SpawnBeam()
 {
 	AHunterCharacter* Hunter = GetHunterCharacter();
-	if (!Hunter || !ChannelTarget.IsValid())
+	if (!Hunter || !Hunter->HasAuthority() || !ChannelTarget.IsValid())
 	{
 		return;
 	}

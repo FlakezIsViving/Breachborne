@@ -7,6 +7,8 @@
 #include "Breachborne/Characters/HunterCharacter.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Breachborne.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -14,16 +16,7 @@ ABBElunaStickyProjectile::ABBElunaStickyProjectile()
 {
 	ProjectileMesh->SetRelativeScale3D(FVector(0.5f));
 
-	static ConstructorHelpers::FObjectFinder<UMaterial> BasicMat(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
-	if (BasicMat.Succeeded())
-	{
-		UMaterialInstanceDynamic* WhiteMat = UMaterialInstanceDynamic::Create(BasicMat.Object, this);
-		if (WhiteMat)
-		{
-			WhiteMat->SetVectorParameterValue(TEXT("Color"), FLinearColor(2.0f, 2.0f, 2.0f));
-			ProjectileMesh->SetMaterial(0, WhiteMat);
-		}
-	}
+	BBPrimitiveVisuals::ApplyColor(ProjectileMesh, FLinearColor(0.18f, 0.26f, 0.48f, 1.0f));
 
 	ProjectileSpeed = 800.0f;
 	ProjectileLifetime = 3.0f;
@@ -163,6 +156,26 @@ void ABBElunaStickyProjectile::Explode()
 		else
 		{
 		}
+	}
+
+	if (SourceASC.IsValid())
+	{
+		FGameplayCueParameters CueParams;
+		CueParams.Instigator = GetInstigator();
+		CueParams.EffectCauser = this;
+		CueParams.Location = GetActorLocation();
+		CueParams.Normal = FVector::UpVector;
+		SourceASC->ExecuteGameplayCue(BBGameplayTags::GameplayCue_Hunter_Eluna_RMB_Impact, CueParams);
+	}
+
+	FActorSpawnParameters BurstParams;
+	BurstParams.Owner = GetOwner();
+	BurstParams.Instigator = GetInstigator();
+	BurstParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBurstActor* Burst = GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+		ABBPrimitiveBurstActor::StaticClass(), GetActorLocation(), FRotator::ZeroRotator, BurstParams))
+	{
+		Burst->InitBurst(GetActorLocation(), RootRadius, 0.22f, FLinearColor(0.43f, 0.78f, 1.0f, 1.0f), true);
 	}
 
 	Destroy();

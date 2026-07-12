@@ -27,6 +27,13 @@ void UBBGameplayAbility::OnInputReleased()
 	}
 }
 
+void UBBGameplayAbility::ConfigureRangeIndicator(EBBRangeIndicatorMode Mode, float CastRange, float EffectRadius)
+{
+	RangeIndicatorInfo.Mode = Mode;
+	RangeIndicatorInfo.CastRange = FMath::Max(0.0f, CastRange);
+	RangeIndicatorInfo.EffectRadius = FMath::Max(0.0f, EffectRadius);
+}
+
 bool UBBGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))

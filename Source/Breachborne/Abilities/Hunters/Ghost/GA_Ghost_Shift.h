@@ -4,6 +4,8 @@
 #include "Breachborne/Abilities/BBGameplayAbility.h"
 #include "GA_Ghost_Shift.generated.h"
 
+class ABBPrimitiveBeamActor;
+
 /**
  * Ghost's Shift — Combat Slide.
  * Instantly launches the character in the cursor direction. Works on ground and in air.
@@ -34,6 +36,9 @@ protected:
 	/** Small upward velocity to clear small obstacles and feel responsive in air */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|Shift")
 	float DashLift = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|Shift|Visual")
+	TSubclassOf<ABBPrimitiveBeamActor> TrailVisualClass;
 
 private:
 	UPROPERTY()

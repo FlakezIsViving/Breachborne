@@ -8,11 +8,14 @@
 #include "Breachborne/Combat/BBAntiHealEffect.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
 #include "Breachborne/Combat/BBSlowEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 
 UGA_Hudson_R_SalvageHook::UGA_Hudson_R_SalvageHook()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_R;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, Range);
 	bActivateOnInputHeld = false;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
@@ -57,7 +60,6 @@ void UGA_Hudson_R_SalvageHook::ActivateAbility(const FGameplayAbilitySpecHandle 
 	const FVector End = Start + AimDir * Range;
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_R, EBBAbilityAnimationPhase::Fire);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_R_Fire, Start, AimDir);
-	Hunter->Multicast_DrawDebugLine(Start, End, FColor::Red, 0.25f, 4.0f);
 
 	if (!Hunter->HasAuthority())
 	{
@@ -70,6 +72,17 @@ void UGA_Hudson_R_SalvageHook::ActivateAbility(const FGameplayAbilitySpecHandle 
 	FCollisionObjectQueryParams ObjParams;
 	ObjParams.AddObjectTypesToQuery(ECC_Pawn);
 	const bool bHit = Hunter->GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjParams, Params);
+	const FVector HookEnd = bHit ? FVector(Hit.ImpactPoint) : End;
+	FActorSpawnParameters VisualParams;
+	VisualParams.Owner = Hunter;
+	VisualParams.Instigator = Hunter;
+	VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBeamActor* HookLine = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+		ABBPrimitiveBeamActor::StaticClass(), Start, FRotator::ZeroRotator, VisualParams))
+	{
+		HookLine->InitBeam(Start, HookEnd, 10.0f, 0.25f,
+			FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+	}
 	AHunterCharacter* TargetHunter = bHit ? Cast<AHunterCharacter>(Hit.GetActor()) : nullptr;
 	const ABreachbornePlayerState* TargetPS = TargetHunter ? TargetHunter->GetPlayerState<ABreachbornePlayerState>() : nullptr;
 	UAbilitySystemComponent* TargetASC = TargetHunter ? TargetHunter->GetAbilitySystemComponent() : nullptr;
@@ -105,9 +118,19 @@ void UGA_Hudson_R_SalvageHook::ActivateAbility(const FGameplayAbilitySpecHandle 
 	TargetASC->AddLooseGameplayTag(BBGameplayTags::State_Hudson_Hooked);
 	HookedTarget = TargetHunter;
 	HookedTargetASC = TargetASC;
+	if (ABBPrimitiveBeamActor* TetherLine = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+		ABBPrimitiveBeamActor::StaticClass(), Start, FRotator::ZeroRotator, VisualParams))
+	{
+		TetherLine->InitBeam(Start, TargetHunter->GetActorLocation() + FVector(0.0f, 0.0f, 45.0f),
+			12.0f, HookDuration, FLinearColor(0.31f, 0.64f, 0.78f, 1.0f));
+	}
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_R_Impact, Hit.ImpactPoint, Hit.ImpactNormal);
 	AddVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_R_Tether, Hit.ImpactPoint, AimDir);
-	Hunter->Multicast_DrawDebugSphere(Hit.ImpactPoint, 40.0f, FColor::Red, 0.3f);
+	if (ABBPrimitiveBurstActor* Latch = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+		ABBPrimitiveBurstActor::StaticClass(), Hit.ImpactPoint, FRotator::ZeroRotator, VisualParams))
+	{
+		Latch->InitBurst(Hit.ImpactPoint, 55.0f, 0.24f, FLinearColor(1.0f, 0.82f, 0.4f, 1.0f));
+	}
 
 	if (UWorld* World = GetWorld())
 	{
@@ -192,16 +215,12 @@ void UGA_Hudson_R_SalvageHook::HookTick()
 		return;
 	}
 
-	Hunter->Multicast_DrawDebugLine(Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 55.0f), Target->GetActorLocation() + FVector(0.0f, 0.0f, 55.0f), FColor::Red, 0.12f, 5.0f);
-	Target->Multicast_DrawDebugCircle(Target->GetActorLocation(), 120.0f, FColor::Red, 0.12f, 4.0f);
-
 	if (const ABreachbornePlayerState* TargetPS = Target->GetPlayerState<ABreachbornePlayerState>())
 	{
 		if (const UBBHealthSet* HealthSet = TargetPS->GetHealthSet())
 		{
 			if (HealthSet->GetHealth() <= HealthSet->GetMaxHealth() * ExecuteHealthFraction)
 			{
-				Target->Multicast_DrawDebugCircle(Target->GetActorLocation(), 170.0f, FColor::Red, 0.22f, 8.0f);
 				StartReel();
 			}
 		}
@@ -230,6 +249,18 @@ void UGA_Hudson_R_SalvageHook::StartReel()
 
 	const float Distance = FVector::Dist2D(ReelStartLocation, Hunter->GetActorLocation());
 	ReelDurationSeconds = FMath::Clamp((Distance / FMath::Max(1.0f, Range)) * MaxReelSeconds, MinReelSeconds, MaxReelSeconds);
+	FActorSpawnParameters VisualParams;
+	VisualParams.Owner = Hunter;
+	VisualParams.Instigator = Hunter;
+	VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const FVector BeamStart = Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 65.0f);
+	const FVector BeamEnd = Target->GetActorLocation() + FVector(0.0f, 0.0f, 65.0f);
+	if (ABBPrimitiveBeamActor* ReelLine = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+		ABBPrimitiveBeamActor::StaticClass(), BeamStart, FRotator::ZeroRotator, VisualParams))
+	{
+		ReelLine->InitBeam(BeamStart, BeamEnd, 14.0f, ReelDurationSeconds,
+			FLinearColor(1.0f, 0.25f, 0.08f, 1.0f));
+	}
 
 	if (UCharacterMovementComponent* MoveComp = Target->GetCharacterMovement())
 	{
@@ -242,8 +273,6 @@ void UGA_Hudson_R_SalvageHook::StartReel()
 	GetWorld()->GetTimerManager().ClearTimer(HookTickHandle);
 	GetWorld()->GetTimerManager().SetTimer(HookTickHandle, this, &UGA_Hudson_R_SalvageHook::HookTick, ReelTickInterval, true, 0.0f);
 
-	Hunter->Multicast_DrawDebugLine(Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 65.0f), Target->GetActorLocation() + FVector(0.0f, 0.0f, 65.0f), FColor::Red, ReelDurationSeconds, 8.0f);
-	Target->Multicast_DrawDebugCircle(Target->GetActorLocation(), 190.0f, FColor::Red, 0.35f, 10.0f);
 }
 
 void UGA_Hudson_R_SalvageHook::ReelTarget()
@@ -281,9 +310,6 @@ void UGA_Hudson_R_SalvageHook::ReelTarget()
 		MoveComp->ForceReplicationUpdate();
 	}
 	Target->ForceNetUpdate();
-
-	Hunter->Multicast_DrawDebugLine(HunterLoc + FVector(0.0f, 0.0f, 65.0f), Target->GetActorLocation() + FVector(0.0f, 0.0f, 65.0f), FColor::Red, ReelTickInterval * 1.5f, 7.0f);
-	Target->Multicast_DrawDebugCircle(Target->GetActorLocation(), 150.0f + 45.0f * Alpha, Alpha > 0.75f ? FColor::Orange : FColor::Red, ReelTickInterval * 1.5f, 8.0f);
 
 	const float ActualDistance = FVector::Dist2D(Target->GetActorLocation(), HunterLoc);
 	if (ActualDistance <= ReelStopDistance + 20.0f)
@@ -330,7 +356,17 @@ void UGA_Hudson_R_SalvageHook::FinishExecute()
 	}
 
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_R, EBBAbilityAnimationPhase::Impact);
-	Hunter->Multicast_DrawDebugSphere(Target->GetActorLocation() + FVector(0.0f, 0.0f, 85.0f), 90.0f, FColor::Red, 0.35f);
+	const FVector ExecuteLocation = Target->GetActorLocation() + FVector(0.0f, 0.0f, 85.0f);
+	FActorSpawnParameters ExecuteParams;
+	ExecuteParams.Owner = Hunter;
+	ExecuteParams.Instigator = Hunter;
+	ExecuteParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBurstActor* ExecuteBurst = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+		ABBPrimitiveBurstActor::StaticClass(), ExecuteLocation, FRotator::ZeroRotator, ExecuteParams))
+	{
+		ExecuteBurst->InitBurst(ExecuteLocation, 105.0f, 0.35f,
+			FLinearColor(1.0f, 0.25f, 0.08f, 1.0f));
+	}
 	ReduceOwnCooldownByFraction(ExecuteCooldownRefundFraction);
 
 	if (CachedActorInfo)

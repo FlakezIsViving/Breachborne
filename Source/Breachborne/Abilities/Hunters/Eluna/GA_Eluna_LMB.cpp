@@ -11,6 +11,7 @@
 UGA_Eluna_LMB::UGA_Eluna_LMB()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_LMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, 1600.0f);
 	bActivateOnInputHeld = true;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -102,6 +103,8 @@ void UGA_Eluna_LMB::FireShot()
 		if (Projectile)
 		{
 			Projectile->InitProjectile(SourceASCPtr, DamageEffectClass, FinalDamage, ShooterPS->GetTeamID());
+			Projectile->SetImpactCueTag(BBGameplayTags::GameplayCue_Hunter_Eluna_LMB_Impact);
+			Projectile->SetImpactVisual(FLinearColor(0.86f, 0.92f, 1.0f, 1.0f), 38.0f);
 			Projectile->FireInDirection(AimDir);
 		}
 		else

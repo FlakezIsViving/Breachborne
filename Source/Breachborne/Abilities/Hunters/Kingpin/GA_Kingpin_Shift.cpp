@@ -10,11 +10,15 @@
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBDamageExecution.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveWedgeActor.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Kingpin_Shift::UGA_Kingpin_Shift()
 {
 	AbilityInputTag    = BBGameplayTags::InputTag_Shift;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Movement, ChargeSpeed * ChargeDuration, 70.0f);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -65,6 +69,27 @@ void UGA_Kingpin_Shift::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const float StartMontageDuration = PlayVisualMontage(BBGameplayTags::Ability_Hunter_Kingpin_Shift, EBBAbilityAnimationPhase::Start);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Shift_Start, Hunter->GetActorLocation(), ChargeDir);
 	AddVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Shift_Trail, Hunter->GetActorLocation(), ChargeDir);
+	if (Hunter->HasAuthority())
+	{
+		const FVector ChargeStart = Hunter->GetActorLocation();
+		const float ChargeRange = ChargeSpeed * ChargeDuration;
+		FActorSpawnParameters VisualParams;
+		VisualParams.Owner = Hunter;
+		VisualParams.Instigator = Hunter;
+		VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveWedgeActor* ChargeWedge = Hunter->GetWorld()->SpawnActor<ABBPrimitiveWedgeActor>(
+			ABBPrimitiveWedgeActor::StaticClass(), ChargeStart, FRotator::ZeroRotator, VisualParams))
+		{
+			ChargeWedge->InitWedge(ChargeStart, ChargeDir, ChargeRange, 12.0f, 8.0f, ChargeDuration,
+				FLinearColor(0.90f, 0.23f, 0.18f, 1.0f));
+		}
+		if (ABBPrimitiveBeamActor* ChargeTrail = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), ChargeStart, FRotator::ZeroRotator, VisualParams))
+		{
+			ChargeTrail->InitBeam(ChargeStart, ChargeStart + ChargeDir * ChargeRange, 12.0f, ChargeDuration,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
+	}
 	if (StartMontageDuration > 0.05f && StartMontageDuration < ChargeDuration)
 	{
 		if (UWorld* MontageWorld = GetWorld())
@@ -152,6 +177,16 @@ void UGA_Kingpin_Shift::ChargeTick()
 		FGameplayEffectSpec Spec(DmgGE, Ctx, 1.0f);
 		Spec.SetSetByCallerMagnitude(BBGameplayTags::SetByCaller_Damage, ChargeDamage);
 		TargetASC->ApplyGameplayEffectSpecToSelf(Spec);
+		FActorSpawnParameters ImpactParams;
+		ImpactParams.Owner = Hunter;
+		ImpactParams.Instigator = Hunter;
+		ImpactParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Impact = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), HitHunter->GetActorLocation(), FRotator::ZeroRotator, ImpactParams))
+		{
+			Impact->InitBurst(HitHunter->GetActorLocation(), 100.0f, 0.22f,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
 
 		UE_LOG(LogBreachborne, Log, TEXT("Kingpin Shift: Charged through %s for %.0f dmg"), *HitHunter->GetName(), ChargeDamage);
 	}

@@ -13,6 +13,7 @@
 UGA_Eluna_RMB::UGA_Eluna_RMB()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_RMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, 2400.0f, RootRadius);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;

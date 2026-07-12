@@ -1,19 +1,9 @@
 #include "BBElunaCrescentProjectile.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Components/StaticMeshComponent.h"
-#include "UObject/ConstructorHelpers.h"
 
 ABBElunaCrescentProjectile::ABBElunaCrescentProjectile()
 {
-	ProjectileMesh->SetRelativeScale3D(FVector(0.4f));
-
-	static ConstructorHelpers::FObjectFinder<UMaterial> BasicMat(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
-	if (BasicMat.Succeeded())
-	{
-		UMaterialInstanceDynamic* WhiteMat = UMaterialInstanceDynamic::Create(BasicMat.Object, this);
-		if (WhiteMat)
-		{
-			WhiteMat->SetVectorParameterValue(TEXT("Color"), FLinearColor(2.0f, 2.0f, 2.0f));
-			ProjectileMesh->SetMaterial(0, WhiteMat);
-		}
-	}
+	ProjectileMesh->SetRelativeScale3D(FVector(0.45f, 0.16f, 0.52f));
+	BBPrimitiveVisuals::ApplyColor(ProjectileMesh, FLinearColor(0.86f, 0.92f, 1.0f, 1.0f));
 }

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GameplayTagContainer.h"
 #include "BBProjectile.generated.h"
 
 class USphereComponent;
@@ -34,6 +35,14 @@ public:
 
 	/** Set the projectile's velocity direction. Call after InitProjectile. */
 	void FireInDirection(const FVector& Direction);
+
+	/** Optional impact cue/fallback used by concrete ability projectiles. */
+	void SetImpactCueTag(FGameplayTag InImpactCueTag) { ImpactCueTag = InImpactCueTag; }
+	void SetImpactVisual(const FLinearColor& InColor, float InRadius = 32.0f)
+	{
+		ImpactVisualColor = InColor;
+		ImpactVisualRadius = FMath::Max(1.0f, InRadius);
+	}
 
 protected:
 	// --- Components ---
@@ -68,6 +77,7 @@ protected:
 	virtual void OnProjectileHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	virtual void OnLifetimeExpired();
+	void ExecuteImpactFeedback(const FVector& Location, const FVector& Normal);
 
 	// --- Server-only damage state (not replicated, accessible to subclasses) ---
 
@@ -76,6 +86,9 @@ protected:
 	float BaseDamage = 0.0f;
 	int32 SourceTeamID = -1;
 	TSet<TWeakObjectPtr<AActor>> HitActors;
+	FGameplayTag ImpactCueTag;
+	FLinearColor ImpactVisualColor = FLinearColor(0.13f, 0.90f, 0.72f, 1.0f);
+	float ImpactVisualRadius = 32.0f;
 
 	FTimerHandle LifetimeTimerHandle;
 };

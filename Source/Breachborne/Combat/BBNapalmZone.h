@@ -21,6 +21,7 @@ class BREACHBORNE_API ABBNapalmZone : public AActor
 
 public:
 	ABBNapalmZone();
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/**
 	 * Initialize the zone with damage parameters. Call on server immediately after spawn.
@@ -45,9 +46,13 @@ protected:
 	float ZoneDuration = 5.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|NapalmZone")
+	float WarningDuration = 0.45f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|NapalmZone")
 	float DamageTickInterval = 0.5f;
 
 private:
+	void BeginActiveZone();
 	void OnDamageTick();
 	void OnZoneExpired();
 
@@ -55,7 +60,9 @@ private:
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
 	float DamagePerTick = 0.0f;
 	int32 SourceTeamID = -1;
+	bool bActiveCueAdded = false;
 
+	FTimerHandle ActivationHandle;
 	FTimerHandle DamageTickHandle;
 	FTimerHandle DurationHandle;
 };

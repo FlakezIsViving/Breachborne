@@ -4,15 +4,13 @@
 #include "Blueprint/UserWidget.h"
 #include "WispIndicatorWidget.generated.h"
 
-class UProgressBar;
-class UVerticalBox;
 class ABBWispPawn;
 
 /**
  * World-space widget displayed above wisp pawns.
- * Shows two bars:
- *   - Yellow decay bar: wisp HP / max HP (drains when not being revived)
- *   - Green revive bar: revive progress 0-1 (fills when ally is near/healing)
+ * Shows the owning player's name and two bars:
+ *   - Thin green upper bar: ally revive progress
+ *   - Larger yellow lower bar: master decay HP; reaching zero kills the wisp
  */
 UCLASS()
 class BREACHBORNE_API UWispIndicatorWidget : public UUserWidget
@@ -22,18 +20,13 @@ class BREACHBORNE_API UWispIndicatorWidget : public UUserWidget
 public:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+		const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
+		int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 	void SetTargetWisp(ABBWispPawn* Wisp);
 
 private:
-	UPROPERTY()
-	TObjectPtr<UProgressBar> DecayBar;
-
-	UPROPERTY()
-	TObjectPtr<UProgressBar> ReviveBar;
-
-	UPROPERTY()
-	TObjectPtr<UVerticalBox> VBox;
-
 	TWeakObjectPtr<ABBWispPawn> TargetWisp;
+	mutable bool bLoggedFirstPaint = false;
 };

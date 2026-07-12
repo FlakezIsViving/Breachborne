@@ -4,15 +4,15 @@
 #include "GameFramework/Actor.h"
 #include "BBElunaReviveBeam.generated.h"
 
+class USceneComponent;
 class UStaticMeshComponent;
 class UPointLightComponent;
 class UParticleSystemComponent;
 class UDecalComponent;
-class UMaterialInstanceDynamic;
 
 /**
- * Eluna R revive beam — enhanced visual connecting Eluna to a target ally/wisp.
- * Concept: thick glowing beam with sparkles, source aura, target crescent moon.
+ * Replicated Eluna R tether visual. A narrow translucent beam links Eluna and
+ * her target while restrained endpoint halos identify the channel participants.
  */
 UCLASS()
 class BREACHBORNE_API ABBElunaReviveBeam : public AActor
@@ -22,25 +22,21 @@ class BREACHBORNE_API ABBElunaReviveBeam : public AActor
 public:
 	ABBElunaReviveBeam();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	void SetBeamTarget(const FVector& TargetLocation);
 	void SetBeamSource(const FVector& SourceLocation);
-
-	/** Update beam color based on distance-to-break ratio (0.0 = safe/green, 1.0 = breaking/red) */
 	void SetDistanceRatio(float Ratio);
 
-	/** Blueprint-assignable particle for beam sparkles ( Niagara or Cascade ) */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Beam")
 	TObjectPtr<class UParticleSystem> BeamParticles;
 
-	/** Blueprint-assignable particle for source glow */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Beam")
 	TObjectPtr<class UParticleSystem> SourceGlowParticles;
 
-	/** Blueprint-assignable particle for target glow */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Beam")
 	TObjectPtr<class UParticleSystem> TargetGlowParticles;
 
-	/** Blueprint-assignable material for the crescent moon decal */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Beam")
 	TObjectPtr<class UMaterialInterface> CrescentDecalMaterial;
 
@@ -49,7 +45,19 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|Eluna|Beam")
+	TObjectPtr<USceneComponent> SceneRoot;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|Eluna|Beam")
 	TObjectPtr<UStaticMeshComponent> BeamMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|Eluna|Beam")
+	TObjectPtr<UStaticMeshComponent> CoreBeamMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|Eluna|Beam")
+	TObjectPtr<UStaticMeshComponent> SourceHaloMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|Eluna|Beam")
+	TObjectPtr<UStaticMeshComponent> TargetHaloMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|Eluna|Beam")
 	TObjectPtr<UPointLightComponent> SourceLight;
@@ -70,14 +78,23 @@ protected:
 	TObjectPtr<UDecalComponent> TargetDecal;
 
 private:
-	FVector CurrentSource = FVector::ZeroVector;
-	FVector CurrentTarget = FVector::ZeroVector;
+	UPROPERTY(ReplicatedUsing = OnRep_BeamState)
+	FVector_NetQuantize CurrentSource = FVector::ZeroVector;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BeamState)
+	FVector_NetQuantize CurrentTarget = FVector::ZeroVector;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BeamState)
 	bool bHasTarget = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BeamState)
+	float DistanceRatio = 0.0f;
+
+	UFUNCTION()
+	void OnRep_BeamState();
+
 	float BeamPulseTime = 0.0f;
 
-	/** Cached dynamic material so we can change color at runtime */
-	UPROPERTY()
-	TObjectPtr<UMaterialInstanceDynamic> BeamMaterialInstance;
-
 	void UpdateBeamTransform();
+	void ApplyVisualStyle();
 };

@@ -8,7 +8,8 @@
  * Eluna Passive — Soul Pack.
  *
  * Heals nearby allies every 5s.
- * Simplified version (full wisp carry deferred).
+ * Automatically carries a nearby allied wisp. Carry freezes normal decay and
+ * continues revival through enemy contest, but hard CC drops the wisp.
  * Passive (always active, no input required).
  */
 UCLASS()

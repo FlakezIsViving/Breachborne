@@ -369,6 +369,7 @@ namespace BBHUD
 	/** Display label for an ability slot from its input tag. */
 	static FString InputTagToSlotLabel(const FGameplayTag& InputTag)
 	{
+		if (InputTag == BBGameplayTags::InputTag_LMB)    return TEXT("LMB");
 		if (InputTag == BBGameplayTags::InputTag_RMB)    return TEXT("RMB");
 		if (InputTag == BBGameplayTags::InputTag_Shift)  return TEXT("Shift");
 		if (InputTag == BBGameplayTags::InputTag_Q)      return TEXT("Q");
@@ -391,6 +392,7 @@ namespace BBHUD
 	/** Per-ability-slot color by InputTag. Helps the eye associate icons with keys. */
 	static FLinearColor SlotColorForTag(const FGameplayTag& InputTag)
 	{
+		if (InputTag == BBGameplayTags::InputTag_LMB)    return FLinearColor(0.35f, 0.72f, 0.95f); // blue (primary)
 		if (InputTag == BBGameplayTags::InputTag_RMB)    return FLinearColor(0.85f, 0.55f, 0.20f); // orange (RMB)
 		if (InputTag == BBGameplayTags::InputTag_Shift)  return FLinearColor(0.30f, 0.80f, 0.95f); // cyan (Shift/dash)
 		if (InputTag == BBGameplayTags::InputTag_Q)      return FLinearColor(0.95f, 0.85f, 0.30f); // yellow (Q)
@@ -458,7 +460,9 @@ void ABBDebugHUD::DrawGameplayHUD()
 
 	DrawBasecampIndicators();
 	DrawWorldItemPrompts();
+	HoveredRangeAbility.Reset();
 	DrawBottomLeftPanel();
+	DrawAbilityRangeIndicators();
 	DrawBottomRightPanel();
 	DrawTopRightPanel();
 	DrawTopLeftPanel();
@@ -887,7 +891,7 @@ void ABBDebugHUD::DrawBottomLeftPanel()
 	DrawTextLine(BarX + BarW + 8.0f, CurY - 2.0f, TEXT("MANA (TODO)"), FLinearColor(0.20f, 0.50f, 0.95f), 0.9f);
 	CurY += 14.0f;
 
-	// --- Ability slots: RMB, Shift(s), Q, R, then a small gap, then F, G ---
+	// --- Ability slots: LMB, RMB, Shift(s), Q, R, then a small gap, then F, G ---
 	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 	if (!ASC) return;
 
@@ -928,11 +932,21 @@ void ABBDebugHUD::DrawBottomLeftPanel()
 	// copy ctor, so a braced-init list of {BBGameplayTags::...} would deduce its element
 	// type as FNativeGameplayTag and fail to copy them into the array. Locals trigger
 	// the implicit FNativeGameplayTag→FGameplayTag conversion exactly once each.
+	const FGameplayTag InputLMB   = BBGameplayTags::InputTag_LMB;
 	const FGameplayTag InputRMB   = BBGameplayTags::InputTag_RMB;
 	const FGameplayTag InputShift = BBGameplayTags::InputTag_Shift;
 	const FGameplayTag InputQ     = BBGameplayTags::InputTag_Q;
 	const FGameplayTag InputR     = BBGameplayTags::InputTag_R;
-	const TArray<FGameplayTag> SlotOrder = { InputRMB, InputShift, InputQ, InputR };
+	const TArray<FGameplayTag> SlotOrder = { InputLMB, InputRMB, InputShift, InputQ, InputR };
+	float MouseX = -1.0f;
+	float MouseY = -1.0f;
+	const APlayerController* PC = GetOwningPlayerController();
+	const bool bHasMousePosition = PC && PC->GetMousePosition(MouseX, MouseY);
+	const auto IsMouseOverSlot = [bHasMousePosition, MouseX, MouseY, SlotSize](float X, float Y)
+	{
+		return bHasMousePosition && MouseX >= X && MouseX <= X + SlotSize
+			&& MouseY >= Y && MouseY <= Y + SlotSize;
+	};
 
 	for (const FGameplayTag& WantTag : SlotOrder)
 	{
@@ -957,6 +971,11 @@ void ABBDebugHUD::DrawBottomLeftPanel()
 				BBHUD::DashSubLabel(Slot.AbilityCDO ? Slot.AbilityCDO->GetClass() : nullptr),
 				Remaining, Duration,
 				BBHUD::SlotColorForTag(Slot.InputTag));
+			if (IsMouseOverSlot(SlotX, SlotY) && Slot.AbilityCDO
+				&& Slot.AbilityCDO->GetRangeIndicatorInfo().IsEnabled())
+			{
+				HoveredRangeAbility = Slot.AbilityCDO;
+			}
 
 			SlotX += SlotSize + SlotGap;
 		}
@@ -988,8 +1007,99 @@ void ABBDebugHUD::DrawBottomLeftPanel()
 			BBHUD::InputTagToSlotLabel(WantTag),
 			bHasPower ? PowerState.PowerID.ToString().Left(5) : FString(),
 			Remaining, Duration, PowerColor);
+		if (IsMouseOverSlot(SlotX, SlotY) && Found && Found->AbilityCDO
+			&& Found->AbilityCDO->GetRangeIndicatorInfo().IsEnabled())
+		{
+			HoveredRangeAbility = Found->AbilityCDO;
+		}
 
 		SlotX += SlotSize + SlotGap;
+	}
+}
+
+void ABBDebugHUD::DrawAbilityRangeIndicators()
+{
+	UWorld* World = GetWorld();
+	AHunterCharacter* Hunter = GetOwnerHunter();
+	ABreachbornePlayerController* PC = Cast<ABreachbornePlayerController>(GetOwningPlayerController());
+	if (!World || !Hunter || !PC)
+	{
+		return;
+	}
+
+	const UBBGameplayAbility* Ability = HoveredRangeAbility.Get();
+	const bool bHoverPreview = Ability != nullptr;
+	if (!Ability)
+	{
+		Ability = PC->GetActiveRangePreviewAbility();
+	}
+	if (!Ability)
+	{
+		return;
+	}
+
+	const FBBAbilityRangeIndicatorInfo& Info = Ability->GetRangeIndicatorInfo();
+	if (!Info.IsEnabled())
+	{
+		return;
+	}
+
+	const FVector AxisX(1.0f, 0.0f, 0.0f);
+	const FVector AxisY(0.0f, 1.0f, 0.0f);
+	const FVector Origin = Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 12.0f);
+	const FColor RangeColor(155, 160, 166, 150);
+	const FColor AimColor(195, 200, 206, 175);
+	constexpr int32 Segments = 96;
+	constexpr float Thickness = 1.5f;
+
+	const auto DrawCircle = [&](const FVector& Center, float Radius, const FColor& Color)
+	{
+		if (Radius > 0.0f)
+		{
+			DrawDebugCircle(World, Center, Radius, Segments, Color, false, 0.0f, 0,
+				Thickness, AxisX, AxisY, false);
+		}
+	};
+
+	if (bHoverPreview)
+	{
+		const float HoverRadius = Info.Mode == EBBRangeIndicatorMode::SelfCentered
+			? Info.EffectRadius
+			: Info.CastRange;
+		DrawCircle(Origin, HoverRadius, RangeColor);
+		return;
+	}
+
+	if (Info.Mode == EBBRangeIndicatorMode::SelfCentered)
+	{
+		DrawCircle(Origin, Info.EffectRadius, AimColor);
+		return;
+	}
+
+	DrawCircle(Origin, Info.CastRange, RangeColor);
+
+	FVector CursorLocation;
+	if (!PC->GetRangePreviewCursorLocation(CursorLocation))
+	{
+		return;
+	}
+
+	FVector Offset = CursorLocation - Origin;
+	Offset.Z = 0.0f;
+	if (Info.CastRange > 0.0f && Offset.SizeSquared() > FMath::Square(Info.CastRange))
+	{
+		Offset = Offset.GetSafeNormal() * Info.CastRange;
+	}
+	const FVector Target(Origin.X + Offset.X, Origin.Y + Offset.Y, Origin.Z);
+	DrawDebugLine(World, Origin, Target, AimColor, false, 0.0f, 0, Thickness);
+
+	if (Info.Mode == EBBRangeIndicatorMode::TargetedArea)
+	{
+		DrawCircle(Target, Info.EffectRadius, AimColor);
+	}
+	else if (Info.Mode == EBBRangeIndicatorMode::Movement)
+	{
+		DrawCircle(Target, Info.EffectRadius > 0.0f ? Info.EffectRadius : 55.0f, AimColor);
 	}
 }
 

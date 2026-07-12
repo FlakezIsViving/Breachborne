@@ -74,11 +74,17 @@ public:
 	void SetLobbySettings(const FBBLobbySettings& NewSettings);
 	int32 GetLobbyActivePlayerCount() const;
 
-	// --- Stubs for in-progress features ---
-	EBBDayNightPhase GetDayNightPhase() const { return EBBDayNightPhase::Day; }
-	int32 GetDayNightCycle() const { return 0; }
-	bool IsNight() const { return false; }
-	void AdvanceDayNightPhase() {}
+	UFUNCTION(BlueprintPure, Category = "Breachborne|DayNight")
+	EBBDayNightPhase GetDayNightPhase() const { return DayNightPhase; }
+
+	UFUNCTION(BlueprintPure, Category = "Breachborne|DayNight")
+	int32 GetDayNightCycle() const { return DayNightCycle; }
+
+	UFUNCTION(BlueprintPure, Category = "Breachborne|DayNight")
+	bool IsNight() const { return DayNightPhase == EBBDayNightPhase::Night; }
+
+	/** Toggle Day/Night and increment the cycle counter (server only). */
+	void AdvanceDayNightPhase();
 
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_MatchPhase, BlueprintReadOnly, Category = "Breachborne|Match")
@@ -95,6 +101,12 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Breachborne|Match")
 	int32 WinningTeamID = -1;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Breachborne|DayNight")
+	EBBDayNightPhase DayNightPhase = EBBDayNightPhase::Day;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Breachborne|DayNight")
+	int32 DayNightCycle = 0;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Breachborne|Match")
 	TArray<FTeamInfo> Teams;

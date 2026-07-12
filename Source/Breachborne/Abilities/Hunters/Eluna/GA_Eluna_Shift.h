@@ -48,7 +48,7 @@ protected:
 	float AllyDetectionRadius = 100.0f;
 
 private:
-	void CheckAllyPassThrough();
+	bool CheckAllyPassThrough();
 
 	UPROPERTY()
 	FGameplayTagContainer CooldownTagContainer;

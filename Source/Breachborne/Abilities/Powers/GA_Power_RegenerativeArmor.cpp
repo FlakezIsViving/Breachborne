@@ -7,6 +7,7 @@
 UGA_Power_RegenerativeArmor::UGA_Power_RegenerativeArmor()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::SelfCentered, 0.0f, 120.0f);
 }
 
 void UGA_Power_RegenerativeArmor::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

@@ -28,6 +28,73 @@ enum class EBBAbilityAnimationPhase : uint8
 	Cancel
 };
 
+/** Shared low-cost visual shapes. Cue assets should be instances of one of these templates. */
+UENUM(BlueprintType)
+enum class EBBVFXTemplateType : uint8
+{
+	None,
+	ProjectileBody,
+	ProjectileTrail,
+	BeamTether,
+	GroundTelegraph,
+	PersistentGroundZone,
+	ConeWedge,
+	ImpactBurst,
+	CharacterAura
+};
+
+USTRUCT(BlueprintType)
+struct BREACHBORNE_API FBBVFXPalette
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Palette")
+	FLinearColor PrimaryColor = FLinearColor::White;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Palette")
+	FLinearColor SecondaryColor = FLinearColor(0.65f, 0.70f, 0.78f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Palette")
+	FLinearColor EmpoweredColor = FLinearColor(1.0f, 0.85f, 0.25f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Palette")
+	FLinearColor FriendlyRelationColor = FLinearColor(0.30f, 0.79f, 0.94f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Palette")
+	FLinearColor EnemyRelationColor = FLinearColor(1.0f, 0.30f, 0.35f, 1.0f);
+};
+
+/** Niagara/user-parameter defaults shared by every cue template. */
+USTRUCT(BlueprintType)
+struct BREACHBORNE_API FBBVFXParameterDefaults
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters", meta = (ClampMin = "0.0"))
+	float Radius = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters", meta = (ClampMin = "0.0"))
+	float Length = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters", meta = (ClampMin = "0.0"))
+	float Width = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters")
+	FVector Direction = FVector::ForwardVector;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float Progress = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters", meta = (ClampMin = "0.0"))
+	float Intensity = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters")
+	bool bEmpowered = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters")
+	bool bEnemy = false;
+};
+
 /**
  * Low-spec budget metadata for a single visual cue.
  * Designers should treat these values as acceptance criteria for 1080p Low/Medium
@@ -67,6 +134,9 @@ struct BREACHBORNE_API FBBGameplayCueVisual
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Cue")
 	bool bLooping = false;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Template")
+	EBBVFXTemplateType TemplateType = EBBVFXTemplateType::None;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Cue", meta = (ClampMin = "0.0"))
 	float LifetimeSeconds = 1.0f;
 
@@ -87,6 +157,9 @@ struct BREACHBORNE_API FBBGameplayCueVisual
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Budget")
 	FBBVisualBudget Budget;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Parameters")
+	FBBVFXParameterDefaults ParameterDefaults;
 };
 
 USTRUCT(BlueprintType)
@@ -143,6 +216,9 @@ class BREACHBORNE_API UBBAbilityVisualSet : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Palette")
+	FBBVFXPalette Palette;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Character")
 	TObjectPtr<USkeletalMesh> SkeletalMesh = nullptr;
 

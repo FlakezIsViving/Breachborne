@@ -57,10 +57,10 @@ TSharedRef<SWidget> UBBHunterSelectWidget::RebuildWidget()
 
 	AddHunterButton(1, TEXT("1 Ghost"), 0, 0);
 	AddHunterButton(2, TEXT("2 Kingpin"), 0, 1);
-	AddHunterButton(3, TEXT("3 Hunter"), 1, 0);
+	AddHunterButton(3, TEXT("3 Eluna"), 1, 0);
 	AddHunterButton(4, TEXT("4 Hudson"), 1, 1);
-	AddHunterButton(5, TEXT("5 Hunter"), 2, 0);
-	AddHunterButton(6, TEXT("6 Hunter"), 2, 1);
+	AddHunterButton(5, TEXT("5 Crysta"), 2, 0);
+	AddHunterButton(6, TEXT("6 Void"), 2, 1);
 
 	return SNew(SBorder)
 		.Padding(FMargin(24.0f))
@@ -140,7 +140,7 @@ void UBBHunterSelectWidget::NativeConstruct()
 	Hunter2->OnClicked.AddDynamic(this, &UBBHunterSelectWidget::SelectHunter2);
 	Grid->AddChildToUniformGrid(Hunter2, 0, 1);
 
-	UButton* Hunter3 = MakeHunterButton(WidgetTree, TEXT("3 Hunter"));
+	UButton* Hunter3 = MakeHunterButton(WidgetTree, TEXT("3 Eluna"));
 	Hunter3->OnClicked.AddDynamic(this, &UBBHunterSelectWidget::SelectHunter3);
 	Grid->AddChildToUniformGrid(Hunter3, 1, 0);
 
@@ -148,11 +148,11 @@ void UBBHunterSelectWidget::NativeConstruct()
 	Hunter4->OnClicked.AddDynamic(this, &UBBHunterSelectWidget::SelectHunter4);
 	Grid->AddChildToUniformGrid(Hunter4, 1, 1);
 
-	UButton* Hunter5 = MakeHunterButton(WidgetTree, TEXT("5 Hunter"));
+	UButton* Hunter5 = MakeHunterButton(WidgetTree, TEXT("5 Crysta"));
 	Hunter5->OnClicked.AddDynamic(this, &UBBHunterSelectWidget::SelectHunter5);
 	Grid->AddChildToUniformGrid(Hunter5, 2, 0);
 
-	UButton* Hunter6 = MakeHunterButton(WidgetTree, TEXT("6 Hunter"));
+	UButton* Hunter6 = MakeHunterButton(WidgetTree, TEXT("6 Void"));
 	Hunter6->OnClicked.AddDynamic(this, &UBBHunterSelectWidget::SelectHunter6);
 	Grid->AddChildToUniformGrid(Hunter6, 2, 1);
 

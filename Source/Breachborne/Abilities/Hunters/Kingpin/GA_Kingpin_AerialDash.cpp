@@ -1,12 +1,14 @@
 #include "GA_Kingpin_AerialDash.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Characters/HunterCharacter.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Kingpin_AerialDash::UGA_Kingpin_AerialDash()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_Shift;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Movement, 650.0f, 55.0f);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -82,6 +84,20 @@ void UGA_Kingpin_AerialDash::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 	LaunchVelocity.Z = DashLift;
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Kingpin_AerialDash, EBBAbilityAnimationPhase::Start);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Shift_Start, Hunter->GetActorLocation(), DashDir);
+	if (Hunter->HasAuthority())
+	{
+		const FVector Start = Hunter->GetActorLocation();
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBeamActor* Trail = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), Start, FRotator::ZeroRotator, Params))
+		{
+			Trail->InitBeam(Start, Start + DashDir * 650.0f, 11.0f, 0.25f,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
+	}
 	Hunter->LaunchCharacter(LaunchVelocity, /*bXYOverride=*/true, /*bZOverride=*/true);
 
 	UE_LOG(LogBreachborne, Log, TEXT("Kingpin Aerial Dash on %s in dir (%.2f, %.2f)"),

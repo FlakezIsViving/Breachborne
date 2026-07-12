@@ -11,6 +11,7 @@
 #include "Breachborne/Combat/BBDamageEffect.h"
 #include "Breachborne/Combat/BBGlideBot.h"
 #include "Breachborne/Combat/BBGroundedEffect.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Combat/BBStunTagEffect.h"
 #include "Breachborne/Combat/BBTargetDummy.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
@@ -40,8 +41,8 @@ ABBHudsonBarbedWireActor::ABBHudsonBarbedWireActor()
 		Comp->SetRelativeLocation(Location);
 		Comp->SetRelativeRotation(Rotation);
 		Comp->SetRelativeScale3D(Scale);
-		Comp->SetHiddenInGame(true);
-		Comp->SetVisibility(false);
+		Comp->SetHiddenInGame(false);
+		Comp->SetVisibility(true);
 		if (Cube)
 		{
 			Comp->SetStaticMesh(Cube);
@@ -54,6 +55,11 @@ ABBHudsonBarbedWireActor::ABBHudsonBarbedWireActor()
 	BarB = MakeBar(TEXT("BarB"), FVector(0.0f, 36.0f, -20.0f), FRotator(0.0f, 0.0f, -28.0f), FVector(7.2f, 0.08f, 0.08f));
 	BarC = MakeBar(TEXT("BarC"), FVector(0.0f, 0.0f, 24.0f), FRotator(0.0f, 0.0f, 18.0f), FVector(7.2f, 0.06f, 0.06f));
 	BarD = MakeBar(TEXT("BarD"), FVector(0.0f, 0.0f, 48.0f), FRotator(0.0f, 0.0f, -18.0f), FVector(7.2f, 0.06f, 0.06f));
+	BBPrimitiveVisuals::ApplyColor(GroundPlate, FLinearColor(0.31f, 0.64f, 0.78f, 1.0f));
+	BBPrimitiveVisuals::ApplyColor(BarA, FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+	BBPrimitiveVisuals::ApplyColor(BarB, FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+	BBPrimitiveVisuals::ApplyColor(BarC, FLinearColor(1.0f, 0.82f, 0.4f, 1.0f));
+	BBPrimitiveVisuals::ApplyColor(BarD, FLinearColor(1.0f, 0.82f, 0.4f, 1.0f));
 
 	DamageEffectClass = UBBDamageEffect::StaticClass();
 	SlowEffectClass = UBBBarbedWireSlowEffect::StaticClass();
@@ -64,6 +70,7 @@ ABBHudsonBarbedWireActor::ABBHudsonBarbedWireActor()
 void ABBHudsonBarbedWireActor::BeginPlay()
 {
 	Super::BeginPlay();
+	SetActorTickEnabled(HasAuthority());
 
 	if (HasAuthority())
 	{
@@ -194,10 +201,6 @@ void ABBHudsonBarbedWireActor::ApplyWireTick()
 			}
 		}
 
-		if (AHunterCharacter* Hunter = TargetHunter)
-		{
-			Hunter->Multicast_DrawDebugCircle(Hunter->GetActorLocation(), 95.0f, FColor::Red, 0.2f, 2.0f);
-		}
 	}
 }
 

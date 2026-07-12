@@ -11,11 +11,14 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBDamageExecution.h"
 #include "Breachborne/Combat/BBStunTagEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveWedgeActor.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Kingpin_Q::UGA_Kingpin_Q()
 {
 	AbilityInputTag    = BBGameplayTags::InputTag_Q;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, SlamRange);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -100,6 +103,17 @@ void UGA_Kingpin_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 		return;
 	}
 
+	FActorSpawnParameters VisualParams;
+	VisualParams.Owner = Hunter;
+	VisualParams.Instigator = Hunter;
+	VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveWedgeActor* Telegraph = Hunter->GetWorld()->SpawnActor<ABBPrimitiveWedgeActor>(
+		ABBPrimitiveWedgeActor::StaticClass(), Origin, FRotator::ZeroRotator, VisualParams))
+	{
+		Telegraph->InitWedge(Origin, Forward, SlamRange, SlamHalfAngle, 8.0f, 0.5f,
+			FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+	}
+
 	const ABreachbornePlayerState* KingpinPS = GetBBPlayerState();
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
 
@@ -167,6 +181,12 @@ void UGA_Kingpin_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 
 		++HitCount;
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Q_Impact, HitHunter->GetActorLocation(), ToTarget);
+		if (ABBPrimitiveBurstActor* Impact = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), HitHunter->GetActorLocation(), FRotator::ZeroRotator, VisualParams))
+		{
+			Impact->InitBurst(HitHunter->GetActorLocation(), 110.0f, 0.25f,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
 		UE_LOG(LogBreachborne, Log, TEXT("Kingpin Q: Stunned %s for %.1fs"), *HitHunter->GetName(), StunDuration);
 
 		// Notify passive that CC was applied (Iron Will cooldown reduction)

@@ -45,6 +45,8 @@ private:
 	FTimerHandle SpinLoopMontageHandle;
 	float SpinStartTime = 0.0f;
 	float OriginalYawRate = 720.0f;
+	uint8 LastVisualStep = 0;
 	bool bReachedSpunUp = false;
 	bool bShouldApplyWindDownCooldown = false;
+	TWeakObjectPtr<class ABBPrimitiveWedgeActor> ActiveSpinVisual;
 };

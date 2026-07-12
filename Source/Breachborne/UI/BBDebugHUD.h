@@ -88,6 +88,7 @@ private:
 	void DrawTopLeftPanel();      // Minimap placeholder, day/night, storm, team portraits
 	void DrawBasecampIndicators();
 	void DrawWorldItemPrompts();
+	void DrawAbilityRangeIndicators();
 
 	void DrawBasecampStationPrompt(const ABBBasecampActor* Basecamp, const FVector& WorldLocation,
 		const FString& Label, const FLinearColor& Color) const;
@@ -112,4 +113,7 @@ private:
 
 	// --- Cached Storm Manager ---
 	mutable TWeakObjectPtr<ABBStormManager> CachedStormManager;
+
+	/** Ability under the owner's mouse this frame. Set while drawing the ability bar. */
+	TWeakObjectPtr<const UBBGameplayAbility> HoveredRangeAbility;
 };

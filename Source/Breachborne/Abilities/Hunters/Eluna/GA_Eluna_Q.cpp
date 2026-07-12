@@ -10,6 +10,7 @@
 UGA_Eluna_Q::UGA_Eluna_Q()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_Q;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, ThrowRange, HealRadius);
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
 	FGameplayTagContainer AssetTags;
@@ -80,6 +81,10 @@ void UGA_Eluna_Q::SpawnZone()
 	if (!Hunter || !ZoneClass)
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	if (!Hunter->HasAuthority())
+	{
 		return;
 	}
 

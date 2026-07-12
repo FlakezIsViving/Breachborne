@@ -20,6 +20,7 @@
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
 #include "Components/BrushComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
@@ -34,6 +35,16 @@
 #include "Breachborne/Items/BBChestLootTable.h"
 #include "Breachborne/Items/BBWorldItem.h"
 #include "Breachborne/Vision/BBBrushVolume.h"
+#include "Breachborne/Combat/BBCrystaBurstZone.h"
+#include "Breachborne/Combat/BBCrystaLMBProjectile.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveWedgeActor.h"
+#include "Breachborne/Combat/BBVoidAnomalyPuddle.h"
+#include "Breachborne/Combat/BBVoidOrbProjectile.h"
+#include "Breachborne/Combat/BBVoidSingularityActor.h"
+#include "Breachborne/Combat/BBVoidSnapProjectile.h"
+#include "Breachborne/Combat/BBVoidSwapProjectile.h"
 
 // ============================================================================
 // Helper — create a minimal transient world with a GameState
@@ -62,6 +73,24 @@ namespace BBTestHelpers
 		World = nullptr;
 		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 	}
+
+	static UStaticMeshComponent* FindMesh(AActor* Actor, const FName ComponentName)
+	{
+		if (!Actor)
+		{
+			return nullptr;
+		}
+		TArray<UStaticMeshComponent*> Meshes;
+		Actor->GetComponents<UStaticMeshComponent>(Meshes);
+		for (UStaticMeshComponent* Mesh : Meshes)
+		{
+			if (Mesh && Mesh->GetFName() == ComponentName)
+			{
+				return Mesh;
+			}
+		}
+		return nullptr;
+	}
 }
 
 // ============================================================================
@@ -69,15 +98,15 @@ namespace BBTestHelpers
 //    AdvanceDayNightPhase() must toggle the replicated enum and increment cycle.
 // ============================================================================
 
-DEFINE_SPEC(FBBGameStateDayNightSpec, "Breachborne.GameSystems.GameState.DayNight",
+BEGIN_DEFINE_SPEC(FBBGameStateDayNightSpec, "Breachborne.GameSystems.GameState.DayNight",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	UWorld* TestWorld = nullptr;
+	ABreachborneGameState* GameState = nullptr;
+END_DEFINE_SPEC(FBBGameStateDayNightSpec)
 
 void FBBGameStateDayNightSpec::Define()
 {
-	UWorld* TestWorld = nullptr;
-	ABreachborneGameState* GameState = nullptr;
-
-	BeforeEach([this, &TestWorld, &GameState]()
+	BeforeEach([this]()
 	{
 		TestWorld = BBTestHelpers::CreateTestWorld(TEXT("BB_DayNightTest"));
 		if (TestWorld)
@@ -86,23 +115,23 @@ void FBBGameStateDayNightSpec::Define()
 		}
 	});
 
-	AfterEach([this, &TestWorld, &GameState]()
+	AfterEach([this]()
 	{
 		GameState = nullptr;
 		BBTestHelpers::DestroyTestWorld(TestWorld);
 		TestWorld = nullptr;
 	});
 
-	Describe("AdvanceDayNightPhase", [this, &GameState]()
+	Describe("AdvanceDayNightPhase", [this]()
 	{
-		It("starts in Day phase", [this, &GameState]()
+		It("starts in Day phase", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			TestEqual("Initial phase is Day",
 				GameState->GetDayNightPhase(), EBBDayNightPhase::Day);
 		});
 
-		It("first call transitions to Night", [this, &GameState]()
+		It("first call transitions to Night", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			GameState->AdvanceDayNightPhase();
@@ -110,7 +139,7 @@ void FBBGameStateDayNightSpec::Define()
 				GameState->GetDayNightPhase(), EBBDayNightPhase::Night);
 		});
 
-		It("second call transitions back to Day", [this, &GameState]()
+		It("second call transitions back to Day", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			GameState->AdvanceDayNightPhase();
@@ -119,14 +148,14 @@ void FBBGameStateDayNightSpec::Define()
 				GameState->GetDayNightPhase(), EBBDayNightPhase::Day);
 		});
 
-		It("IsNight returns true after first advance", [this, &GameState]()
+		It("IsNight returns true after first advance", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			GameState->AdvanceDayNightPhase();
 			TestTrue("IsNight() == true after advance", GameState->IsNight());
 		});
 
-		It("DayNightCycle increments on each advance", [this, &GameState]()
+		It("DayNightCycle increments on each advance", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			const int32 InitialCycle = GameState->GetDayNightCycle();
@@ -145,15 +174,15 @@ void FBBGameStateDayNightSpec::Define()
 //    SetMatchPhase must update the replicated MatchPhase field.
 // ============================================================================
 
-DEFINE_SPEC(FBBGameStateMatchPhaseSpec, "Breachborne.GameSystems.GameState.MatchPhase",
+BEGIN_DEFINE_SPEC(FBBGameStateMatchPhaseSpec, "Breachborne.GameSystems.GameState.MatchPhase",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	UWorld* TestWorld = nullptr;
+	ABreachborneGameState* GameState = nullptr;
+END_DEFINE_SPEC(FBBGameStateMatchPhaseSpec)
 
 void FBBGameStateMatchPhaseSpec::Define()
 {
-	UWorld* TestWorld = nullptr;
-	ABreachborneGameState* GameState = nullptr;
-
-	BeforeEach([this, &TestWorld, &GameState]()
+	BeforeEach([this]()
 	{
 		TestWorld = BBTestHelpers::CreateTestWorld(TEXT("BB_MatchPhaseTest"));
 		if (TestWorld)
@@ -162,23 +191,23 @@ void FBBGameStateMatchPhaseSpec::Define()
 		}
 	});
 
-	AfterEach([this, &TestWorld, &GameState]()
+	AfterEach([this]()
 	{
 		GameState = nullptr;
 		BBTestHelpers::DestroyTestWorld(TestWorld);
 		TestWorld = nullptr;
 	});
 
-	Describe("SetMatchPhase", [this, &GameState]()
+	Describe("SetMatchPhase", [this]()
 	{
-		It("starts in WaitingForPlayers", [this, &GameState]()
+		It("starts in WaitingForPlayers", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			TestEqual("Initial phase is WaitingForPlayers",
 				GameState->GetMatchPhase(), EMatchPhase::WaitingForPlayers);
 		});
 
-		It("transitions to Dropping", [this, &GameState]()
+		It("transitions to Dropping", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			GameState->SetMatchPhase(EMatchPhase::Dropping);
@@ -186,7 +215,7 @@ void FBBGameStateMatchPhaseSpec::Define()
 				GameState->GetMatchPhase(), EMatchPhase::Dropping);
 		});
 
-		It("transitions to Playing", [this, &GameState]()
+		It("transitions to Playing", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			GameState->SetMatchPhase(EMatchPhase::Playing);
@@ -194,7 +223,7 @@ void FBBGameStateMatchPhaseSpec::Define()
 				GameState->GetMatchPhase(), EMatchPhase::Playing);
 		});
 
-		It("transitions to Ended", [this, &GameState]()
+		It("transitions to Ended", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			GameState->SetMatchPhase(EMatchPhase::Ended);
@@ -202,7 +231,7 @@ void FBBGameStateMatchPhaseSpec::Define()
 				GameState->GetMatchPhase(), EMatchPhase::Ended);
 		});
 
-		It("ElapsedMatchTime starts at zero", [this, &GameState]()
+		It("ElapsedMatchTime starts at zero", [this]()
 		{
 			if (!TestNotNull("GameState valid", GameState)) return;
 			TestEqual("Elapsed time zero", GameState->GetElapsedMatchTime(), 0.f);
@@ -216,27 +245,27 @@ void FBBGameStateMatchPhaseSpec::Define()
 //    it should be present (NetMode is NM_Standalone or NM_DedicatedServer).
 // ============================================================================
 
-DEFINE_SPEC(FBBContractSubsystemSpec, "Breachborne.GameSystems.ContractSubsystem",
+BEGIN_DEFINE_SPEC(FBBContractSubsystemSpec, "Breachborne.GameSystems.ContractSubsystem",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	UWorld* TestWorld = nullptr;
+END_DEFINE_SPEC(FBBContractSubsystemSpec)
 
 void FBBContractSubsystemSpec::Define()
 {
-	UWorld* TestWorld = nullptr;
-
-	BeforeEach([this, &TestWorld]()
+	BeforeEach([this]()
 	{
 		TestWorld = BBTestHelpers::CreateTestWorld(TEXT("BB_ContractTest"));
 	});
 
-	AfterEach([this, &TestWorld]()
+	AfterEach([this]()
 	{
 		BBTestHelpers::DestroyTestWorld(TestWorld);
 		TestWorld = nullptr;
 	});
 
-	Describe("Subsystem availability", [this, &TestWorld]()
+	Describe("Subsystem availability", [this]()
 	{
-		It("subsystem exists in a standalone world", [this, &TestWorld]()
+		It("subsystem exists in a standalone world", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -245,9 +274,9 @@ void FBBContractSubsystemSpec::Define()
 		});
 	});
 
-	Describe("IssueContractToTeam", [this, &TestWorld]()
+	Describe("IssueContractToTeam", [this]()
 	{
-		It("contract is None before issuance", [this, &TestWorld]()
+		It("contract is None before issuance", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -258,7 +287,7 @@ void FBBContractSubsystemSpec::Define()
 			TestEqual("No contract before issue", C.ContractType, EBBContractType::None);
 		});
 
-		It("IssueContractToTeam assigns Brawler or CreepFarm (not None)", [this, &TestWorld]()
+		It("IssueContractToTeam assigns Brawler or CreepFarm (not None)", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -270,7 +299,7 @@ void FBBContractSubsystemSpec::Define()
 			TestNotEqual("Contract type is assigned", C.ContractType, EBBContractType::None);
 		});
 
-		It("issued contract has positive ObjectiveCount", [this, &TestWorld]()
+		It("issued contract has positive ObjectiveCount", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -282,7 +311,7 @@ void FBBContractSubsystemSpec::Define()
 			TestTrue("ObjectiveCount > 0", C.ObjectiveCount > 0);
 		});
 
-		It("issued contract has positive GoldReward", [this, &TestWorld]()
+		It("issued contract has positive GoldReward", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -294,7 +323,7 @@ void FBBContractSubsystemSpec::Define()
 			TestTrue("GoldReward > 0", C.GoldReward > 0);
 		});
 
-		It("different teams get independent contracts", [this, &TestWorld]()
+		It("different teams get independent contracts", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -311,9 +340,9 @@ void FBBContractSubsystemSpec::Define()
 		});
 	});
 
-	Describe("ReportKill on Brawler contract", [this, &TestWorld]()
+	Describe("ReportKill on Brawler contract", [this]()
 	{
-		It("one kill increments Brawler progress by 1", [this, &TestWorld]()
+		It("one kill increments Brawler progress by 1", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			UBBContractSubsystem* Contracts =
@@ -353,34 +382,34 @@ void FBBContractSubsystemSpec::Define()
 //    in a test world without crashing and has collision enabled.
 // ============================================================================
 
-DEFINE_SPEC(FBBBrushVolumeSpec, "Breachborne.GameSystems.BrushVolume",
+BEGIN_DEFINE_SPEC(FBBBrushVolumeSpec, "Breachborne.GameSystems.BrushVolume",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	UWorld* TestWorld = nullptr;
+END_DEFINE_SPEC(FBBBrushVolumeSpec)
 
 void FBBBrushVolumeSpec::Define()
 {
-	UWorld* TestWorld = nullptr;
-
-	BeforeEach([this, &TestWorld]()
+	BeforeEach([this]()
 	{
 		TestWorld = BBTestHelpers::CreateTestWorld(TEXT("BB_BrushVolumeTest"));
 	});
 
-	AfterEach([this, &TestWorld]()
+	AfterEach([this]()
 	{
 		BBTestHelpers::DestroyTestWorld(TestWorld);
 		TestWorld = nullptr;
 	});
 
-	Describe("ABBBrushVolume", [this, &TestWorld]()
+	Describe("ABBBrushVolume", [this]()
 	{
-		It("spawns without crash", [this, &TestWorld]()
+		It("spawns without crash", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			ABBBrushVolume* Volume = TestWorld->SpawnActor<ABBBrushVolume>();
 			TestNotNull("BrushVolume spawned", Volume);
 		});
 
-		It("does not replicate  [server-only actor]", [this, &TestWorld]()
+		It("does not replicate  [server-only actor]", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			ABBBrushVolume* Volume = TestWorld->SpawnActor<ABBBrushVolume>();
@@ -388,7 +417,7 @@ void FBBBrushVolumeSpec::Define()
 			TestFalse("bReplicates is false", Volume->GetIsReplicated());
 		});
 
-		It("brush component generates overlap events", [this, &TestWorld]()
+		It("brush component generates overlap events", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			ABBBrushVolume* Volume = TestWorld->SpawnActor<ABBBrushVolume>();
@@ -406,27 +435,27 @@ void FBBBrushVolumeSpec::Define()
 //    should produce independent ABBWorldItem pickups.
 // ============================================================================
 
-DEFINE_SPEC(FBBChestLootSpec, "Breachborne.GameSystems.ChestLoot",
+BEGIN_DEFINE_SPEC(FBBChestLootSpec, "Breachborne.GameSystems.ChestLoot",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	UWorld* TestWorld = nullptr;
+END_DEFINE_SPEC(FBBChestLootSpec)
 
 void FBBChestLootSpec::Define()
 {
-	UWorld* TestWorld = nullptr;
-
-	BeforeEach([this, &TestWorld]()
+	BeforeEach([this]()
 	{
 		TestWorld = BBTestHelpers::CreateTestWorld(TEXT("BB_ChestLootTest"));
 	});
 
-	AfterEach([this, &TestWorld]()
+	AfterEach([this]()
 	{
 		BBTestHelpers::DestroyTestWorld(TestWorld);
 		TestWorld = nullptr;
 	});
 
-	Describe("ABBChestActor", [this, &TestWorld]()
+	Describe("ABBChestActor", [this]()
 	{
-		It("spawns replicated and starts closed", [this, &TestWorld]()
+		It("spawns replicated and starts closed", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			ABBChestActor* Chest = TestWorld->SpawnActor<ABBChestActor>();
@@ -437,9 +466,9 @@ void FBBChestLootSpec::Define()
 		});
 	});
 
-	Describe("UBBChestLootTable fallback", [this, &TestWorld]()
+	Describe("UBBChestLootTable fallback", [this]()
 	{
-		It("spawns loose world item pickups", [this, &TestWorld]()
+		It("spawns loose world item pickups", [this]()
 		{
 			if (!TestNotNull("World valid", TestWorld)) return;
 			const int32 SpawnedCount = UBBChestLootTable::SpawnFallbackLoot(TestWorld, FVector::ZeroVector, EBBChestTier::Common);
@@ -452,6 +481,119 @@ void FBBChestLootSpec::Define()
 			}
 			TestEqual("Spawn count matches world item count", WorldItemCount, SpawnedCount);
 		});
+	});
+}
+
+// ============================================================================
+// 6. Primitive VFX geometry
+//    Objective fallback geometry must match gameplay radii and empowered state.
+// ============================================================================
+
+BEGIN_DEFINE_SPEC(FBBPrimitiveVFXSpec, "Breachborne.GameSystems.PrimitiveVFX",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	UWorld* TestWorld = nullptr;
+END_DEFINE_SPEC(FBBPrimitiveVFXSpec)
+
+void FBBPrimitiveVFXSpec::Define()
+{
+	BeforeEach([this]()
+	{
+		TestWorld = BBTestHelpers::CreateTestWorld(TEXT("BB_PrimitiveVFXTest"));
+	});
+
+	AfterEach([this]()
+	{
+		BBTestHelpers::DestroyTestWorld(TestWorld);
+		TestWorld = nullptr;
+	});
+
+	It("sizes Crysta Q disc to the gameplay radius", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBCrystaBurstZone* Zone = TestWorld->SpawnActor<ABBCrystaBurstZone>();
+		if (!TestNotNull("Crysta zone spawned", Zone)) return;
+		Zone->InitBurstZone(nullptr, nullptr, nullptr, nullptr, 0, 400.0f, 60.0f, 0.0f);
+		UStaticMeshComponent* Mesh = BBTestHelpers::FindMesh(Zone, TEXT("ZoneMesh"));
+		if (!TestNotNull("Zone mesh valid", Mesh)) return;
+		TestTrue("400 radius uses 8x basic cylinder scale", FMath::IsNearlyEqual(Mesh->GetRelativeScale3D().X, 8.0f));
+	});
+
+	It("sizes Void Q disc to the gameplay radius", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBVoidAnomalyPuddle* Puddle = TestWorld->SpawnActor<ABBVoidAnomalyPuddle>();
+		if (!TestNotNull("Void puddle spawned", Puddle)) return;
+		Puddle->InitPuddle(nullptr, nullptr, nullptr, 0, 460.0f, 60.0f, 0.0f, 0.0f);
+		UStaticMeshComponent* Mesh = BBTestHelpers::FindMesh(Puddle, TEXT("PuddleMesh"));
+		if (!TestNotNull("Puddle mesh valid", Mesh)) return;
+		TestTrue("460 radius uses 9.2x basic cylinder scale", FMath::IsNearlyEqual(Mesh->GetRelativeScale3D().X, 9.2f));
+	});
+
+	It("shows empowered Void state on replicated primitive actors", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBVoidOrbProjectile* Orb = TestWorld->SpawnActor<ABBVoidOrbProjectile>();
+		ABBVoidSnapProjectile* Snap = TestWorld->SpawnActor<ABBVoidSnapProjectile>();
+		ABBVoidSwapProjectile* Swap = TestWorld->SpawnActor<ABBVoidSwapProjectile>();
+		if (!TestNotNull("Orb spawned", Orb) || !TestNotNull("Snap spawned", Snap) || !TestNotNull("Swap spawned", Swap)) return;
+		Orb->InitVoidOrb(nullptr, nullptr, nullptr, 0.0f, 0, true);
+		Snap->InitSnap(nullptr, nullptr, nullptr, nullptr, 0, FVector::ForwardVector, true);
+		Swap->InitSwapProjectile(nullptr, FVector::ZeroVector, FVector(1000.0f, 0.0f, 0.0f), 60.0f, 500.0f, true);
+		UStaticMeshComponent* OrbMesh = BBTestHelpers::FindMesh(Orb, TEXT("ProjectileMesh"));
+		UStaticMeshComponent* ConeMesh = BBTestHelpers::FindMesh(Snap, TEXT("ConeMesh"));
+		UStaticMeshComponent* ZoneMesh = BBTestHelpers::FindMesh(Swap, TEXT("ZoneMesh"));
+		if (!TestNotNull("Orb mesh valid", OrbMesh) || !TestNotNull("Cone mesh valid", ConeMesh) || !TestNotNull("Swap zone mesh valid", ZoneMesh)) return;
+		TestTrue("Charged orb is enlarged", FMath::IsNearlyEqual(OrbMesh->GetRelativeScale3D().X, 0.24f));
+		TestTrue("Empowered cone is enlarged", FMath::IsNearlyEqual(ConeMesh->GetRelativeScale3D().X, 1.9f));
+		TestTrue("Empowered swap radius is exact", FMath::IsNearlyEqual(ZoneMesh->GetRelativeScale3D().X, 10.0f));
+	});
+
+	It("shows empowered Crysta LMB state", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBCrystaLMBProjectile* Projectile = TestWorld->SpawnActor<ABBCrystaLMBProjectile>();
+		if (!TestNotNull("Crysta projectile spawned", Projectile)) return;
+		Projectile->InitCrystaProjectile(nullptr, nullptr, nullptr, 0.0f, 0.0f, 0, false, false, true);
+		UStaticMeshComponent* Mesh = BBTestHelpers::FindMesh(Projectile, TEXT("ProjectileMesh"));
+		if (!TestNotNull("Projectile mesh valid", Mesh)) return;
+		TestTrue("Empowered projectile is enlarged", FMath::IsNearlyEqual(Mesh->GetRelativeScale3D().X, 0.24f));
+	});
+
+	It("builds bounded replicated beam and wedge geometry", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBPrimitiveBeamActor* Beam = TestWorld->SpawnActor<ABBPrimitiveBeamActor>();
+		ABBPrimitiveWedgeActor* Wedge = TestWorld->SpawnActor<ABBPrimitiveWedgeActor>();
+		if (!TestNotNull("Beam spawned", Beam) || !TestNotNull("Wedge spawned", Wedge)) return;
+		Beam->InitBeam(FVector::ZeroVector, FVector(1000.0f, 0.0f, 0.0f), 10.0f, 1.0f, FLinearColor::White);
+		Wedge->InitWedge(FVector::ZeroVector, FVector::ForwardVector, 600.0f, 35.0f, 6.0f, 1.0f, FLinearColor::White);
+		UStaticMeshComponent* BeamMesh = BBTestHelpers::FindMesh(Beam, TEXT("BeamMesh"));
+		if (!TestNotNull("Beam mesh valid", BeamMesh)) return;
+		TestTrue("Beam length scale matches 1000 units", FMath::IsNearlyEqual(BeamMesh->GetRelativeScale3D().Z, 10.0f));
+		int32 VisibleWedgeSegments = 0;
+		TArray<UStaticMeshComponent*> WedgeMeshes;
+		Wedge->GetComponents<UStaticMeshComponent>(WedgeMeshes);
+		for (const UStaticMeshComponent* Mesh : WedgeMeshes)
+		{
+			VisibleWedgeSegments += Mesh && Mesh->IsVisible() ? 1 : 0;
+		}
+		TestEqual("Wedge renders two edges and eight arc segments", VisibleWedgeSegments, 10);
+		TestTrue("Fallback actors replicate", Beam->GetIsReplicated() && Wedge->GetIsReplicated());
+	});
+
+	It("keeps replicated burst fallback hidden until initialized", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBPrimitiveBurstActor* Burst = TestWorld->SpawnActor<ABBPrimitiveBurstActor>();
+		if (!TestNotNull("Burst spawned", Burst)) return;
+		UStaticMeshComponent* BurstMesh = BBTestHelpers::FindMesh(Burst, TEXT("BurstMesh"));
+		if (!TestNotNull("Burst mesh valid", BurstMesh)) return;
+		TestFalse("Uninitialized burst is hidden", BurstMesh->IsVisible());
+		Burst->InitBurst(FVector(120.0f, 30.0f, 10.0f), 75.0f, 1.0f, FLinearColor::White, true);
+		TestTrue("Initialized burst is visible", BurstMesh->IsVisible());
+		TestTrue("Burst radius matches requested disc radius",
+			FMath::IsNearlyEqual(BurstMesh->GetRelativeScale3D().X, 1.5f));
+		TestTrue("Burst fallback replicates", Burst->GetIsReplicated());
 	});
 }
 

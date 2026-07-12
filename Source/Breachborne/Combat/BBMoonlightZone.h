@@ -23,6 +23,7 @@ class BREACHBORNE_API ABBMoonlightZone : public AActor
 
 public:
 	ABBMoonlightZone();
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/**
 	 * Initialize the zone with heal parameters. Call immediately after spawn.
@@ -70,20 +71,35 @@ private:
 	void UpdateTravel(float DeltaTime);
 	void TryAttachToAlly();
 	bool TryAttachAlongPath(const FVector& From, const FVector& To);
+	void RefreshVisualState();
+	void SpawnPulse(bool bFinalBurst);
+
+	UFUNCTION()
+	void OnRep_VisualState();
 
 	TWeakObjectPtr<AHunterCharacter> SourceHunter;
 	TWeakObjectPtr<AActor> AttachedAlly;
 	float HealPerTick = 12.0f;
 	float TickInterval = 0.5f;
+	UPROPERTY(ReplicatedUsing = OnRep_VisualState)
 	float HealRadius = 400.0f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_VisualState)
 	float ZoneDuration = 2.5f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_VisualState)
+	bool bVisualInitialized = false;
+
 	float SelfHealFraction = 0.5f;
 	float WispHealMultiplier = 5.0f;
 	float BurstHeal = 90.0f;
 	float ElapsedTime = 0.0f;
 	float TickAccumulator = 0.0f;
 	bool bInitialized = false;
+	UPROPERTY(Replicated)
 	bool bTossed = false;
+
+	UPROPERTY(Replicated)
 	bool bIsTraveling = false;
 
 	FVector ThrowStartLocation;

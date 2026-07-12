@@ -93,9 +93,9 @@ ABBWispPawn::ABBWispPawn()
 	// Indicator widget (screen-space bars above wisp)
 	IndicatorWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("IndicatorWidget"));
 	IndicatorWidgetComp->SetupAttachment(RootComponent);
-	IndicatorWidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+	IndicatorWidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 95.0f));
 	IndicatorWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
-	IndicatorWidgetComp->SetDrawSize(FVector2D(120.0f, 40.0f));
+	IndicatorWidgetComp->SetDrawSize(FVector2D(150.0f, 46.0f));
 	IndicatorWidgetComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	IndicatorWidgetComp->SetVisibility(true);
 	IndicatorWidgetComp->SetWidgetClass(UWispIndicatorWidget::StaticClass());
@@ -437,15 +437,17 @@ void ABBWispPawn::ServerWispTick()
 	// Track previous state for transition logging
 	const EWispState PrevState = WispState;
 
-	// Update wisp state based on proximity
-	if (bAllyNearby && WispState == EWispState::Active)
+	// Enemy contest has priority over ordinary ally proximity. Eluna carry is
+	// handled above and intentionally bypasses this branch.
+	const bool bCanProximityRevive = bAllyNearby && !bEnemyNearby;
+	if (bCanProximityRevive && WispState == EWispState::Active)
 	{
 		WispState = EWispState::BeingRevived;
 		ReviveStartTime = GetWorld()->GetTimeSeconds();
 		UE_LOG(LogBreachborne, Warning, TEXT("Wisp: REVIVE STARTED | Ally=%s Dist=%.0f | Rate=%.2f/s | EstTime=%.1fs"),
 			*NearestAllyName, NearestAllyDist, RezFillRate, 1.0f / RezFillRate);
 	}
-	else if (!bAllyNearby && WispState == EWispState::BeingRevived)
+	else if (!bCanProximityRevive && WispState == EWispState::BeingRevived)
 	{
 		WispState = EWispState::Active;
 		const float Elapsed = (ReviveStartTime > 0.0f) ? (GetWorld()->GetTimeSeconds() - ReviveStartTime) : 0.0f;
@@ -483,11 +485,14 @@ void ABBWispPawn::ServerWispTick()
 		HealAccumulated = 0.0f;
 	}
 
-	// Total rate capped at MaxReviveMultiplier (default 2.0x)
-	float TotalMultiplier = FMath::Min(ProximityMultiplier + HealMultiplier, MaxReviveMultiplier);
+	// Healing freezes decay and accelerates revive while uncontested. Enemy
+	// presence overrides every ordinary source; Eluna carry is the sole exception.
+	const float TotalMultiplier = bEnemyNearby
+		? 0.0f
+		: FMath::Min(ProximityMultiplier + HealMultiplier, MaxReviveMultiplier);
 
 	// Decay is paused if ANY revive source is active (ally proximity or heals)
-	bool bDecayPaused = (TotalMultiplier > 0.0f);
+	const bool bDecayPaused = TotalMultiplier > 0.0f;
 
 	const float PreTickHP = ReplicatedWispHP;
 	const float PreTickRez = RezBarProgress;

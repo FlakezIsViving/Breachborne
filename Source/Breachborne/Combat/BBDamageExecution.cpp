@@ -119,7 +119,6 @@ void UBBDamageExecution::Execute_Implementation(
 				if (bHitFromBack)
 				{
 					FinalDamage *= 1.25f;
-					TargetHunter->Multicast_DrawDebugCircle(TargetHunter->GetActorLocation(), 120.0f, FColor::Red, 0.35f, 5.0f);
 				}
 			}
 		}

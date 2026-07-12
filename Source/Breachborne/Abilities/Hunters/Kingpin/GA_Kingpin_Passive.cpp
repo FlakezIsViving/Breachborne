@@ -5,6 +5,7 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Characters/HunterCharacter.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Kingpin_Passive::UGA_Kingpin_Passive()
@@ -102,5 +103,15 @@ void UGA_Kingpin_Passive::OnCCApplied(FGameplayTag Tag, const FGameplayEventData
 	{
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Kingpin_Passive, EBBAbilityAnimationPhase::PassivePulse);
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Passive_Pulse, Hunter->GetActorLocation(), FVector::UpVector);
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), Hunter->GetActorLocation(), FRotator::ZeroRotator, Params))
+		{
+			Pulse->InitBurst(Hunter->GetActorLocation(), 150.0f, 0.22f,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
 	}
 }

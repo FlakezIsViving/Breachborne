@@ -4,6 +4,9 @@
 #include "Breachborne/Abilities/BBGameplayAbility.h"
 #include "GA_Ghost_Q.generated.h"
 
+class ABBPrimitiveBeamActor;
+class ABBPrimitiveBurstActor;
+
 /**
  * Ghost's Q Ability — Piercing Laser.
  * Single-activation line trace that pierces through ALL targets in line.
@@ -31,6 +34,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Ghost|Q")
 	float CooldownDuration = 8.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|Q|Visual")
+	TSubclassOf<ABBPrimitiveBeamActor> BeamVisualClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|Q|Visual")
+	TSubclassOf<ABBPrimitiveBurstActor> BurstVisualClass;
 
 private:
 	/** Cooldown tags container — built once, returned by GetCooldownTags */

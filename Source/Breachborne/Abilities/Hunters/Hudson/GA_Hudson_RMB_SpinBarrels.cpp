@@ -3,10 +3,12 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Characters/HunterCharacter.h"
+#include "Breachborne/Combat/BBPrimitiveWedgeActor.h"
 
 UGA_Hudson_RMB_SpinBarrels::UGA_Hudson_RMB_SpinBarrels()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_RMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, 1300.0f);
 	bActivateOnInputHeld = true;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
@@ -51,7 +53,23 @@ void UGA_Hudson_RMB_SpinBarrels::ActivateAbility(const FGameplayAbilitySpecHandl
 	}
 	SpinStartTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 	bReachedSpunUp = false;
+	LastVisualStep = 0;
 	bShouldApplyWindDownCooldown = true;
+	if (Hunter->HasAuthority())
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveWedgeActor* Ring = Hunter->GetWorld()->SpawnActor<ABBPrimitiveWedgeActor>(
+			ABBPrimitiveWedgeActor::StaticClass(), Hunter->GetActorLocation(), FRotator::ZeroRotator, Params))
+		{
+			Ring->AttachToActor(Hunter, FAttachmentTransformRules::KeepWorldTransform);
+			Ring->InitWedge(Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 70.0f), FVector::ForwardVector,
+				90.0f, 179.0f, 4.0f, 60.0f, FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+			ActiveSpinVisual = Ring;
+		}
+	}
 
 	if (UCharacterMovementComponent* MoveComp = Hunter->GetCharacterMovement())
 	{
@@ -86,6 +104,11 @@ void UGA_Hudson_RMB_SpinBarrels::EndAbility(const FGameplayAbilitySpecHandle Han
 	{
 		ASC->SetLooseGameplayTagCount(BBGameplayTags::State_Hudson_Spinning, 0);
 		ASC->SetLooseGameplayTagCount(BBGameplayTags::State_Hudson_SpunUp, 0);
+	}
+	if (ActiveSpinVisual.IsValid())
+	{
+		ActiveSpinVisual->Destroy();
+		ActiveSpinVisual.Reset();
 	}
 
 	RemoveVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_RMB_Loop);
@@ -130,11 +153,16 @@ void UGA_Hudson_RMB_SpinBarrels::SpinTick()
 		ASC->AddLooseGameplayTag(BBGameplayTags::State_Hudson_SpunUp);
 	}
 
-	const uint8 Red = 255;
-	const uint8 Green = static_cast<uint8>(FMath::Lerp(150.0f, 20.0f, Alpha));
-	const FColor RingColor(Red, Green, 0);
-	const float Radius = FMath::Lerp(90.0f, 140.0f, Alpha);
-	Hunter->Multicast_DrawDebugCircle(Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 70.0f), Radius, RingColor, 0.08f, bReachedSpunUp ? 6.0f : 3.0f);
+	if (Hunter->HasAuthority() && ActiveSpinVisual.IsValid())
+	{
+		const uint8 VisualStep = static_cast<uint8>(FMath::FloorToInt(Alpha * 10.0f));
+		if (VisualStep != LastVisualStep)
+		{
+			LastVisualStep = VisualStep;
+			ActiveSpinVisual->UpdateWedge(FMath::Lerp(90.0f, 140.0f, Alpha),
+				bReachedSpunUp ? FLinearColor(1.0f, 0.25f, 0.08f, 1.0f) : FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+		}
+	}
 }
 
 const FGameplayTagContainer* UGA_Hudson_RMB_SpinBarrels::GetCooldownTags() const

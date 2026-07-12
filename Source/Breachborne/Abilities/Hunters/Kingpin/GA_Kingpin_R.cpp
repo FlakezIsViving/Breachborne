@@ -8,6 +8,8 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBAntiHealEffect.h"
 #include "Breachborne/Combat/BBDamageExecution.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveWedgeActor.h"
 #include "Breachborne/Breachborne.h"
 
 namespace
@@ -18,6 +20,7 @@ namespace
 UGA_Kingpin_R::UGA_Kingpin_R()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_R;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, ShotgunRange);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
@@ -83,6 +86,18 @@ void UGA_Kingpin_R::FireShell()
 	const FVector Origin = Hunter->GetActorLocation();
 	const FVector Forward = Hunter->GetActorForwardVector().GetSafeNormal2D();
 	const float CosHalfAngle = FMath::Cos(FMath::DegreesToRadians(ShotgunHalfAngle));
+	FActorSpawnParameters VisualParams;
+	VisualParams.Owner = Hunter;
+	VisualParams.Instigator = Hunter;
+	VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveWedgeActor* Blast = Hunter->GetWorld()->SpawnActor<ABBPrimitiveWedgeActor>(
+		ABBPrimitiveWedgeActor::StaticClass(), Origin, FRotator::ZeroRotator, VisualParams))
+	{
+		const FLinearColor ShellColor = ShellsFired == 1
+			? FLinearColor(0.90f, 0.23f, 0.18f, 1.0f)
+			: FLinearColor(1.0f, 0.69f, 0.13f, 1.0f);
+		Blast->InitWedge(Origin, Forward, ShotgunRange, ShotgunHalfAngle, 10.0f, 0.24f, ShellColor);
+	}
 
 	TArray<FOverlapResult> Overlaps;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(KingpinShotgunUlt), false, Hunter);
@@ -119,6 +134,12 @@ void UGA_Kingpin_R::FireShell()
 		ApplyShellHit(SourceASC, TargetASC, Hunter);
 		++HitCount;
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_R_Impact, HitHunter->GetActorLocation(), ToTarget);
+		if (ABBPrimitiveBurstActor* Impact = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), HitHunter->GetActorLocation(), FRotator::ZeroRotator, VisualParams))
+		{
+			Impact->InitBurst(HitHunter->GetActorLocation(), 125.0f, 0.25f,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
 
 		UE_LOG(LogBreachborne, Log, TEXT("Kingpin R: Shell %d hit %s for %.0f damage + anti-heal %.1fs"),
 			ShellsFired, *HitHunter->GetName(), DamagePerShell, AntiHealDuration);

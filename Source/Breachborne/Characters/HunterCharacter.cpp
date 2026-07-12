@@ -1,6 +1,7 @@
 #include "HunterCharacter.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "GameplayCueInterface.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
@@ -19,13 +20,48 @@
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Abilities/BBAbilityVisualSet.h"
 #include "Breachborne/Abilities/BBHunterDefinition.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Breachborne.h"
-#include "HAL/IConsoleManager.h"
 
-static TAutoConsoleVariable<int32> CVarBBDebugPrimitiveVisuals(
-	TEXT("bb.Visuals.DebugPrimitives"),
-	0,
-	TEXT("Enables legacy DrawDebug primitive visuals for ability iteration. 0=off for normal play, 1=on for dev/debug."));
+namespace
+{
+	void SpawnHudsonLocalCueFallback(AHunterCharacter* Hunter, const FBBLocalGameplayCue& Cue)
+	{
+		if (!Hunter || Hunter->GetNetMode() == NM_DedicatedServer || !Cue.CueTag.IsValid())
+		{
+			return;
+		}
+
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (Cue.CueTag == BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Fire)
+		{
+			if (ABBPrimitiveBeamActor* Beam = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+				ABBPrimitiveBeamActor::StaticClass(), Cue.Location, FRotator::ZeroRotator, Params))
+			{
+				Beam->SetReplicates(false);
+				const FVector Direction = Cue.Normal.IsNearlyZero() ? Hunter->GetActorForwardVector() : FVector(Cue.Normal).GetSafeNormal();
+				Beam->InitBeam(Cue.Location, Cue.Location + Direction * 1300.0f, 2.5f, 0.09f,
+					FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+			}
+		}
+		else if (Cue.CueTag == BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Impact
+			|| Cue.CueTag == BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Heal)
+		{
+			if (ABBPrimitiveBurstActor* Burst = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+				ABBPrimitiveBurstActor::StaticClass(), Cue.Location, FRotator::ZeroRotator, Params))
+			{
+				Burst->SetReplicates(false);
+				const bool bHeal = Cue.CueTag == BBGameplayTags::GameplayCue_Hunter_Hudson_LMB_Heal;
+				Burst->InitBurst(Cue.Location, bHeal ? 34.0f : 20.0f, bHeal ? 0.2f : 0.14f,
+					bHeal ? FLinearColor(0.31f, 0.64f, 0.78f, 1.0f) : FLinearColor(1.0f, 0.82f, 0.4f, 1.0f));
+			}
+		}
+	}
+}
 
 AHunterCharacter::AHunterCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UBBCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -424,34 +460,38 @@ void AHunterCharacter::BindASCFromPlayerState()
 	}
 }
 
-void AHunterCharacter::Multicast_DrawDebugCircle_Implementation(const FVector& Center, float Radius, const FColor& Color, float LifeTime, float Thickness)
+void AHunterCharacter::Multicast_InvokeLocalGameplayCueBatch_Implementation(
+	const TArray<FBBLocalGameplayCue>& Cues, bool bSkipFirstCueForRemoteOwner)
 {
-	if (CVarBBDebugPrimitiveVisuals.GetValueOnGameThread() <= 0)
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC || Cues.IsEmpty())
 	{
 		return;
 	}
 
-	DrawDebugCircle(GetWorld(), Center, Radius, 32, Color, false, LifeTime, 0, Thickness, FVector(1,0,0), FVector(0,1,0), false);
+	const int32 FirstCueIndex = bSkipFirstCueForRemoteOwner && IsLocallyControlled() && !HasAuthority() ? 1 : 0;
+	for (int32 Index = FirstCueIndex; Index < Cues.Num(); ++Index)
+	{
+		const FBBLocalGameplayCue& Cue = Cues[Index];
+		if (!Cue.CueTag.IsValid())
+		{
+			continue;
+		}
+
+		FGameplayCueParameters Params;
+		Params.Instigator = this;
+		Params.EffectCauser = this;
+		Params.SourceObject = this;
+		Params.Location = Cue.Location;
+		Params.Normal = Cue.Normal;
+		ASC->InvokeGameplayCueEvent(Cue.CueTag, EGameplayCueEvent::Executed, Params);
+		SpawnHudsonLocalCueFallback(this, Cue);
+	}
 }
 
-void AHunterCharacter::Multicast_DrawDebugLine_Implementation(const FVector& Start, const FVector& End, const FColor& Color, float LifeTime, float Thickness)
+void AHunterCharacter::PlayLocalPrimitiveCueFallback(const FBBLocalGameplayCue& Cue)
 {
-	if (CVarBBDebugPrimitiveVisuals.GetValueOnGameThread() <= 0)
-	{
-		return;
-	}
-
-	DrawDebugLine(GetWorld(), Start, End, Color, false, LifeTime, 0, Thickness);
-}
-
-void AHunterCharacter::Multicast_DrawDebugSphere_Implementation(const FVector& Center, float Radius, const FColor& Color, float LifeTime)
-{
-	if (CVarBBDebugPrimitiveVisuals.GetValueOnGameThread() <= 0)
-	{
-		return;
-	}
-
-	DrawDebugSphere(GetWorld(), Center, Radius, 12, Color, false, LifeTime);
+	SpawnHudsonLocalCueFallback(this, Cue);
 }
 
 void AHunterCharacter::BeginHookPull(AActor* Target, float PullSpeed, float ImpactDistance, float MaxPullDuration, float PullTickInterval, UClass* DamageEffectClass, float Damage, const FGameplayEffectContextHandle& Context)

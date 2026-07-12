@@ -12,6 +12,7 @@
 UGA_Ghost_LMB::UGA_Ghost_LMB()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_LMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, 1500.0f);
 	bActivateOnInputHeld = true;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -125,6 +126,7 @@ void UGA_Ghost_LMB::FireShot()
 		if (Projectile)
 		{
 			Projectile->InitProjectile(SourceASCPtr, DamageEffectClass, BaseDamagePerShot, ShooterPS->GetTeamID());
+			Projectile->SetImpactCueTag(BBGameplayTags::GameplayCue_Hunter_Ghost_LMB_Impact);
 			Projectile->FireInDirection(AimDir);
 
 			UE_LOG(LogBreachborne, Verbose, TEXT("Ghost LMB: Spawned projectile at %s dir %s"),

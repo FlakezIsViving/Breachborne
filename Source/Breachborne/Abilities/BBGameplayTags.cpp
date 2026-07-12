@@ -44,6 +44,22 @@ namespace BBGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Hudson_RMB_Loop, "Ability.Hunter.Hudson.RMB_Loop");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Hudson_R_Reel,   "Ability.Hunter.Hudson.R_Reel");
 
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_LMB, "Ability.Hunter.Crysta.LMB");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_RMB, "Ability.Hunter.Crysta.RMB");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_Shift, "Ability.Hunter.Crysta.Shift");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_Q, "Ability.Hunter.Crysta.Q");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_R, "Ability.Hunter.Crysta.R");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_Passive, "Ability.Hunter.Crysta.Passive");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_Shift_Primary, "Ability.Hunter.Crysta.Shift.Primary");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Crysta_Shift_Secondary, "Ability.Hunter.Crysta.Shift.Secondary");
+
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Void_LMB, "Ability.Hunter.Void.LMB");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Void_RMB, "Ability.Hunter.Void.RMB");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Void_Shift, "Ability.Hunter.Void.Shift");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Void_Q, "Ability.Hunter.Void.Q");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Void_R, "Ability.Hunter.Void.R");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hunter_Void_Passive, "Ability.Hunter.Void.Passive");
+
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Category_Passive, "Ability.Category.Passive");
 
 	// --- State Tags ---
@@ -70,6 +86,11 @@ namespace BBGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Hudson_SpunUp, "State.Hudson.SpunUp");
 	UE_DEFINE_GAMEPLAY_TAG(State_Hudson_Hovering, "State.Hudson.Hovering");
 	UE_DEFINE_GAMEPLAY_TAG(State_Hudson_Hooked, "State.Hudson.Hooked");
+	UE_DEFINE_GAMEPLAY_TAG(State_Crysta_Reverberation, "State.Crysta.Reverberation");
+	UE_DEFINE_GAMEPLAY_TAG(State_Crysta_EmpoweredLMB, "State.Crysta.EmpoweredLMB");
+	UE_DEFINE_GAMEPLAY_TAG(State_Void_Empowered, "State.Void.Empowered");
+	UE_DEFINE_GAMEPLAY_TAG(State_Void_Swapping, "State.Void.Swapping");
+	UE_DEFINE_GAMEPLAY_TAG(State_Void_SingularityPulled, "State.Void.SingularityPulled");
 
 	// --- Input Tags (item powers) ---
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Power1, "InputTag.Power1");
@@ -116,6 +137,17 @@ namespace BBGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Hudson_Q, "Cooldown.Hunter.Hudson.Q");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Hudson_R, "Cooldown.Hunter.Hudson.R");
 
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Crysta_RMB, "Cooldown.Hunter.Crysta.RMB");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Crysta_Shift_Primary, "Cooldown.Hunter.Crysta.Shift.Primary");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Crysta_Shift_Secondary, "Cooldown.Hunter.Crysta.Shift.Secondary");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Crysta_Q, "Cooldown.Hunter.Crysta.Q");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Crysta_R, "Cooldown.Hunter.Crysta.R");
+
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Void_RMB, "Cooldown.Hunter.Void.RMB");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Void_Shift, "Cooldown.Hunter.Void.Shift");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Void_Q, "Cooldown.Hunter.Void.Q");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Hunter_Void_R, "Cooldown.Hunter.Void.R");
+
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Power1, "Cooldown.Power1");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Power2, "Cooldown.Power2");
 
@@ -144,6 +176,7 @@ namespace BBGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Hudson_Passive_Pulse, "GameplayCue.Hunter.Hudson.Passive.Pulse");
 
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Ghost_LMB_Fire, "GameplayCue.Hunter.Ghost.LMB.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Ghost_LMB_Impact, "GameplayCue.Hunter.Ghost.LMB.Impact");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Ghost_RMB_Cast, "GameplayCue.Hunter.Ghost.RMB.Cast");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Ghost_RMB_Impact, "GameplayCue.Hunter.Ghost.RMB.Impact");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Ghost_Shift_Start, "GameplayCue.Hunter.Ghost.Shift.Start");
@@ -177,6 +210,37 @@ namespace BBGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Kingpin_R_Impact, "GameplayCue.Hunter.Kingpin.R.Impact");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Kingpin_Passive_Pulse, "GameplayCue.Hunter.Kingpin.Passive.Pulse");
 
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_LMB_Fire, "GameplayCue.Hunter.Crysta.LMB.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_LMB_Impact, "GameplayCue.Hunter.Crysta.LMB.Impact");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_LMB_Empowered, "GameplayCue.Hunter.Crysta.LMB.Empowered");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_RMB_Fire, "GameplayCue.Hunter.Crysta.RMB.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_RMB_Return, "GameplayCue.Hunter.Crysta.RMB.Return");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_RMB_Impact, "GameplayCue.Hunter.Crysta.RMB.Impact");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_Shift_Dash, "GameplayCue.Hunter.Crysta.Shift.Dash");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_Q_Cast, "GameplayCue.Hunter.Crysta.Q.Cast");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_Q_Active, "GameplayCue.Hunter.Crysta.Q.Active");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_Q_Detonate, "GameplayCue.Hunter.Crysta.Q.Detonate");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_R_Warning, "GameplayCue.Hunter.Crysta.R.Warning");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_R_Fire, "GameplayCue.Hunter.Crysta.R.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_R_Impact, "GameplayCue.Hunter.Crysta.R.Impact");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Crysta_Passive_Detonate, "GameplayCue.Hunter.Crysta.Passive.Detonate");
+
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_LMB_Fire, "GameplayCue.Hunter.Void.LMB.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_LMB_Impact, "GameplayCue.Hunter.Void.LMB.Impact");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_LMB_Charged, "GameplayCue.Hunter.Void.LMB.Charged");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_RMB_Fire, "GameplayCue.Hunter.Void.RMB.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_RMB_Impact, "GameplayCue.Hunter.Void.RMB.Impact");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_Shift_Cast, "GameplayCue.Hunter.Void.Shift.Cast");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_Shift_Swap, "GameplayCue.Hunter.Void.Shift.Swap");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_Q_Cast, "GameplayCue.Hunter.Void.Q.Cast");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_Q_Active, "GameplayCue.Hunter.Void.Q.Active");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_Q_Detonate, "GameplayCue.Hunter.Void.Q.Detonate");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_R_Warning, "GameplayCue.Hunter.Void.R.Warning");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_R_Active, "GameplayCue.Hunter.Void.R.Active");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_R_Pull, "GameplayCue.Hunter.Void.R.Pull");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_R_End, "GameplayCue.Hunter.Void.R.End");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Hunter_Void_Passive_Empowered, "GameplayCue.Hunter.Void.Passive.Empowered");
+
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Power_EmergencyPlatform_Preview, "GameplayCue.Power.EmergencyPlatform.Preview");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Power_EmergencyPlatform_Spawn, "GameplayCue.Power.EmergencyPlatform.Spawn");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Power_GrapplingHook_Fire, "GameplayCue.Power.GrapplingHook.Fire");
@@ -195,6 +259,8 @@ namespace BBGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Kill, "Event.Kill");
 	UE_DEFINE_GAMEPLAY_TAG(Event_CCApplied, "Event.CCApplied");
 	UE_DEFINE_GAMEPLAY_TAG(Event_DamageTaken, "Event.DamageTaken");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Crysta_ReverberationDetonated, "Event.Crysta.ReverberationDetonated");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Void_DamageDealt, "Event.Void.DamageDealt");
 
 	// --- SetByCaller Tags ---
 	UE_DEFINE_GAMEPLAY_TAG(SetByCaller_Damage, "SetByCaller.Damage");

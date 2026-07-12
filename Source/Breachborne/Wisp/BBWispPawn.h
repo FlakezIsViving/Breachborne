@@ -189,9 +189,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Wisp|Tuning")
 	float ExecuteDuration = 2.0f;
 
-	/** Proximity sphere radius for rez/stomp detection (cm) */
+	/** Close-range radius for ally revive/enemy stomp detection (cm) */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Wisp|Tuning")
-	float ProximityRadius = 400.0f;
+	float ProximityRadius = 175.0f;
 
 	/** Execute sphere radius for E-key execute detection (cm) */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Wisp|Tuning")

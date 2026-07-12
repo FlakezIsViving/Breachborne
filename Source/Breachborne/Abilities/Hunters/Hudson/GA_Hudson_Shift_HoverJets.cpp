@@ -7,11 +7,14 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Characters/HunterCharacter.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 
 UGA_Hudson_Shift_HoverJets::UGA_Hudson_Shift_HoverJets()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_Shift;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Movement, HoverSpeed * MaxHoverDuration, HitRadius);
 	bActivateOnInputHeld = true;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
@@ -55,6 +58,20 @@ void UGA_Hudson_Shift_HoverJets::ActivateAbility(const FGameplayAbilitySpecHandl
 	const float StartMontageDuration = PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_Shift, EBBAbilityAnimationPhase::Start);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_Shift_Start, Hunter->GetActorLocation(), HoverDirection);
 	AddVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_Shift_Loop, Hunter->GetActorLocation(), HoverDirection);
+	if (Hunter->HasAuthority())
+	{
+		const FVector Start = Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 35.0f);
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBeamActor* Trail = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), Start, FRotator::ZeroRotator, Params))
+		{
+			Trail->InitBeam(Start, Start + HoverDirection * HoverSpeed * MaxHoverDuration, 10.0f, MaxHoverDuration,
+				FLinearColor(0.31f, 0.64f, 0.78f, 1.0f));
+		}
+	}
 	if (StartMontageDuration > 0.05f && StartMontageDuration < MaxHoverDuration)
 	{
 		if (UWorld* MontageWorld = GetWorld())
@@ -140,8 +157,6 @@ void UGA_Hudson_Shift_HoverJets::HoverTick()
 	}
 
 	const FVector Loc = Hunter->GetActorLocation();
-	Hunter->Multicast_DrawDebugLine(Loc - HoverDirection * 120.0f + FVector(0.0f, 0.0f, 35.0f), Loc - HoverDirection * 35.0f + FVector(0.0f, 0.0f, 35.0f), FColor::Blue, 0.08f, 4.0f);
-	Hunter->Multicast_DrawDebugSphere(Loc, HitRadius, FColor::Blue, 0.07f);
 
 	if (UCharacterMovementComponent* MoveComp = Hunter->GetCharacterMovement())
 	{
@@ -185,6 +200,16 @@ void UGA_Hudson_Shift_HoverJets::HoverTick()
 		TargetHunter->LaunchCharacter(KnockDir * KnockbackForce + FVector(0.0f, 0.0f, 260.0f), true, true);
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_Shift, EBBAbilityAnimationPhase::Impact);
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_Shift_Impact, TargetHunter->GetActorLocation(), KnockDir);
+		FActorSpawnParameters ImpactParams;
+		ImpactParams.Owner = Hunter;
+		ImpactParams.Instigator = Hunter;
+		ImpactParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Impact = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), TargetHunter->GetActorLocation(), FRotator::ZeroRotator, ImpactParams))
+		{
+			Impact->InitBurst(TargetHunter->GetActorLocation(), HitRadius, 0.24f,
+				FLinearColor(1.0f, 0.54f, 0.16f, 1.0f));
+		}
 
 		FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.0f, SourceASC->MakeEffectContext());
 		if (Spec.IsValid())
@@ -193,7 +218,6 @@ void UGA_Hudson_Shift_HoverJets::HoverTick()
 			SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
 		}
 
-		Hunter->Multicast_DrawDebugLine(Hunter->GetActorLocation(), TargetHunter->GetActorLocation() + KnockDir * 180.0f, FColor::Cyan, 0.35f, 6.0f);
 		ReduceOwnCooldown(CooldownDuration * CooldownRefundFractionPerHit);
 	}
 }

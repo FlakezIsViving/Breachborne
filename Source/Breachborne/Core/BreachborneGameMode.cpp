@@ -27,9 +27,23 @@
 #include "Breachborne/Abilities/Hunters/Hudson/GA_Hudson_R_SalvageHook.h"
 #include "Breachborne/Abilities/Hunters/Hudson/GA_Hudson_RMB_SpinBarrels.h"
 #include "Breachborne/Abilities/Hunters/Hudson/GA_Hudson_Shift_HoverJets.h"
+#include "Breachborne/Abilities/Hunters/Crysta/GA_Crysta_LMB.h"
+#include "Breachborne/Abilities/Hunters/Crysta/GA_Crysta_Passive.h"
+#include "Breachborne/Abilities/Hunters/Crysta/GA_Crysta_Q.h"
+#include "Breachborne/Abilities/Hunters/Crysta/GA_Crysta_R.h"
+#include "Breachborne/Abilities/Hunters/Crysta/GA_Crysta_RMB.h"
+#include "Breachborne/Abilities/Hunters/Crysta/GA_Crysta_Shift.h"
+#include "Breachborne/Abilities/Hunters/Void/GA_Void_LMB.h"
+#include "Breachborne/Abilities/Hunters/Void/GA_Void_Passive.h"
+#include "Breachborne/Abilities/Hunters/Void/GA_Void_Q.h"
+#include "Breachborne/Abilities/Hunters/Void/GA_Void_R.h"
+#include "Breachborne/Abilities/Hunters/Void/GA_Void_RMB.h"
+#include "Breachborne/Abilities/Hunters/Void/GA_Void_Shift.h"
 #include "Breachborne/Storm/BBStormManager.h"
 #include "Breachborne/Items/BBInventoryManager.h"
 #include "Breachborne/Items/BBWorldItemSpawner.h"
+#include "Breachborne/Wisp/BBWispPawn.h"
+#include "Breachborne/Wisp/BBDeathboxActor.h"
 #include "Breachborne/Breachborne.h"
 #include "Engine/Blueprint.h"
 #include "EngineUtils.h"
@@ -68,6 +82,8 @@ ABreachborneGameMode::ABreachborneGameMode()
 	PlayerControllerClass = ABreachbornePlayerController::StaticClass();
 	DefaultPawnClass = AHunterCharacter::StaticClass();
 	HUDClass = ABBDebugHUD::StaticClass();
+	WispPawnClass = ABBWispPawn::StaticClass();
+	DeathboxClass = ABBDeathboxActor::StaticClass();
 }
 
 void ABreachborneGameMode::InitGameState()
@@ -194,6 +210,19 @@ void ABreachborneGameMode::Logout(AController* Exiting)
 			{
 				BBGameState->UpdateTeamAliveCount(BBPS->GetTeamID(), -1);
 			}
+		}
+
+		if (BBPS)
+		{
+			const TWeakObjectPtr<ABreachbornePlayerState> PlayerKey(BBPS);
+			if (const TWeakObjectPtr<AHunterCharacter>* DownedHunter = DownedHunters.Find(PlayerKey))
+			{
+				if (DownedHunter->IsValid())
+				{
+					DownedHunter->Get()->Destroy();
+				}
+			}
+			DownedHunters.Remove(PlayerKey);
 		}
 	}
 
@@ -768,6 +797,18 @@ const UBBHunterDefinition* ABreachborneGameMode::ResolveHunterDefinition(int32 H
 				return HudsonDef;
 			}
 			break;
+		case 5:
+			if (const UBBHunterDefinition* CrystaDef = LoadHunterDefinitionAsset(TEXT("/Game/Hunters/Crysta/DA_Crysta.DA_Crysta")))
+			{
+				return CrystaDef;
+			}
+			break;
+		case 6:
+			if (const UBBHunterDefinition* VoidDef = LoadHunterDefinitionAsset(TEXT("/Game/Hunters/Void/DA_Void.DA_Void")))
+			{
+				return VoidDef;
+			}
+			break;
 		default:
 			break;
 		}
@@ -826,6 +867,49 @@ void ABreachborneGameMode::BuildNativeHunterDefinitions()
 		};
 
 		NativeHunterDefinitions.Add(4, HudsonDef);
+	}
+
+	if (!NativeHunterDefinitions.Contains(5))
+	{
+		UBBHunterDefinition* CrystaDef = NewObject<UBBHunterDefinition>(this, TEXT("Native_DA_Crysta"));
+		CrystaDef->HunterName = FText::FromString(TEXT("Crysta"));
+		CrystaDef->Role = EHunterRole::Fighter;
+		CrystaDef->BaseHealth = 525.0f;
+		CrystaDef->BaseAttackPower = 50.0f;
+		CrystaDef->BaseAbilityPower = 60.0f;
+		CrystaDef->BaseMoveSpeed = 600.0f;
+		CrystaDef->AbilitiesToGrant = {
+			UGA_Crysta_LMB::StaticClass(),
+			UGA_Crysta_RMB::StaticClass(),
+			UGA_Crysta_Shift_Primary::StaticClass(),
+			UGA_Crysta_Shift_Secondary::StaticClass(),
+			UGA_Crysta_Q::StaticClass(),
+			UGA_Crysta_R::StaticClass(),
+			UGA_Crysta_Passive::StaticClass()
+		};
+
+		NativeHunterDefinitions.Add(5, CrystaDef);
+	}
+
+	if (!NativeHunterDefinitions.Contains(6))
+	{
+		UBBHunterDefinition* VoidDef = NewObject<UBBHunterDefinition>(this, TEXT("Native_DA_Void"));
+		VoidDef->HunterName = FText::FromString(TEXT("Void"));
+		VoidDef->Role = EHunterRole::Controller;
+		VoidDef->BaseHealth = 500.0f;
+		VoidDef->BaseAttackPower = 45.0f;
+		VoidDef->BaseAbilityPower = 65.0f;
+		VoidDef->BaseMoveSpeed = 590.0f;
+		VoidDef->AbilitiesToGrant = {
+			UGA_Void_LMB::StaticClass(),
+			UGA_Void_RMB::StaticClass(),
+			UGA_Void_Shift::StaticClass(),
+			UGA_Void_Q::StaticClass(),
+			UGA_Void_R::StaticClass(),
+			UGA_Void_Passive::StaticClass()
+		};
+
+		NativeHunterDefinitions.Add(6, VoidDef);
 	}
 }
 
@@ -942,6 +1026,25 @@ void ABreachborneGameMode::StartGameplayMatch()
 		StormManager->StartStorm();
 	}
 
+	// Clear stale downed-state actors before spawning the new match's hunters.
+	for (const TPair<TWeakObjectPtr<ABreachbornePlayerState>, TWeakObjectPtr<AHunterCharacter>>& Entry : DownedHunters)
+	{
+		if (Entry.Value.IsValid())
+		{
+			Entry.Value->Destroy();
+		}
+	}
+	DownedHunters.Reset();
+
+	for (TActorIterator<ABBWispPawn> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
+	}
+	for (TActorIterator<ABBDeathboxActor> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
+	}
+
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (APlayerController* PC = It->Get())
@@ -1041,6 +1144,23 @@ void ABreachborneGameMode::ResetToHunterSelect()
 			PS->SetReadyForMatch(false);
 			PS->SetHunterLocked(false);
 		}
+	}
+
+	for (const TPair<TWeakObjectPtr<ABreachbornePlayerState>, TWeakObjectPtr<AHunterCharacter>>& Entry : DownedHunters)
+	{
+		if (Entry.Value.IsValid())
+		{
+			Entry.Value->Destroy();
+		}
+	}
+	DownedHunters.Reset();
+	for (TActorIterator<ABBWispPawn> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
+	}
+	for (TActorIterator<ABBDeathboxActor> It(GetWorld()); It; ++It)
+	{
+		It->Destroy();
 	}
 
 	BBGameState->SetMatchPhase(EMatchPhase::WaitingForPlayers);
@@ -1336,6 +1456,7 @@ void ABreachborneGameMode::OnHunterKilled(UAbilitySystemComponent* VictimASC, UA
 	AHunterCharacter* VictimHunter = Cast<AHunterCharacter>(VictimASC->GetAvatarActor());
 	if (VictimHunter)
 	{
+		VictimASC->CancelAllAbilities();
 		VictimHunter->SetActorHiddenInGame(true);
 		VictimHunter->SetActorEnableCollision(false);
 		VictimHunter->GetCharacterMovement()->DisableMovement();
@@ -1353,8 +1474,24 @@ void ABreachborneGameMode::OnHunterKilled(UAbilitySystemComponent* VictimASC, UA
 		}
 	}
 
+	const bool bUseDevAutoRespawn = ShouldUseDevAutoRespawn();
+	if (!bUseDevAutoRespawn && VictimPS && VictimHunter)
+	{
+		DownedHunters.Add(VictimPS, VictimHunter);
+
+		const bool bEnteredWisp = KillerASC && EnterWispState(VictimPS, VictimHunter, KillerPS);
+		if (!bEnteredWisp)
+		{
+			if (AController* VictimController = VictimHunter->GetController())
+			{
+				VictimController->UnPossess();
+			}
+			SpawnDeathbox(VictimPS, VictimHunter->GetActorLocation());
+		}
+	}
+
 	// --- Dev auto-respawn ---
-	if (ShouldUseDevAutoRespawn())
+	if (bUseDevAutoRespawn)
 	{
 		UE_LOG(LogBreachborne, Warning, TEXT("    Dev respawn in %.1fs..."), DevRespawnDelay);
 
@@ -1385,6 +1522,220 @@ void ABreachborneGameMode::OnHunterKilled(UAbilitySystemComponent* VictimASC, UA
 		UE_LOG(LogBreachborne, Warning, TEXT("BB_MATCH|SERVER|WinCheckSkipped aliveTeams=%d matchStartAliveTeams=%d"),
 			BBGameState->GetAliveTeamCount(),
 			MatchStartAliveTeamCount);
+	}
+}
+
+bool ABreachborneGameMode::EnterWispState(ABreachbornePlayerState* VictimPS,
+	AHunterCharacter* VictimHunter, ABreachbornePlayerState* KnockerPS)
+{
+	if (!HasAuthority() || !VictimPS || !VictimHunter || !GetWorld() || !WispPawnClass)
+	{
+		return false;
+	}
+
+	AController* VictimController = VictimHunter->GetController();
+	if (!VictimController)
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("WispSpawn: missing controller for victim=%s"),
+			*VictimPS->GetPlayerName());
+		return false;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = VictimController;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const FVector SpawnLocation = VictimHunter->GetActorLocation() + FVector(0.0f, 0.0f, 45.0f);
+	ABBWispPawn* Wisp = GetWorld()->SpawnActor<ABBWispPawn>(
+		WispPawnClass, SpawnLocation, VictimHunter->GetActorRotation(), SpawnParams);
+	if (!Wisp)
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("WispSpawn: failed for victim=%s at %s"),
+			*VictimPS->GetPlayerName(), *SpawnLocation.ToCompactString());
+		return false;
+	}
+
+	Wisp->KnockerPlayerState = KnockerPS;
+	Wisp->PreWispGroundedLocation = VictimHunter->GetActorLocation();
+	Wisp->OnWispReviveReady.AddDynamic(this, &ABreachborneGameMode::HandleWispRevive);
+	Wisp->OnWispDied.AddDynamic(this, &ABreachborneGameMode::HandleWispDied);
+	Wisp->OnWispExecuted.AddDynamic(this, &ABreachborneGameMode::HandleWispExecuted);
+	Wisp->InitWisp(VictimPS);
+
+	if (UBBAbilitySystemComponent* ASC = VictimPS->GetBBAbilitySystemComponent())
+	{
+		ASC->AddLooseGameplayTag(BBGameplayTags::State_Wisp);
+	}
+	VictimController->Possess(Wisp);
+	if (VictimController->GetPawn() != Wisp)
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("WispSpawn: possession failed for victim=%s controller=%s"),
+			*VictimPS->GetPlayerName(), *VictimController->GetName());
+		Wisp->Destroy();
+		return false;
+	}
+
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("WispSpawn: victim=%s team=%d wisp=%s location=%s controller=%s"),
+		*VictimPS->GetPlayerName(), VictimPS->GetTeamID(), *Wisp->GetName(),
+		*SpawnLocation.ToCompactString(), *VictimController->GetName());
+	return true;
+}
+
+bool ABreachborneGameMode::ReviveDownedHunter(ABreachbornePlayerState* VictimPS,
+	const FVector& ReviveLocation, float HealthFraction)
+{
+	if (!HasAuthority() || !VictimPS)
+	{
+		return false;
+	}
+
+	const TWeakObjectPtr<ABreachbornePlayerState> PlayerKey(VictimPS);
+	TWeakObjectPtr<AHunterCharacter>* HunterEntry = DownedHunters.Find(PlayerKey);
+	AHunterCharacter* Hunter = HunterEntry ? HunterEntry->Get() : nullptr;
+	APlayerController* PlayerController = Cast<APlayerController>(VictimPS->GetOwner());
+	UBBAbilitySystemComponent* ASC = VictimPS->GetBBAbilitySystemComponent();
+	UBBHealthSet* HealthSet = VictimPS->GetHealthSet();
+	if (!Hunter || !PlayerController || !ASC || !HealthSet)
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("WispRevive: invalid state victim=%s hunter=%s controller=%s asc=%s health=%s"),
+			*VictimPS->GetPlayerName(), *GetNameSafe(Hunter), *GetNameSafe(PlayerController),
+			*GetNameSafe(ASC), *GetNameSafe(HealthSet));
+		return false;
+	}
+
+	const FVector SafeReviveLocation = ReviveLocation + FVector(0.0f, 0.0f, 50.0f);
+	Hunter->SetActorLocation(SafeReviveLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	Hunter->SetActorHiddenInGame(false);
+	Hunter->SetActorEnableCollision(true);
+	Hunter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	Hunter->GetCharacterMovement()->StopMovementImmediately();
+
+	ASC->RemoveLooseGameplayTag(BBGameplayTags::State_Wisp);
+	ASC->RemoveLooseGameplayTag(BBGameplayTags::State_Dead);
+	HealthSet->SetHealth(FMath::Max(1.0f, HealthSet->GetMaxHealth() * FMath::Clamp(HealthFraction, 0.01f, 1.0f)));
+	HealthSet->SetShield(0.0f);
+	VictimPS->SetIsAlive(true);
+	VictimPS->UpdateHealthProxy();
+
+	PlayerController->Possess(Hunter);
+	if (BBGameState)
+	{
+		BBGameState->UpdateTeamAliveCount(VictimPS->GetTeamID(), 1);
+	}
+	DownedHunters.Remove(PlayerKey);
+
+	UE_LOG(LogBreachborne, Warning, TEXT("WispRevive: player=%s health=%.0f location=%s"),
+		*VictimPS->GetPlayerName(), HealthSet->GetHealth(), *SafeReviveLocation.ToCompactString());
+	return true;
+}
+
+ABBDeathboxActor* ABreachborneGameMode::SpawnDeathbox(ABreachbornePlayerState* VictimPS,
+	const FVector& Location)
+{
+	if (!HasAuthority() || !VictimPS || !GetWorld() || !DeathboxClass)
+	{
+		return nullptr;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ABBDeathboxActor* Deathbox = GetWorld()->SpawnActor<ABBDeathboxActor>(
+		DeathboxClass, Location + FVector(0.0f, 0.0f, 25.0f), FRotator::ZeroRotator, SpawnParams);
+	if (!Deathbox)
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("DeathboxSpawn: failed for victim=%s"),
+			*VictimPS->GetPlayerName());
+		return nullptr;
+	}
+
+	Deathbox->InitDeathbox(VictimPS, VictimPS->GetInventoryData());
+	Deathbox->OnReviveComplete.AddDynamic(this, &ABreachborneGameMode::HandleDeathboxReviveComplete);
+	UE_LOG(LogBreachborne, Warning, TEXT("DeathboxSpawn: victim=%s deathbox=%s location=%s"),
+		*VictimPS->GetPlayerName(), *Deathbox->GetName(), *Deathbox->GetActorLocation().ToCompactString());
+	return Deathbox;
+}
+
+void ABreachborneGameMode::HandleWispRevive(ABBWispPawn* Wisp)
+{
+	if (!Wisp || !HasAuthority())
+	{
+		return;
+	}
+
+	ABreachbornePlayerState* VictimPS = Wisp->GetOwningPlayerState();
+	if (ReviveDownedHunter(VictimPS, Wisp->GetActorLocation(), WispReviveHealthFraction))
+	{
+		Wisp->OnWispReviveReady.RemoveDynamic(this, &ABreachborneGameMode::HandleWispRevive);
+		Wisp->OnWispDied.RemoveDynamic(this, &ABreachborneGameMode::HandleWispDied);
+		Wisp->OnWispExecuted.RemoveDynamic(this, &ABreachborneGameMode::HandleWispExecuted);
+		Wisp->Destroy();
+	}
+}
+
+void ABreachborneGameMode::HandleWispDied(ABBWispPawn* Wisp, bool bWasExecuted)
+{
+	if (!Wisp || !HasAuthority())
+	{
+		return;
+	}
+
+	ABreachbornePlayerState* VictimPS = Wisp->GetOwningPlayerState();
+	const FVector DeathLocation = Wisp->GetActorLocation();
+	if (AController* WispController = Wisp->GetController())
+	{
+		WispController->UnPossess();
+	}
+	if (VictimPS)
+	{
+		if (UBBAbilitySystemComponent* ASC = VictimPS->GetBBAbilitySystemComponent())
+		{
+			ASC->RemoveLooseGameplayTag(BBGameplayTags::State_Wisp);
+		}
+		SpawnDeathbox(VictimPS, DeathLocation);
+	}
+
+	UE_LOG(LogBreachborne, Warning, TEXT("WispDeath: victim=%s executed=%d location=%s"),
+		VictimPS ? *VictimPS->GetPlayerName() : TEXT("Unknown"), bWasExecuted ? 1 : 0,
+		*DeathLocation.ToCompactString());
+	Wisp->Destroy();
+}
+
+void ABreachborneGameMode::HandleWispExecuted(ABBWispPawn* Wisp, AHunterCharacter* Executor)
+{
+	if (!Wisp || !HasAuthority())
+	{
+		return;
+	}
+
+	if (Executor)
+	{
+		if (ABreachbornePlayerState* ExecutorPS = Executor->GetPlayerState<ABreachbornePlayerState>())
+		{
+			if (UBBHealthSet* ExecutorHealth = ExecutorPS->GetHealthSet())
+			{
+				ExecutorHealth->SetHealth(ExecutorHealth->GetMaxHealth());
+				ExecutorPS->UpdateHealthProxy();
+			}
+		}
+	}
+	HandleWispDied(Wisp, true);
+}
+
+void ABreachborneGameMode::HandleDeathboxReviveComplete(ABBDeathboxActor* Deathbox,
+	AHunterCharacter* Reviver)
+{
+	(void)Reviver;
+	if (!Deathbox || !HasAuthority())
+	{
+		return;
+	}
+
+	if (ReviveDownedHunter(Deathbox->GetVictimPlayerState(), Deathbox->GetActorLocation(),
+		Deathbox->GetReviveHealthFraction()))
+	{
+		Deathbox->OnReviveComplete.RemoveDynamic(this, &ABreachborneGameMode::HandleDeathboxReviveComplete);
+		Deathbox->Destroy();
 	}
 }
 

@@ -53,6 +53,7 @@ ABBGlideBot::ABBGlideBot(const FObjectInitializer& ObjectInitializer)
 void ABBGlideBot::BeginPlay()
 {
 	Super::BeginPlay();
+	SetActorTickEnabled(HasAuthority());
 
 	if (!HasAuthority())
 	{

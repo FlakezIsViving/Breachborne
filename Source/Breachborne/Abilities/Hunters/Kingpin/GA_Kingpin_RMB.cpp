@@ -9,11 +9,14 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
 #include "Breachborne/Combat/BBHookTagEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Kingpin_RMB::UGA_Kingpin_RMB()
 {
 	AbilityInputTag    = BBGameplayTags::InputTag_RMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, MaxRange);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -60,6 +63,17 @@ void UGA_Kingpin_RMB::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 		ObjParams.AddObjectTypesToQuery(ECC_Pawn);
 
 		const bool bHit = Hunter->GetWorld()->LineTraceSingleByObjectType(Hit, StartLoc, EndLoc, ObjParams, Params);
+		const FVector HookEnd = bHit ? FVector(Hit.ImpactPoint) : EndLoc;
+		FActorSpawnParameters VisualParams;
+		VisualParams.Owner = Hunter;
+		VisualParams.Instigator = Hunter;
+		VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBeamActor* HookLine = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), StartLoc, FRotator::ZeroRotator, VisualParams))
+		{
+			HookLine->InitBeam(StartLoc, HookEnd, 9.0f, bHit ? MaxPullDuration : 0.28f,
+				FLinearColor(0.90f, 0.23f, 0.18f, 1.0f));
+		}
 
 		AHunterCharacter* HitHunter = bHit ? Cast<AHunterCharacter>(Hit.GetActor()) : nullptr;
 		bool bValidTarget = false;
@@ -76,6 +90,12 @@ void UGA_Kingpin_RMB::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 		{
 			UAbilitySystemComponent* TargetASC = HitHunter->GetAbilitySystemComponent();
 			ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_RMB_Impact, Hit.ImpactPoint, Hit.ImpactNormal);
+			if (ABBPrimitiveBurstActor* Latch = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+				ABBPrimitiveBurstActor::StaticClass(), Hit.ImpactPoint, FRotator::ZeroRotator, VisualParams))
+			{
+				Latch->InitBurst(Hit.ImpactPoint, 75.0f, 0.22f,
+					FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+			}
 
 			// 1. Hook tag GE (CDO-backed UBBHookTagEffect for replication safety, duration overridden per-spec)
 			FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();

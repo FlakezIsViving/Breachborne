@@ -10,7 +10,10 @@
 class UInputAction;
 class UInputMappingContext;
 class UBBAbilitySystemComponent;
+class UBBGameplayAbility;
 class ABBBasecampActor;
+class ABBWispPawn;
+class ABBDeathboxActor;
 class UUserWidget;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
@@ -40,6 +43,10 @@ public:
 	ABBBasecampActor* GetActiveRecallBasecamp() const { return ActiveRecallBasecamp; }
 
 	bool ConsumePendingTargetedPowerActivation(const FGameplayTag& InputTag, FVector& OutTargetLocation);
+
+	/** Local HUD accessors for owner-only ability range previews. */
+	const UBBGameplayAbility* GetActiveRangePreviewAbility() const;
+	bool GetRangePreviewCursorLocation(FVector& OutLocation) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Breachborne|Match")
 	void RequestHunterSelection(int32 HunterID);
@@ -184,6 +191,7 @@ private:
 	void HandlePrimaryFireStarted(const FInputActionValue& Value);
 	void HandlePrimaryFireCompleted(const FInputActionValue& Value);
 	void HandleSecondaryFireStarted(const FInputActionValue& Value);
+	void HandleSecondaryFireCompleted(const FInputActionValue& Value);
 	void HandleDashStarted(const FInputActionValue& Value);
 	void HandleAbilityQStarted(const FInputActionValue& Value);
 	void HandleUltimateStarted(const FInputActionValue& Value);
@@ -219,6 +227,10 @@ private:
 
 	/** Deproject cursor screen position to world ray, intersect with ground plane at pawn Z */
 	bool GetCursorWorldLocation(FVector& OutLocation) const;
+	void BeginAbilityRangePreview(const FGameplayTag& InputTag, bool bUntilRelease);
+	void EndAbilityRangePreview(const FGameplayTag& InputTag = FGameplayTag());
+	void UpdateAbilityRangePreview();
+	const UBBGameplayAbility* FindAbilityForRangePreview(const FGameplayTag& InputTag) const;
 
 	bool IsTacticalNukeEquippedForInput(const FGameplayTag& InputTag) const;
 	void BeginTacticalNukeTargeting(const FGameplayTag& InputTag);
@@ -428,6 +440,12 @@ private:
 	void ServerInteractWithBasecamp(ABBBasecampActor* Basecamp);
 
 	UFUNCTION(Server, Reliable)
+	void ServerInteractWithWisp(ABBWispPawn* Wisp);
+
+	UFUNCTION(Server, Reliable)
+	void ServerInteractWithDeathbox(ABBDeathboxActor* Deathbox);
+
+	UFUNCTION(Server, Reliable)
 	void ServerStartBasecampRecall();
 
 	void RecallTick();
@@ -473,6 +491,14 @@ private:
 
 	FGameplayTag PendingTargetedPowerInputTag;
 	FVector PendingTargetedPowerLocation = FVector::ZeroVector;
+
+	/** Owner-only preview state; never replicated and never affects gameplay. */
+	FGameplayTag ActiveRangePreviewInputTag;
+	float ActiveRangePreviewEndTime = -1.0f;
+	bool bRangePreviewUntilRelease = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|UI|RangeIndicator")
+	float DiscreteRangePreviewDuration = 0.85f;
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> ActiveClientFrontendWidget;

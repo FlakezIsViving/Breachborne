@@ -32,6 +32,16 @@ Create one `UBBAbilityVisualSet` asset per hunter/power:
 Assign the visual set on each `UBBHunterDefinition`. Existing mesh, anim class,
 mesh transform, and montage fields remain fallbacks while assets are migrated.
 
+## GameplayCue Roots
+
+- New shared templates and cue assets: `/Game/GameplayCues`
+- Existing hunter cue compatibility root: `/Game/Hunters`
+- Existing power cue compatibility root: `/Game/Powers`
+
+All three roots are explicitly scanned in `Config/DefaultGame.ini`. Keep the compatibility roots
+until existing assets such as `/Game/Hunters/Hudson/Cues` are moved in-editor and redirectors are
+fixed. See `docs/VFX_FOUNDATION.md` for the locked template, palette, parameter, and budget contract.
+
 ## Hudson Vertical Slice
 
 Hudson is the first complete visual slice. Author GameplayCue assets for:
@@ -54,13 +64,8 @@ Hudson is the first complete visual slice. Author GameplayCue assets for:
 - `GameplayCue.Hunter.Hudson.R.Reel`
 - `GameplayCue.Hunter.Hudson.Passive.Pulse`
 
-## Debug Primitives
+## Primitive Fallbacks
 
-Legacy multicast debug primitives are off by default for normal play.
-Enable them only for iteration:
-
-```text
-bb.Visuals.DebugPrimitives 1
-```
-
-Set it back to `0` before performance testing.
+Playtest primitives are real bounded mesh actors or local batched-cue visuals. The legacy
+DrawDebug multicast path and its console toggle were removed so disabled debug rendering cannot
+consume network RPC budget.

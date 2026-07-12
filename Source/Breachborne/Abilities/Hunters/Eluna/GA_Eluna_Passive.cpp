@@ -4,6 +4,7 @@
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBHealEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Wisp/BBWispPawn.h"
 #include "Breachborne/Breachborne.h"
 #include "Engine/World.h"
@@ -42,7 +43,7 @@ void UGA_Eluna_Passive::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	Hunter->GetWorldTimerManager().SetTimer(
 		WispPickupTimerHandle,
 		FTimerDelegate::CreateUObject(this, &UGA_Eluna_Passive::TickWispPickup),
-		0.5f,
+		0.1f,
 		true
 	);
 }
@@ -111,6 +112,15 @@ void UGA_Eluna_Passive::TickHeal()
 	if (bAppliedHeal)
 	{
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Eluna_Passive, EBBAbilityAnimationPhase::PassivePulse);
+		FActorSpawnParameters Params;
+		Params.Owner = Hunter;
+		Params.Instigator = Hunter;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), SourceLoc, FRotator::ZeroRotator, Params))
+		{
+			Pulse->InitBurst(SourceLoc, HealRadius, 0.24f, FLinearColor(0.43f, 0.78f, 1.0f, 1.0f), true);
+		}
 	}
 }
 
@@ -130,16 +140,40 @@ void UGA_Eluna_Passive::TickWispPickup()
 
 	const FVector SourceLoc = Hunter->GetActorLocation();
 	const int32 SourceTeam = SourcePS->GetTeamID();
+	const UBBAbilitySystemComponent* ASC = GetBBAbilitySystemComponent();
+	const bool bCarrierCrowdControlled = ASC
+		&& (ASC->HasMatchingGameplayTag(BBGameplayTags::State_Stunned)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Spiked)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Dazed)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Hooked)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Hudson_Hooked)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Void_SingularityPulled));
 
 	// Check if currently carrying a wisp — drop if too far
 	if (CarriedWisp.IsValid())
 	{
-		if (FVector::Dist(SourceLoc, CarriedWisp->GetActorLocation()) > WispDropDistance)
+		if (bCarrierCrowdControlled
+			|| FVector::Dist(SourceLoc, CarriedWisp->GetActorLocation()) > WispDropDistance)
 		{
+			UE_LOG(LogBreachborne, Log, TEXT("Eluna Passive: Dropped carried wisp (CC=%d)"),
+				bCarrierCrowdControlled ? 1 : 0);
 			CarriedWisp->SetCarrier(nullptr);
 			CarriedWisp = nullptr;
+			FActorSpawnParameters Params;
+			Params.Owner = Hunter;
+			Params.Instigator = Hunter;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+				ABBPrimitiveBurstActor::StaticClass(), SourceLoc, FRotator::ZeroRotator, Params))
+			{
+				Pulse->InitBurst(SourceLoc, WispPickupRadius, 0.2f, FLinearColor(1.0f, 0.48f, 0.78f, 1.0f));
+			}
 
 		}
+		return;
+	}
+	if (bCarrierCrowdControlled)
+	{
 		return;
 	}
 
@@ -171,6 +205,15 @@ void UGA_Eluna_Passive::TickWispPickup()
 			CarriedWisp = Wisp;
 			PlayVisualMontage(BBGameplayTags::Ability_Hunter_Eluna_Passive, EBBAbilityAnimationPhase::PassivePulse);
 			ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Eluna_Passive_Carry, Hunter->GetActorLocation(), FVector::UpVector);
+			FActorSpawnParameters Params;
+			Params.Owner = Hunter;
+			Params.Instigator = Hunter;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+				ABBPrimitiveBurstActor::StaticClass(), SourceLoc, FRotator::ZeroRotator, Params))
+			{
+				Pulse->InitBurst(SourceLoc, WispPickupRadius, 0.25f, FLinearColor::White);
+			}
 			UE_LOG(LogBreachborne, Log, TEXT("Eluna Passive: Picked up wisp of %s"), *WispOwnerPS->GetPlayerName());
 			break; // Only carry one wisp at a time
 		}

@@ -7,12 +7,16 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBTargetDummy.h"
 #include "Breachborne/Combat/BBGlideBot.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Breachborne.h"
 #include "DrawDebugHelpers.h"
 
 ABBGrenade::ABBGrenade()
 {
 	ProjectileSpeed = 2500.0f;
+	ProjectileMesh->SetRelativeScale3D(FVector(0.28f));
+	BBPrimitiveVisuals::ApplyColor(ProjectileMesh, FLinearColor(1.0f, 0.32f, 0.05f, 1.0f));
 	ProjectileLifetime = 3.0f; // Longer than fuse — fuse handles detonation
 }
 
@@ -104,7 +108,27 @@ void ABBGrenade::Explode()
 
 	UE_LOG(LogBreachborne, Log, TEXT("BBGrenade: Exploding at %s, radius %.0f"), *ExplosionCenter.ToString(), ExplosionRadius);
 
-	DrawDebugSphere(GetWorld(), ExplosionCenter, ExplosionRadius, 16, FColor::Orange, false, 1.5f);
+	if (SourceASC.IsValid())
+	{
+		FGameplayCueParameters CueParams;
+		CueParams.Instigator = GetInstigator();
+		CueParams.EffectCauser = this;
+		CueParams.SourceObject = this;
+		CueParams.Location = ExplosionCenter;
+		CueParams.Normal = FVector::UpVector;
+		SourceASC->ExecuteGameplayCue(BBGameplayTags::GameplayCue_Hunter_Ghost_RMB_Impact, CueParams);
+	}
+
+	FActorSpawnParameters VisualSpawnParams;
+	VisualSpawnParams.Owner = GetOwner();
+	VisualSpawnParams.Instigator = GetInstigator();
+	VisualSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveBurstActor* Burst = GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+		ABBPrimitiveBurstActor::StaticClass(), ExplosionCenter, FRotator::ZeroRotator, VisualSpawnParams))
+	{
+		Burst->InitBurst(ExplosionCenter + FVector(0.0f, 0.0f, 8.0f), ExplosionRadius, 0.28f,
+			FLinearColor(1.0f, 0.22f, 0.03f, 1.0f), true);
+	}
 
 	// Sphere overlap to find all pawns in explosion radius
 	TArray<FOverlapResult> Overlaps;

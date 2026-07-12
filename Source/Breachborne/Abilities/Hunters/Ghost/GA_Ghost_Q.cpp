@@ -7,13 +7,15 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
 #include "Breachborne/Combat/BBTargetDummy.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "AbilitySystemComponent.h"
 #include "Breachborne/Breachborne.h"
-#include "DrawDebugHelpers.h"
 
 UGA_Ghost_Q::UGA_Ghost_Q()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_Q;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, MaxRange);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -25,6 +27,8 @@ UGA_Ghost_Q::UGA_Ghost_Q()
 	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Hunter_Ghost_Q);
 
 	DamageEffectClass = UBBDamageEffect::StaticClass();
+	BeamVisualClass = ABBPrimitiveBeamActor::StaticClass();
+	BurstVisualClass = ABBPrimitiveBurstActor::StaticClass();
 }
 
 void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -53,6 +57,18 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 	const FVector EndLocation = StartLocation + (AimDir * MaxRange);
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Fire);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Fire, StartLocation, AimDir);
+	if (bIsServer && BeamVisualClass)
+	{
+		FActorSpawnParameters VisualParams;
+		VisualParams.Owner = Hunter;
+		VisualParams.Instigator = Hunter;
+		VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBeamActor* Beam = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			BeamVisualClass, FTransform::Identity, VisualParams))
+		{
+			Beam->InitBeam(StartLocation, EndLocation, 25.0f, 0.24f, FLinearColor(0.13f, 0.90f, 0.72f, 1.0f));
+		}
+	}
 
 	// Sphere sweep multi-trace against Pawn object type — pierces all targets in line
 	static constexpr float SweepRadius = 25.0f;
@@ -73,16 +89,6 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 	);
 
 	// Draw debug trace line — cyan for Q, visible for 2s
-	if (Hunter->IsLocallyControlled())
-	{
-		const FColor QColor = HitResults.Num() > 0 ? FColor::Cyan : FColor::Blue;
-		DrawDebugLine(Hunter->GetWorld(), StartLocation, EndLocation, QColor, false, 2.0f, 0, 4.0f);
-		for (const FHitResult& Hit : HitResults)
-		{
-			DrawDebugSphere(Hunter->GetWorld(), Hit.ImpactPoint, 15.0f, 8, FColor::Cyan, false, 2.0f);
-		}
-	}
-
 	UE_LOG(LogBreachborne, Log, TEXT("Ghost Q: %s | Trace from %s dir %s | Hits: %d"),
 		bIsServer ? TEXT("SERVER") : TEXT("CLIENT"),
 		*StartLocation.ToString(), *AimDir.ToString(), HitResults.Num());
@@ -137,6 +143,18 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 
 				DamagedActors.Add(HitActor);
 				ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Impact, Hit.ImpactPoint, Hit.ImpactNormal);
+				if (BurstVisualClass)
+				{
+					FActorSpawnParameters VisualParams;
+					VisualParams.Owner = Hunter;
+					VisualParams.Instigator = Hunter;
+					VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+					if (ABBPrimitiveBurstActor* Burst = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+						BurstVisualClass, Hit.ImpactPoint, FRotator::ZeroRotator, VisualParams))
+					{
+						Burst->InitBurst(Hit.ImpactPoint, 48.0f, 0.22f, FLinearColor(0.90f, 1.0f, 1.0f, 1.0f));
+					}
+				}
 
 				UE_LOG(LogBreachborne, Log, TEXT("Ghost Q: Hit %s (Team %d) for %.0f base damage"), *HitActor->GetName(), TargetTeamID, BaseDamage);
 			}

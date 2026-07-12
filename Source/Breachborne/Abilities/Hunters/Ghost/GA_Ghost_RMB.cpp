@@ -12,6 +12,7 @@
 UGA_Ghost_RMB::UGA_Ghost_RMB()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_RMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, 3750.0f, 400.0f);
 	bActivateOnInputHeld = false;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;

@@ -7,6 +7,7 @@
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBTargetDummy.h"
 #include "Breachborne/Combat/BBGlideBot.h"
+#include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Breachborne.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -40,6 +41,7 @@ ABBNapalmZone::ABBNapalmZone()
 		ZoneVisualMesh->SetRelativeScale3D(FVector(RadiusScale, RadiusScale, 0.05f));
 		ZoneVisualMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f)); // Slightly above ground
 	}
+	BBPrimitiveVisuals::ApplyColor(ZoneVisualMesh, FLinearColor(1.0f, 0.20f, 0.03f, 1.0f));
 }
 
 void ABBNapalmZone::InitZone(UAbilitySystemComponent* InASC, TSubclassOf<UGameplayEffect> InDamageGE, float InDamagePerTick, int32 InTeamID)
@@ -51,15 +53,15 @@ void ABBNapalmZone::InitZone(UAbilitySystemComponent* InASC, TSubclassOf<UGamepl
 
 	if (HasAuthority())
 	{
-		// Start damage tick timer
-		GetWorldTimerManager().SetTimer(
-			DamageTickHandle,
-			this,
-			&ABBNapalmZone::OnDamageTick,
-			DamageTickInterval,
-			true, // looping
-			0.0f  // first tick immediately
-		);
+		if (WarningDuration > 0.0f)
+		{
+			GetWorldTimerManager().SetTimer(ActivationHandle, this, &ABBNapalmZone::BeginActiveZone,
+				WarningDuration, false);
+		}
+		else
+		{
+			BeginActiveZone();
+		}
 
 		// Self-destruct after duration
 		GetWorldTimerManager().SetTimer(
@@ -73,6 +75,45 @@ void ABBNapalmZone::InitZone(UAbilitySystemComponent* InASC, TSubclassOf<UGamepl
 		UE_LOG(LogBreachborne, Log, TEXT("BBNapalmZone: Initialized — radius %.0f, duration %.1fs, dmg/tick %.1f"),
 			ZoneRadius, ZoneDuration, DamagePerTick);
 	}
+}
+
+void ABBNapalmZone::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (HasAuthority())
+	{
+		GetWorldTimerManager().ClearTimer(ActivationHandle);
+		GetWorldTimerManager().ClearTimer(DamageTickHandle);
+		GetWorldTimerManager().ClearTimer(DurationHandle);
+		if (bActiveCueAdded && SourceASC.IsValid())
+		{
+			SourceASC->RemoveGameplayCue(BBGameplayTags::GameplayCue_Hunter_Ghost_R_Active);
+			bActiveCueAdded = false;
+		}
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void ABBNapalmZone::BeginActiveZone()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (SourceASC.IsValid())
+	{
+		FGameplayCueParameters CueParams;
+		CueParams.Instigator = GetInstigator();
+		CueParams.EffectCauser = this;
+		CueParams.SourceObject = this;
+		CueParams.Location = GetActorLocation();
+		CueParams.Normal = FVector::UpVector;
+		SourceASC->AddGameplayCue(BBGameplayTags::GameplayCue_Hunter_Ghost_R_Active, CueParams);
+		bActiveCueAdded = true;
+	}
+
+	GetWorldTimerManager().SetTimer(DamageTickHandle, this, &ABBNapalmZone::OnDamageTick,
+		DamageTickInterval, true, 0.0f);
 }
 
 void ABBNapalmZone::OnDamageTick()
@@ -138,6 +179,5 @@ void ABBNapalmZone::OnDamageTick()
 void ABBNapalmZone::OnZoneExpired()
 {
 	UE_LOG(LogBreachborne, Log, TEXT("BBNapalmZone: Duration expired, destroying"));
-	GetWorldTimerManager().ClearTimer(DamageTickHandle);
 	Destroy();
 }

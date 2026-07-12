@@ -9,6 +9,7 @@
 UGA_Power_TacticalNuke::UGA_Power_TacticalNuke()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, 5200.0f, Radius);
 }
 
 void UGA_Power_TacticalNuke::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

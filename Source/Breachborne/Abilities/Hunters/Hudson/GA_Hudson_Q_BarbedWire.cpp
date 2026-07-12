@@ -8,6 +8,7 @@
 UGA_Hudson_Q_BarbedWire::UGA_Hudson_Q_BarbedWire()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_Q;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, Range, 360.0f);
 	bActivateOnInputHeld = false;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 

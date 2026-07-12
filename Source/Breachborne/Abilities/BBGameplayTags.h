@@ -52,6 +52,22 @@ namespace BBGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_RMB_Loop);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Hudson_R_Reel);
 
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_Passive);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_Shift_Primary);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Crysta_Shift_Secondary);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Void_LMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Void_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Void_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Void_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Void_R);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hunter_Void_Passive);
+
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Category_Passive);
 
 	// --- State Tags (block abilities, drive logic) ---
@@ -78,6 +94,11 @@ namespace BBGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_SpunUp);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_Hovering);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Hudson_Hooked);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Crysta_Reverberation);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Crysta_EmpoweredLMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Void_Empowered);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Void_Swapping);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Void_SingularityPulled);
 
 	// --- Input Tags (item powers) ---
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Power1);
@@ -124,6 +145,17 @@ namespace BBGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Hudson_Q);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Hudson_R);
 
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Crysta_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Crysta_Shift_Primary);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Crysta_Shift_Secondary);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Crysta_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Crysta_R);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Void_RMB);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Void_Shift);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Void_Q);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Hunter_Void_R);
+
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Power1);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Power2);
 
@@ -152,6 +184,7 @@ namespace BBGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Hudson_Passive_Pulse);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_LMB_Impact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_RMB_Cast);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_RMB_Impact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Ghost_Shift_Start);
@@ -185,6 +218,37 @@ namespace BBGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_R_Impact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Kingpin_Passive_Pulse);
 
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_LMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_LMB_Empowered);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_RMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_RMB_Return);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_RMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_Shift_Dash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_Q_Cast);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_Q_Active);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_Q_Detonate);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_R_Warning);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_R_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_R_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Crysta_Passive_Detonate);
+
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_LMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_LMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_LMB_Charged);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_RMB_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_RMB_Impact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_Shift_Cast);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_Shift_Swap);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_Q_Cast);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_Q_Active);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_Q_Detonate);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_R_Warning);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_R_Active);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_R_Pull);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_R_End);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Hunter_Void_Passive_Empowered);
+
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_EmergencyPlatform_Preview);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_EmergencyPlatform_Spawn);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Power_GrapplingHook_Fire);
@@ -203,6 +267,8 @@ namespace BBGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Kill);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_CCApplied);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_DamageTaken);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Crysta_ReverberationDetonated);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Void_DamageDealt);
 
 	// --- SetByCaller Tags (parameterize GE magnitudes) ---
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage);

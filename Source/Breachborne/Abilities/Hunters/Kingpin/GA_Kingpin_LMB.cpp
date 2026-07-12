@@ -8,11 +8,15 @@
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Combat/BBDamageExecution.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Combat/BBPrimitiveWedgeActor.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Kingpin_LMB::UGA_Kingpin_LMB()
 {
 	AbilityInputTag    = BBGameplayTags::InputTag_LMB;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, MeleeRange);
 	bActivateOnInputHeld = true;
 
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -72,6 +76,16 @@ void UGA_Kingpin_LMB::PerformStrike()
 	const FVector Origin  = Hunter->GetActorLocation();
 	const FVector Forward = Hunter->GetActorForwardVector().GetSafeNormal2D();
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_LMB_Fire, Origin, Forward);
+	FActorSpawnParameters VisualParams;
+	VisualParams.Owner = Hunter;
+	VisualParams.Instigator = Hunter;
+	VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (ABBPrimitiveWedgeActor* Swipe = Hunter->GetWorld()->SpawnActor<ABBPrimitiveWedgeActor>(
+		ABBPrimitiveWedgeActor::StaticClass(), Origin, FRotator::ZeroRotator, VisualParams))
+	{
+		Swipe->InitWedge(Origin, Forward, MeleeRange, 72.5f, 7.0f, 0.18f,
+			FLinearColor(0.90f, 0.23f, 0.18f, 1.0f));
+	}
 
 	// Overlap sphere to find enemies in melee range
 	TArray<FOverlapResult> Overlaps;
@@ -126,6 +140,12 @@ void UGA_Kingpin_LMB::PerformStrike()
 	{
 		ApplyDamageToTarget(SourceASC, PrimaryASC, BaseDamage);
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_LMB_Impact, PrimaryTarget->GetActorLocation(), (PrimaryTarget->GetActorLocation() - Origin).GetSafeNormal());
+		if (ABBPrimitiveBurstActor* Impact = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), PrimaryTarget->GetActorLocation(), FRotator::ZeroRotator, VisualParams))
+		{
+			Impact->InitBurst(PrimaryTarget->GetActorLocation(), 70.0f, 0.2f,
+				FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+		}
 		UE_LOG(LogBreachborne, Log, TEXT("Kingpin LMB: Strike %s for %.0f"), *PrimaryTarget->GetName(), BaseDamage);
 
 		// Chain bounce: find second enemy within ChainRadius of the primary target
@@ -157,6 +177,12 @@ void UGA_Kingpin_LMB::PerformStrike()
 				{
 					const float ChainDmg = BaseDamage * ChainDamageFraction;
 					ApplyDamageToTarget(SourceASC, ChainASC, ChainDmg);
+					if (ABBPrimitiveBeamActor* Chain = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+						ABBPrimitiveBeamActor::StaticClass(), PrimaryLoc, FRotator::ZeroRotator, VisualParams))
+					{
+						Chain->InitBeam(PrimaryLoc, ChainCandidate->GetActorLocation(), 6.0f, 0.2f,
+							FLinearColor(1.0f, 0.69f, 0.13f, 1.0f));
+					}
 					UE_LOG(LogBreachborne, Log, TEXT("Kingpin LMB: Chain to %s for %.0f"), *ChainCandidate->GetName(), ChainDmg);
 					break; // One chain bounce only
 				}

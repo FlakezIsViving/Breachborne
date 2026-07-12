@@ -7,6 +7,7 @@
 UGA_Power_EmergencyPlatform::UGA_Power_EmergencyPlatform()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, SpawnDistance, 180.0f);
 }
 
 void UGA_Power_EmergencyPlatform::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

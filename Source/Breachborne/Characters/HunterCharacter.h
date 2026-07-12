@@ -20,6 +20,22 @@ class UBBMantleComponent;
 class UBBCharacterMovementComponent;
 class UBBHunterDefinition;
 
+/** One cue in a server-authored cosmetic batch. Clients invoke these locally. */
+USTRUCT()
+struct BREACHBORNE_API FBBLocalGameplayCue
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FGameplayTag CueTag;
+
+	UPROPERTY()
+	FVector_NetQuantize Location = FVector::ZeroVector;
+
+	UPROPERTY()
+	FVector_NetQuantizeNormal Normal = FVector::UpVector;
+};
+
 /**
  * Base character class for all hunters. Top-down isometric with:
  * - Spring arm camera at ~60° pitch, 2000 arm length
@@ -87,15 +103,12 @@ public:
 	/** Get the glider indicator mesh (for toggling visibility from GliderComponent) */
 	UStaticMeshComponent* GetGliderIndicatorMesh() const { return GliderIndicatorMesh; }
 
-	// --- Stubs for in-progress abilities ---
+	/** Batch high-frequency cosmetic cues into one network RPC, then execute them locally. */
 	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_DrawDebugCircle(const FVector& Center, float Radius, const FColor& Color, float LifeTime, float Thickness);
+	void Multicast_InvokeLocalGameplayCueBatch(const TArray<FBBLocalGameplayCue>& Cues, bool bSkipFirstCueForRemoteOwner);
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_DrawDebugLine(const FVector& Start, const FVector& End, const FColor& Color, float LifeTime, float Thickness);
-
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_DrawDebugSphere(const FVector& Center, float Radius, const FColor& Color, float LifeTime);
+	/** Plays the code primitive paired with a locally predicted cue without another network RPC. */
+	void PlayLocalPrimitiveCueFallback(const FBBLocalGameplayCue& Cue);
 
 	void BeginHookPull(AActor* Target, float PullSpeed, float ImpactDistance, float MaxPullDuration, float PullTickInterval, UClass* DamageEffectClass, float Damage, const FGameplayEffectContextHandle& Context);
 

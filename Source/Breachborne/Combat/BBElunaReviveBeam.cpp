@@ -1,210 +1,242 @@
 #include "BBElunaReviveBeam.h"
-#include "Components/StaticMeshComponent.h"
-#include "Components/PointLightComponent.h"
-#include "Particles/ParticleSystemComponent.h"
 #include "Components/DecalComponent.h"
-#include "UObject/ConstructorHelpers.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "UObject/ConstructorHelpers.h"
+
+namespace
+{
+	void ConfigureVisualMesh(UStaticMeshComponent* Mesh)
+	{
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Mesh->SetCastShadow(false);
+		Mesh->SetReceivesDecals(false);
+	}
+
+	void SetMeshColorAndOpacity(UStaticMeshComponent* Mesh, const FLinearColor& Color, float Opacity)
+	{
+		if (!Mesh)
+		{
+			return;
+		}
+		const FVector VectorColor(Color.R, Color.G, Color.B);
+		Mesh->SetVectorParameterValueOnMaterials(TEXT("Color"), VectorColor);
+		Mesh->SetVectorParameterValueOnMaterials(TEXT("BaseColor"), VectorColor);
+		Mesh->SetVectorParameterValueOnMaterials(TEXT("Tint"), VectorColor);
+		Mesh->SetScalarParameterValueOnMaterials(TEXT("Opacity"), Opacity);
+		Mesh->SetScalarParameterValueOnMaterials(TEXT("Alpha"), Opacity);
+	}
+}
 
 ABBElunaReviveBeam::ABBElunaReviveBeam()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	bReplicates = false;
+	bReplicates = true;
+	bAlwaysRelevant = true;
+	SetReplicatingMovement(false);
+	SetNetUpdateFrequency(15.0f);
+	SetMinNetUpdateFrequency(10.0f);
 
-	// Beam mesh — thicker cylinder with emissive material
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
+
 	BeamMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BeamMesh"));
-	BeamMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	SetRootComponent(BeamMesh);
+	BeamMesh->SetupAttachment(SceneRoot);
+	ConfigureVisualMesh(BeamMesh);
+
+	CoreBeamMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CoreBeamMesh"));
+	CoreBeamMesh->SetupAttachment(SceneRoot);
+	ConfigureVisualMesh(CoreBeamMesh);
+
+	SourceHaloMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SourceHaloMesh"));
+	SourceHaloMesh->SetupAttachment(SceneRoot);
+	ConfigureVisualMesh(SourceHaloMesh);
+
+	TargetHaloMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TargetHaloMesh"));
+	TargetHaloMesh->SetupAttachment(SceneRoot);
+	ConfigureVisualMesh(TargetHaloMesh);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(TEXT("/Engine/BasicShapes/Cylinder"));
 	if (CylinderMesh.Succeeded())
 	{
 		BeamMesh->SetStaticMesh(CylinderMesh.Object);
+		CoreBeamMesh->SetStaticMesh(CylinderMesh.Object);
+		SourceHaloMesh->SetStaticMesh(CylinderMesh.Object);
+		TargetHaloMesh->SetStaticMesh(CylinderMesh.Object);
 	}
 
-	// Create a dynamic emissive material
-	static ConstructorHelpers::FObjectFinder<UMaterial> BasicMat(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
-	if (BasicMat.Succeeded())
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> TranslucentMaterial(
+		TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent"));
+	if (TranslucentMaterial.Succeeded())
 	{
-		BeamMaterialInstance = UMaterialInstanceDynamic::Create(BasicMat.Object, this);
-		if (BeamMaterialInstance)
-		{
-			BeamMaterialInstance->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.2f, 0.6f, 1.0f));
-			BeamMesh->SetMaterial(0, BeamMaterialInstance);
-		}
+		BeamMesh->SetMaterial(0, TranslucentMaterial.Object);
+		SourceHaloMesh->SetMaterial(0, TranslucentMaterial.Object);
+		TargetHaloMesh->SetMaterial(0, TranslucentMaterial.Object);
+	}
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> CoreMaterial(
+		TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
+	if (CoreMaterial.Succeeded())
+	{
+		CoreBeamMesh->SetMaterial(0, CoreMaterial.Object);
 	}
 
-	BeamMesh->SetRelativeScale3D(FVector(0.15f, 0.15f, 1.0f));
-
-	// Source glow light
 	SourceLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("SourceLight"));
-	SourceLight->SetupAttachment(BeamMesh);
-	SourceLight->SetRelativeLocation(FVector(0.0f, 0.0f, -500.0f));
-	SourceLight->SetLightColor(FLinearColor(0.3f, 0.7f, 1.0f));
-	SourceLight->SetIntensity(5000.0f);
-	SourceLight->SetAttenuationRadius(300.0f);
-	SourceLight->SetSourceRadius(50.0f);
+	SourceLight->SetupAttachment(SceneRoot);
+	SourceLight->SetIntensity(250.0f);
+	SourceLight->SetAttenuationRadius(140.0f);
 	SourceLight->bUseInverseSquaredFalloff = false;
 	SourceLight->SetCastShadows(false);
 
-	// Target glow light
 	TargetLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("TargetLight"));
-	TargetLight->SetupAttachment(BeamMesh);
-	TargetLight->SetRelativeLocation(FVector(0.0f, 0.0f, 500.0f));
-	TargetLight->SetLightColor(FLinearColor(0.3f, 0.7f, 1.0f));
-	TargetLight->SetIntensity(3000.0f);
-	TargetLight->SetAttenuationRadius(200.0f);
-	TargetLight->SetSourceRadius(30.0f);
+	TargetLight->SetupAttachment(SceneRoot);
+	TargetLight->SetIntensity(250.0f);
+	TargetLight->SetAttenuationRadius(140.0f);
 	TargetLight->bUseInverseSquaredFalloff = false;
 	TargetLight->SetCastShadows(false);
 
-	// Particle system placeholders
 	BeamPSC = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("BeamPSC"));
-	BeamPSC->SetupAttachment(BeamMesh);
-	BeamPSC->SetRelativeLocation(FVector::ZeroVector);
+	BeamPSC->SetupAttachment(SceneRoot);
 	BeamPSC->bAutoActivate = true;
 
 	SourcePSC = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("SourcePSC"));
-	SourcePSC->SetupAttachment(BeamMesh);
-	SourcePSC->SetRelativeLocation(FVector(0.0f, 0.0f, -500.0f));
+	SourcePSC->SetupAttachment(SceneRoot);
 	SourcePSC->bAutoActivate = true;
 
 	TargetPSC = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("TargetPSC"));
-	TargetPSC->SetupAttachment(BeamMesh);
-	TargetPSC->SetRelativeLocation(FVector(0.0f, 0.0f, 500.0f));
+	TargetPSC->SetupAttachment(SceneRoot);
 	TargetPSC->bAutoActivate = true;
 
-	// Crescent moon decal at target
 	TargetDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("TargetDecal"));
-	TargetDecal->SetupAttachment(BeamMesh);
-	TargetDecal->SetRelativeLocation(FVector(0.0f, 0.0f, 500.0f));
+	TargetDecal->SetupAttachment(SceneRoot);
 	TargetDecal->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
-	TargetDecal->DecalSize = FVector(150.0f, 150.0f, 150.0f);
+	TargetDecal->DecalSize = FVector(90.0f, 90.0f, 90.0f);
 	TargetDecal->SetVisibility(false);
+}
+
+void ABBElunaReviveBeam::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABBElunaReviveBeam, CurrentSource);
+	DOREPLIFETIME(ABBElunaReviveBeam, CurrentTarget);
+	DOREPLIFETIME(ABBElunaReviveBeam, bHasTarget);
+	DOREPLIFETIME(ABBElunaReviveBeam, DistanceRatio);
 }
 
 void ABBElunaReviveBeam::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (BeamParticles && BeamPSC)
+	if (BeamParticles)
 	{
 		BeamPSC->SetTemplate(BeamParticles);
 	}
-	if (SourceGlowParticles && SourcePSC)
+	if (SourceGlowParticles)
 	{
 		SourcePSC->SetTemplate(SourceGlowParticles);
 	}
-	if (TargetGlowParticles && TargetPSC)
+	if (TargetGlowParticles)
 	{
 		TargetPSC->SetTemplate(TargetGlowParticles);
 	}
-	if (CrescentDecalMaterial && TargetDecal)
+	if (CrescentDecalMaterial)
 	{
 		TargetDecal->SetDecalMaterial(CrescentDecalMaterial);
 		TargetDecal->SetVisibility(true);
 	}
+	ApplyVisualStyle();
+	UpdateBeamTransform();
 }
 
 void ABBElunaReviveBeam::SetBeamTarget(const FVector& TargetLocation)
 {
 	CurrentTarget = TargetLocation;
 	bHasTarget = true;
+	UpdateBeamTransform();
 }
 
 void ABBElunaReviveBeam::SetBeamSource(const FVector& SourceLocation)
 {
 	CurrentSource = SourceLocation;
+	UpdateBeamTransform();
 }
 
 void ABBElunaReviveBeam::SetDistanceRatio(float Ratio)
 {
-	if (!BeamMaterialInstance)
-	{
-		return;
-	}
+	DistanceRatio = FMath::Clamp(Ratio, 0.0f, 1.0f);
+	ApplyVisualStyle();
+}
 
-	Ratio = FMath::Clamp(Ratio, 0.0f, 1.0f);
+void ABBElunaReviveBeam::OnRep_BeamState()
+{
+	ApplyVisualStyle();
+	UpdateBeamTransform();
+}
 
-	// Green (safe) -> Yellow (mid) -> Red (breaking)
-	// Use two-stage lerp: green->yellow for 0-0.5, yellow->red for 0.5-1.0
-	FLinearColor Color;
-	if (Ratio <= 0.5f)
-	{
-		const float T = Ratio * 2.0f;
-		Color = FMath::Lerp(FLinearColor(0.0f, 1.0f, 0.0f), FLinearColor(1.0f, 1.0f, 0.0f), T);
-	}
-	else
-	{
-		const float T = (Ratio - 0.5f) * 2.0f;
-		Color = FMath::Lerp(FLinearColor(1.0f, 1.0f, 0.0f), FLinearColor(1.0f, 0.0f, 0.0f), T);
-	}
-
-	BeamMaterialInstance->SetVectorParameterValue(TEXT("Color"), Color);
-
-	// Also tint the lights to match
-	if (SourceLight)
-	{
-		SourceLight->SetLightColor(Color);
-	}
-	if (TargetLight)
-	{
-		TargetLight->SetLightColor(Color);
-	}
+void ABBElunaReviveBeam::ApplyVisualStyle()
+{
+	const FLinearColor SafeColor(0.58f, 0.82f, 1.0f, 1.0f);
+	const FLinearColor EdgeColor(1.0f, 0.48f, 0.78f, 1.0f);
+	const FLinearColor BeamColor = FMath::Lerp(SafeColor, EdgeColor, DistanceRatio);
+	const FLinearColor CoreColor = FMath::Lerp(FLinearColor::White, BeamColor, 0.35f);
+	SetMeshColorAndOpacity(BeamMesh, BeamColor, 0.5f);
+	SetMeshColorAndOpacity(CoreBeamMesh, CoreColor, 1.0f);
+	SetMeshColorAndOpacity(SourceHaloMesh, BeamColor, 0.35f);
+	SetMeshColorAndOpacity(TargetHaloMesh, BeamColor, 0.35f);
+	SourceLight->SetLightColor(BeamColor);
+	TargetLight->SetLightColor(BeamColor);
 }
 
 void ABBElunaReviveBeam::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 	if (!bHasTarget)
 	{
 		return;
 	}
-
 	BeamPulseTime += DeltaTime;
 	UpdateBeamTransform();
 }
 
 void ABBElunaReviveBeam::UpdateBeamTransform()
 {
-	const FVector Direction = CurrentTarget - CurrentSource;
-	const float Distance = Direction.Size();
-
+	if (!bHasTarget)
+	{
+		return;
+	}
+	const FVector Source = CurrentSource;
+	const FVector Target = CurrentTarget;
+	const FVector Delta = Target - Source;
+	const float Distance = Delta.Size();
 	if (Distance < 1.0f)
 	{
 		return;
 	}
 
-	const FVector MidPoint = (CurrentSource + CurrentTarget) * 0.5f;
-	const FRotator BeamRot = Direction.GetSafeNormal().Rotation() + FRotator(90.0f, 0.0f, 0.0f);
+	const FVector MidPoint = (Source + Target) * 0.5f;
+	const FRotator BeamRotation = FQuat::FindBetweenNormals(FVector::UpVector, Delta / Distance).Rotator();
+	const float Pulse = 1.0f + 0.05f * FMath::Sin(BeamPulseTime * 5.0f);
+	const float CylinderLengthScale = Distance / 100.0f;
 
-	SetActorLocation(MidPoint);
-	SetActorRotation(BeamRot);
+	BeamMesh->SetWorldLocationAndRotation(MidPoint, BeamRotation);
+	BeamMesh->SetWorldScale3D(FVector(0.14f * Pulse, 0.14f * Pulse, CylinderLengthScale));
+	CoreBeamMesh->SetWorldLocationAndRotation(MidPoint, BeamRotation);
+	CoreBeamMesh->SetWorldScale3D(FVector(0.035f, 0.035f, CylinderLengthScale * 1.002f));
 
-	// Pulsing thickness
-	const float Pulse = 1.0f + 0.15f * FMath::Sin(BeamPulseTime * 4.0f);
-	BeamMesh->SetRelativeScale3D(FVector(0.12f * Pulse, 0.12f * Pulse, Distance * 0.5f));
+	SourceHaloMesh->SetWorldLocation(Source + FVector(0.0f, 0.0f, 4.0f));
+	SourceHaloMesh->SetWorldRotation(FRotator::ZeroRotator);
+	SourceHaloMesh->SetWorldScale3D(FVector(1.8f, 1.8f, 0.025f));
+	TargetHaloMesh->SetWorldLocation(Target + FVector(0.0f, 0.0f, 4.0f));
+	TargetHaloMesh->SetWorldRotation(FRotator::ZeroRotator);
+	TargetHaloMesh->SetWorldScale3D(FVector(1.8f, 1.8f, 0.025f));
 
-	// Update light positions to source/target
-	if (SourceLight)
-	{
-		SourceLight->SetRelativeLocation(FVector(0.0f, 0.0f, -Distance * 0.5f));
-	}
-	if (TargetLight)
-	{
-		TargetLight->SetRelativeLocation(FVector(0.0f, 0.0f, Distance * 0.5f));
-	}
-	if (SourcePSC)
-	{
-		SourcePSC->SetRelativeLocation(FVector(0.0f, 0.0f, -Distance * 0.5f));
-	}
-	if (TargetPSC)
-	{
-		TargetPSC->SetRelativeLocation(FVector(0.0f, 0.0f, Distance * 0.5f));
-	}
-	if (TargetDecal)
-	{
-		TargetDecal->SetRelativeLocation(FVector(0.0f, 0.0f, Distance * 0.5f));
-	}
+	SourceLight->SetWorldLocation(Source + FVector(0.0f, 0.0f, 35.0f));
+	TargetLight->SetWorldLocation(Target + FVector(0.0f, 0.0f, 35.0f));
+	BeamPSC->SetWorldLocation(MidPoint);
+	SourcePSC->SetWorldLocation(Source);
+	TargetPSC->SetWorldLocation(Target);
+	TargetDecal->SetWorldLocation(Target + FVector(0.0f, 0.0f, 8.0f));
 }

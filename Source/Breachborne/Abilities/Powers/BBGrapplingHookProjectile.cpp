@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 
 ABBGrapplingHookProjectile::ABBGrapplingHookProjectile()
@@ -57,9 +58,25 @@ void ABBGrapplingHookProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 
-	StartLocation = GetActorLocation();
-	CollisionComp->OnComponentHit.AddDynamic(this, &ABBGrapplingHookProjectile::OnHookHit);
-	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ABBGrapplingHookProjectile::OnHookOverlap);
+	OwnerHunter = Cast<AHunterCharacter>(GetOwner());
+	if (HasAuthority())
+	{
+		StartLocation = GetActorLocation();
+		CollisionComp->OnComponentHit.AddDynamic(this, &ABBGrapplingHookProjectile::OnHookHit);
+		CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &ABBGrapplingHookProjectile::OnHookOverlap);
+	}
+	else
+	{
+		CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
+
+void ABBGrapplingHookProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABBGrapplingHookProjectile, AttachedActor);
+	DOREPLIFETIME(ABBGrapplingHookProjectile, AttachedLocation);
+	DOREPLIFETIME(ABBGrapplingHookProjectile, bAttached);
 }
 
 void ABBGrapplingHookProjectile::InitGrapple(AHunterCharacter* InOwnerHunter, const FVector& Direction, float InRange, float InInitialPullSpeed, float InMaxPullSpeed, float InStopDistance, float InMaxPullDuration, float InPullTickInterval)
@@ -83,6 +100,10 @@ void ABBGrapplingHookProjectile::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	UpdateChainVisual();
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	if (!bAttached && FVector::DistSquared(StartLocation, GetActorLocation()) >= FMath::Square(Range))
 	{
@@ -92,7 +113,7 @@ void ABBGrapplingHookProjectile::Tick(float DeltaSeconds)
 
 	if (bAttached && OwnerHunter.IsValid())
 	{
-		const FVector EndPoint = AttachedActor.IsValid() ? AttachedActor->GetActorLocation() : AttachedLocation;
+		const FVector EndPoint = IsValid(AttachedActor) ? AttachedActor->GetActorLocation() : FVector(AttachedLocation);
 		if (FVector::DistSquared(OwnerHunter->GetActorLocation(), EndPoint) <= FMath::Square(StopDistance + 50.0f))
 		{
 			Destroy();
@@ -102,7 +123,7 @@ void ABBGrapplingHookProjectile::Tick(float DeltaSeconds)
 
 void ABBGrapplingHookProjectile::OnHookHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (bAttached || OtherActor == OwnerHunter.Get())
+	if (!HasAuthority() || bAttached || OtherActor == OwnerHunter.Get())
 	{
 		return;
 	}
@@ -112,7 +133,7 @@ void ABBGrapplingHookProjectile::OnHookHit(UPrimitiveComponent* HitComponent, AA
 
 void ABBGrapplingHookProjectile::OnHookOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (bAttached || !OtherActor || OtherActor == OwnerHunter.Get())
+	if (!HasAuthority() || bAttached || !OtherActor || OtherActor == OwnerHunter.Get())
 	{
 		return;
 	}
@@ -122,6 +143,11 @@ void ABBGrapplingHookProjectile::OnHookOverlap(UPrimitiveComponent* OverlappedCo
 
 void ABBGrapplingHookProjectile::AttachHook(const FHitResult& Hit)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	bAttached = true;
 	AttachedActor = Hit.GetActor();
 	AttachedLocation = Hit.ImpactPoint.IsNearlyZero() ? GetActorLocation() : FVector(Hit.ImpactPoint);
@@ -135,24 +161,46 @@ void ABBGrapplingHookProjectile::AttachHook(const FHitResult& Hit)
 
 	CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetLifeSpan(MaxPullDuration + 0.35f);
+	ForceNetUpdate();
 
-	if (HasAuthority() && OwnerHunter.IsValid())
+	if (OwnerHunter.IsValid())
 	{
-		OwnerHunter->BeginGrapplePull(AttachedActor.Get(), AttachedLocation, InitialPullSpeed, MaxPullSpeed, StopDistance, MaxPullDuration, PullTickInterval);
+		OwnerHunter->BeginGrapplePull(AttachedActor, AttachedLocation, InitialPullSpeed, MaxPullSpeed, StopDistance, MaxPullDuration, PullTickInterval);
 		UE_LOG(LogBreachborne, Log, TEXT("PowerAbility: GrapplingHook latched onto %s"),
-			AttachedActor.IsValid() ? *AttachedActor->GetName() : *AttachedLocation.ToCompactString());
+			IsValid(AttachedActor) ? *AttachedActor->GetName() : *FVector(AttachedLocation).ToCompactString());
 	}
+}
+
+void ABBGrapplingHookProjectile::OnRep_AttachmentState()
+{
+	if (!bAttached)
+	{
+		return;
+	}
+
+	SetActorLocation(FVector(AttachedLocation));
+	if (ProjectileMovement)
+	{
+		ProjectileMovement->StopMovementImmediately();
+		ProjectileMovement->Deactivate();
+	}
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UpdateChainVisual();
 }
 
 void ABBGrapplingHookProjectile::UpdateChainVisual()
 {
+	if (!OwnerHunter.IsValid())
+	{
+		OwnerHunter = Cast<AHunterCharacter>(GetOwner());
+	}
 	if (!OwnerHunter.IsValid() || !ChainMesh)
 	{
 		return;
 	}
 
 	const FVector Start = OwnerHunter->GetActorLocation() + FVector(0.0f, 0.0f, 55.0f);
-	const FVector End = bAttached && AttachedActor.IsValid() ? AttachedActor->GetActorLocation() : GetActorLocation();
+	const FVector End = bAttached && IsValid(AttachedActor) ? AttachedActor->GetActorLocation() : GetActorLocation();
 	const FVector Mid = (Start + End) * 0.5f;
 	const FVector Delta = End - Start;
 	const float Length = Delta.Size();

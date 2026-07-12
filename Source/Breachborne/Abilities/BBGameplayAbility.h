@@ -10,6 +10,38 @@ class AHunterCharacter;
 class ABreachbornePlayerState;
 class UBBAbilitySystemComponent;
 
+UENUM(BlueprintType)
+enum class EBBRangeIndicatorMode : uint8
+{
+	Disabled,
+	Directional,
+	TargetedArea,
+	SelfCentered,
+	Movement
+};
+
+USTRUCT(BlueprintType)
+struct BREACHBORNE_API FBBAbilityRangeIndicatorInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Range Indicator")
+	EBBRangeIndicatorMode Mode = EBBRangeIndicatorMode::Disabled;
+
+	/** Maximum distance from the caster to the target/center/landing point. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Range Indicator", meta = (ClampMin = "0.0"))
+	float CastRange = 0.0f;
+
+	/** Radius around the target point or caster. Zero means no area footprint. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Range Indicator", meta = (ClampMin = "0.0"))
+	float EffectRadius = 0.0f;
+
+	bool IsEnabled() const
+	{
+		return Mode != EBBRangeIndicatorMode::Disabled && (CastRange > 0.0f || EffectRadius > 0.0f);
+	}
+};
+
 /**
  * Base class for all Breachborne abilities.
  * Provides input tag binding, blocking state tag checks, and helper accessors.
@@ -34,6 +66,9 @@ public:
 
 	/** Called by ASC when the input tag for this ability is released */
 	virtual void OnInputReleased();
+
+	/** Local-only HUD metadata. This does not participate in gameplay authority. */
+	const FBBAbilityRangeIndicatorInfo& GetRangeIndicatorInfo() const { return RangeIndicatorInfo; }
 
 protected:
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
@@ -79,6 +114,9 @@ protected:
 	/** Stop a specific animation phase from the character's visual set for an ability/input tag. */
 	void StopVisualMontage(FGameplayTag AbilityOrInputTag, EBBAbilityAnimationPhase Phase, float BlendOutTime = 0.15f) const;
 
+	/** Configure the shared hover/aim range preview for this ability. */
+	void ConfigureRangeIndicator(EBBRangeIndicatorMode Mode, float CastRange, float EffectRadius = 0.0f);
+
 	// --- Configuration ---
 
 	/** The input tag that maps this ability to an Enhanced Input action */
@@ -88,4 +126,7 @@ protected:
 	/** If true, ability stays active while input is held (for auto-fire abilities like LMB) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Input")
 	bool bActivateOnInputHeld = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|UI")
+	FBBAbilityRangeIndicatorInfo RangeIndicatorInfo;
 };

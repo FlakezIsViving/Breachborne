@@ -25,6 +25,7 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
+#include "Breachborne/Abilities/BBGameplayAbility.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Abilities/BBHealthSet.h"
 #include "Breachborne/Items/BBInventoryManager.h"
@@ -33,6 +34,8 @@
 #include "Breachborne/Items/BBWorldItem.h"
 #include "Breachborne/Items/BBWorldItemSpawner.h"
 #include "Breachborne/PvE/BBBasecampActor.h"
+#include "Breachborne/Wisp/BBWispPawn.h"
+#include "Breachborne/Wisp/BBDeathboxActor.h"
 #include "Breachborne/UI/BBCustomLobbyWidget.h"
 #include "Breachborne/UI/BBHunterSelectWidget.h"
 #include "Breachborne/UI/BBPostMatchWidget.h"
@@ -122,6 +125,7 @@ void ABreachbornePlayerController::BeginPlay()
 void ABreachbornePlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+	EndAbilityRangePreview();
 
 	UE_LOG(LogBreachborne, Log, TEXT("PlayerController possessed pawn: %s"), InPawn ? *InPawn->GetName() : TEXT("nullptr"));
 }
@@ -155,6 +159,7 @@ void ABreachbornePlayerController::SetupInputComponent()
 		if (SecondaryFireAction)
 		{
 			EnhancedInput->BindAction(SecondaryFireAction, ETriggerEvent::Started, this, &ABreachbornePlayerController::HandleSecondaryFireStarted);
+			EnhancedInput->BindAction(SecondaryFireAction, ETriggerEvent::Completed, this, &ABreachbornePlayerController::HandleSecondaryFireCompleted);
 		}
 
 		if (DashAction)
@@ -237,6 +242,7 @@ void ABreachbornePlayerController::PlayerTick(float DeltaTime)
 		UpdateCursorAim(DeltaTime);
 		UpdateGliderFromHeldJump();
 		UpdateTacticalNukeTargeting(DeltaTime);
+		UpdateAbilityRangePreview();
 	}
 }
 
@@ -796,7 +802,10 @@ void ABreachbornePlayerController::HandlePrimaryFireStarted(const FInputActionVa
 
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_LMB);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_LMB))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_LMB, true);
+		}
 	}
 }
 
@@ -806,6 +815,7 @@ void ABreachbornePlayerController::HandlePrimaryFireCompleted(const FInputAction
 	{
 		ASC->InputTagReleased(BBGameplayTags::InputTag_LMB);
 	}
+	EndAbilityRangePreview(BBGameplayTags::InputTag_LMB);
 }
 
 void ABreachbornePlayerController::HandleSecondaryFireStarted(const FInputActionValue& Value)
@@ -818,15 +828,30 @@ void ABreachbornePlayerController::HandleSecondaryFireStarted(const FInputAction
 
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_RMB);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_RMB))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_RMB, true);
+		}
 	}
+}
+
+void ABreachbornePlayerController::HandleSecondaryFireCompleted(const FInputActionValue& Value)
+{
+	if (UBBAbilitySystemComponent* ASC = GetBBASC())
+	{
+		ASC->InputTagReleased(BBGameplayTags::InputTag_RMB);
+	}
+	EndAbilityRangePreview(BBGameplayTags::InputTag_RMB);
 }
 
 void ABreachbornePlayerController::HandleDashStarted(const FInputActionValue& Value)
 {
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Shift);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Shift))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_Shift, false);
+		}
 	}
 }
 
@@ -834,7 +859,10 @@ void ABreachbornePlayerController::HandleAbilityQStarted(const FInputActionValue
 {
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Q);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Q))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_Q, false);
+		}
 	}
 }
 
@@ -842,7 +870,10 @@ void ABreachbornePlayerController::HandleUltimateStarted(const FInputActionValue
 {
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_R);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_R))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_R, false);
+		}
 	}
 }
 
@@ -875,7 +906,10 @@ void ABreachbornePlayerController::HandlePower1KeyPressed()
 
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Power1);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Power1))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_Power1, false);
+		}
 	}
 }
 
@@ -898,7 +932,10 @@ void ABreachbornePlayerController::HandlePower2KeyPressed()
 
 	if (UBBAbilitySystemComponent* ASC = GetBBASC())
 	{
-		ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Power2);
+		if (ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_Power2))
+		{
+			BeginAbilityRangePreview(BBGameplayTags::InputTag_Power2, false);
+		}
 	}
 }
 
@@ -917,6 +954,58 @@ void ABreachbornePlayerController::HandleInteractKeyPressed()
 
 	const FVector PawnLocation = ControlledPawn->GetActorLocation();
 	const float SearchRadius = 300.0f;
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(ControlledPawn);
+	ABreachbornePlayerState* InteractingPS = GetPlayerState<ABreachbornePlayerState>();
+
+	if (Hunter && InteractingPS && InteractingPS->GetIsAlive())
+	{
+		ABBWispPawn* NearestEnemyWisp = nullptr;
+		float NearestWispDistSq = FLT_MAX;
+		for (TActorIterator<ABBWispPawn> It(GetWorld()); It; ++It)
+		{
+			ABBWispPawn* Wisp = *It;
+			const ABreachbornePlayerState* WispOwner = Wisp ? Wisp->GetOwningPlayerState() : nullptr;
+			if (!WispOwner || WispOwner->GetTeamID() == InteractingPS->GetTeamID())
+			{
+				continue;
+			}
+
+			const float DistSq = FVector::DistSquared(PawnLocation, Wisp->GetActorLocation());
+			if (DistSq <= FMath::Square(Wisp->GetExecuteRadius()) && DistSq < NearestWispDistSq)
+			{
+				NearestWispDistSq = DistSq;
+				NearestEnemyWisp = Wisp;
+			}
+		}
+		if (NearestEnemyWisp)
+		{
+			ServerInteractWithWisp(NearestEnemyWisp);
+			return;
+		}
+
+		ABBDeathboxActor* NearestAllyDeathbox = nullptr;
+		float NearestDeathboxDistSq = FLT_MAX;
+		for (TActorIterator<ABBDeathboxActor> It(GetWorld()); It; ++It)
+		{
+			ABBDeathboxActor* Deathbox = *It;
+			if (!Deathbox)
+			{
+				continue;
+			}
+
+			const float DistSq = FVector::DistSquared(PawnLocation, Deathbox->GetActorLocation());
+			if (DistSq <= FMath::Square(Deathbox->GetInteractRadius()) && DistSq < NearestDeathboxDistSq)
+			{
+				NearestDeathboxDistSq = DistSq;
+				NearestAllyDeathbox = Deathbox;
+			}
+		}
+		if (NearestAllyDeathbox)
+		{
+			ServerInteractWithDeathbox(NearestAllyDeathbox);
+			return;
+		}
+	}
 
 	ABBBasecampActor* NearestBasecamp = nullptr;
 	float NearestBasecampDistSq = FLT_MAX;
@@ -1122,6 +1211,100 @@ bool ABreachbornePlayerController::GetCursorWorldLocation(FVector& OutLocation) 
 	return true;
 }
 
+const UBBGameplayAbility* ABreachbornePlayerController::FindAbilityForRangePreview(const FGameplayTag& InputTag) const
+{
+	const UBBAbilitySystemComponent* ASC = GetBBASC();
+	if (!ASC || !InputTag.IsValid())
+	{
+		return nullptr;
+	}
+
+	const UBBGameplayAbility* FirstMatch = nullptr;
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		const UBBGameplayAbility* Ability = Cast<UBBGameplayAbility>(Spec.Ability);
+		if (!Ability || (!Spec.DynamicAbilityTags.HasTagExact(InputTag)
+			&& !Ability->GetAbilityInputTag().MatchesTagExact(InputTag)))
+		{
+			continue;
+		}
+
+		if (!Ability->GetRangeIndicatorInfo().IsEnabled())
+		{
+			continue;
+		}
+
+		if (Spec.IsActive())
+		{
+			return Ability;
+		}
+		FirstMatch = FirstMatch ? FirstMatch : Ability;
+	}
+
+	return FirstMatch;
+}
+
+void ABreachbornePlayerController::BeginAbilityRangePreview(const FGameplayTag& InputTag, bool bUntilRelease)
+{
+	if (!IsLocalController() || !FindAbilityForRangePreview(InputTag))
+	{
+		return;
+	}
+
+	ActiveRangePreviewInputTag = InputTag;
+	bRangePreviewUntilRelease = bUntilRelease;
+	ActiveRangePreviewEndTime = bUntilRelease || !GetWorld()
+		? -1.0f
+		: GetWorld()->GetTimeSeconds() + DiscreteRangePreviewDuration;
+}
+
+void ABreachbornePlayerController::EndAbilityRangePreview(const FGameplayTag& InputTag)
+{
+	if (InputTag.IsValid() && !ActiveRangePreviewInputTag.MatchesTagExact(InputTag))
+	{
+		return;
+	}
+
+	ActiveRangePreviewInputTag = FGameplayTag();
+	ActiveRangePreviewEndTime = -1.0f;
+	bRangePreviewUntilRelease = false;
+}
+
+void ABreachbornePlayerController::UpdateAbilityRangePreview()
+{
+	if (!ActiveRangePreviewInputTag.IsValid())
+	{
+		return;
+	}
+
+	const AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
+	const ABreachbornePlayerState* PS = GetPlayerState<ABreachbornePlayerState>();
+	if (!Hunter || (PS && !PS->GetIsAlive()) || !FindAbilityForRangePreview(ActiveRangePreviewInputTag))
+	{
+		EndAbilityRangePreview();
+		return;
+	}
+
+	if (!bRangePreviewUntilRelease && GetWorld()
+		&& ActiveRangePreviewEndTime >= 0.0f
+		&& GetWorld()->GetTimeSeconds() >= ActiveRangePreviewEndTime)
+	{
+		EndAbilityRangePreview();
+	}
+}
+
+const UBBGameplayAbility* ABreachbornePlayerController::GetActiveRangePreviewAbility() const
+{
+	return ActiveRangePreviewInputTag.IsValid()
+		? FindAbilityForRangePreview(ActiveRangePreviewInputTag)
+		: nullptr;
+}
+
+bool ABreachbornePlayerController::GetRangePreviewCursorLocation(FVector& OutLocation) const
+{
+	return GetCursorWorldLocation(OutLocation);
+}
+
 bool ABreachbornePlayerController::IsTacticalNukeEquippedForInput(const FGameplayTag& InputTag) const
 {
 	const ABreachbornePlayerState* PS = GetPlayerState<ABreachbornePlayerState>();
@@ -1146,6 +1329,7 @@ void ABreachbornePlayerController::BeginTacticalNukeTargeting(const FGameplayTag
 	bTacticalNukeTargetingActive = true;
 	TacticalNukeTargetingInputTag = InputTag;
 	TacticalNukeTargetLocation = GetClampedTacticalNukeTargetLocation();
+	BeginAbilityRangePreview(InputTag, true);
 
 	if (AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn()))
 	{
@@ -1175,6 +1359,7 @@ void ABreachbornePlayerController::CancelTacticalNukeTargeting()
 
 	bTacticalNukeTargetingActive = false;
 	TacticalNukeTargetingInputTag = FGameplayTag();
+	EndAbilityRangePreview();
 
 	if (AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn()))
 	{
@@ -1190,10 +1375,6 @@ void ABreachbornePlayerController::UpdateTacticalNukeTargeting(float DeltaTime)
 	}
 
 	TacticalNukeTargetLocation = GetClampedTacticalNukeTargetLocation();
-	DrawDebugCircle(GetWorld(), TacticalNukeTargetLocation + FVector(0.0f, 0.0f, 10.0f), TacticalNukePreviewRadius, 64,
-		FColor::Red, false, 0.0f, 0, 8.0f, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 1.0f, 0.0f), false);
-	DrawDebugSphere(GetWorld(), TacticalNukeTargetLocation + FVector(0.0f, 0.0f, 45.0f), 35.0f, 12,
-		FColor::Yellow, false, 0.0f, 0, 4.0f);
 }
 
 FVector ABreachbornePlayerController::GetClampedTacticalNukeTargetLocation() const
@@ -1996,6 +2177,40 @@ void ABreachbornePlayerController::ServerInteractWithBasecamp_Implementation(ABB
 	{
 		Basecamp->ServerRequestInteract(this);
 	}
+}
+
+void ABreachbornePlayerController::ServerInteractWithWisp_Implementation(ABBWispPawn* Wisp)
+{
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
+	ABreachbornePlayerState* InteractingPS = GetPlayerState<ABreachbornePlayerState>();
+	ABreachbornePlayerState* WispOwner = Wisp ? Wisp->GetOwningPlayerState() : nullptr;
+	if (!Hunter || !InteractingPS || !InteractingPS->GetIsAlive() || !WispOwner
+		|| WispOwner->GetTeamID() == InteractingPS->GetTeamID()
+		|| FVector::DistSquared(Hunter->GetActorLocation(), Wisp->GetActorLocation()) > FMath::Square(Wisp->GetExecuteRadius()))
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("WispInteract: execute rejected player=%s wisp=%s"),
+			*GetNameSafe(InteractingPS), *GetNameSafe(Wisp));
+		return;
+	}
+
+	Wisp->ServerBeginExecute(Hunter);
+}
+
+void ABreachbornePlayerController::ServerInteractWithDeathbox_Implementation(ABBDeathboxActor* Deathbox)
+{
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
+	ABreachbornePlayerState* InteractingPS = GetPlayerState<ABreachbornePlayerState>();
+	ABreachbornePlayerState* VictimPS = Deathbox ? Deathbox->GetVictimPlayerState() : nullptr;
+	if (!Hunter || !InteractingPS || !InteractingPS->GetIsAlive() || !VictimPS
+		|| VictimPS->GetTeamID() != InteractingPS->GetTeamID()
+		|| FVector::DistSquared(Hunter->GetActorLocation(), Deathbox->GetActorLocation()) > FMath::Square(Deathbox->GetInteractRadius()))
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("DeathboxInteract: revive rejected player=%s deathbox=%s"),
+			*GetNameSafe(InteractingPS), *GetNameSafe(Deathbox));
+		return;
+	}
+
+	Deathbox->ServerBeginReviveChannel(Hunter);
 }
 
 void ABreachbornePlayerController::ServerStartBasecampRecall_Implementation()

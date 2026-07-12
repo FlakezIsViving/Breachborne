@@ -16,6 +16,7 @@ class BREACHBORNE_API ABBGrapplingHookProjectile : public AActor
 
 public:
 	ABBGrapplingHookProjectile();
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void InitGrapple(AHunterCharacter* InOwnerHunter, const FVector& Direction, float InRange, float InInitialPullSpeed, float InMaxPullSpeed, float InStopDistance, float InMaxPullDuration, float InPullTickInterval);
 
@@ -28,6 +29,9 @@ protected:
 
 	UFUNCTION()
 	void OnHookOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnRep_AttachmentState();
 
 private:
 	void AttachHook(const FHitResult& Hit);
@@ -48,10 +52,15 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<AHunterCharacter> OwnerHunter;
 
-	UPROPERTY()
-	TWeakObjectPtr<AActor> AttachedActor;
+	UPROPERTY(ReplicatedUsing = OnRep_AttachmentState)
+	TObjectPtr<AActor> AttachedActor;
 
-	FVector AttachedLocation = FVector::ZeroVector;
+	UPROPERTY(ReplicatedUsing = OnRep_AttachmentState)
+	FVector_NetQuantize AttachedLocation = FVector::ZeroVector;
+
+	UPROPERTY(ReplicatedUsing = OnRep_AttachmentState)
+	bool bAttached = false;
+
 	FVector StartLocation = FVector::ZeroVector;
 	float Range = 2200.0f;
 	float InitialPullSpeed = 1900.0f;
@@ -59,5 +68,4 @@ private:
 	float StopDistance = 140.0f;
 	float MaxPullDuration = 2.2f;
 	float PullTickInterval = 0.02f;
-	bool bAttached = false;
 };

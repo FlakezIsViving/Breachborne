@@ -4,6 +4,8 @@
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Breachborne.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -14,6 +16,7 @@
 UGA_Eluna_GroundDash::UGA_Eluna_GroundDash()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_Shift;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Movement, DashDistance, 55.0f);
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
 	FGameplayTagContainer AssetTags;
@@ -67,23 +70,49 @@ void UGA_Eluna_GroundDash::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		: BBGameplayTags::Ability_Hunter_Eluna_GroundDash;
 	PlayVisualMontage(VisualAbilityTag, EBBAbilityAnimationPhase::Start);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Eluna_Shift_Trail, Hunter->GetActorLocation(), DashDir);
+	const FVector DashStart = Hunter->GetActorLocation();
+	if (Hunter->HasAuthority())
+	{
+		FActorSpawnParameters TrailParams;
+		TrailParams.Owner = Hunter;
+		TrailParams.Instigator = Hunter;
+		TrailParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBeamActor* Trail = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), DashStart, FRotator::ZeroRotator, TrailParams))
+		{
+			Trail->InitBeam(DashStart, DashStart + DashDir * DashDistance, 9.0f, 0.28f,
+				FLinearColor(0.86f, 0.92f, 1.0f, 1.0f));
+		}
+	}
 	Hunter->LaunchCharacter(LaunchVelocity, true, true);
-	CheckAllyPassThrough();
+	if (CheckAllyPassThrough() && Hunter->HasAuthority())
+	{
+		FActorSpawnParameters PulseParams;
+		PulseParams.Owner = Hunter;
+		PulseParams.Instigator = Hunter;
+		PulseParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			ABBPrimitiveBurstActor::StaticClass(), Hunter->GetActorLocation(), FRotator::ZeroRotator, PulseParams))
+		{
+			Pulse->InitBurst(Hunter->GetActorLocation(), AllyDetectionRadius * 1.5f, 0.22f,
+				FLinearColor(0.30f, 0.79f, 0.94f, 1.0f));
+		}
+	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
-void UGA_Eluna_GroundDash::CheckAllyPassThrough()
+bool UGA_Eluna_GroundDash::CheckAllyPassThrough()
 {
 	AHunterCharacter* Hunter = GetHunterCharacter();
 	if (!Hunter)
 	{
-		return;
+		return false;
 	}
 
 	ABreachbornePlayerState* SourcePS = GetBBPlayerState();
 	if (!SourcePS)
 	{
-		return;
+		return false;
 	}
 
 	const FVector SourceLoc = Hunter->GetActorLocation();
@@ -120,7 +149,7 @@ void UGA_Eluna_GroundDash::CheckAllyPassThrough()
 
 	if (!bPassedThroughAlly)
 	{
-		return;
+		return false;
 	}
 
 	// Refund 50% of this dash's cooldown
@@ -160,7 +189,7 @@ void UGA_Eluna_GroundDash::CheckAllyPassThrough()
 		}
 	}
 
-
+	return true;
 }
 
 const FGameplayTagContainer* UGA_Eluna_GroundDash::GetCooldownTags() const
@@ -188,6 +217,7 @@ UGA_Eluna_AerialDash::UGA_Eluna_AerialDash()
 
 	// Aerial dash goes farther
 	DashDistance = 900.0f;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Movement, DashDistance, 55.0f);
 	CooldownDuration = 6.0f;
 }
 

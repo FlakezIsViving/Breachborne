@@ -4,6 +4,7 @@
 #include "Breachborne/Characters/HunterCharacter.h"
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Combat/BBNapalmZone.h"
+#include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
@@ -12,6 +13,7 @@
 UGA_Ghost_R::UGA_Ghost_R()
 {
 	AbilityInputTag = BBGameplayTags::InputTag_R;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::TargetedArea, MaxRange, 500.0f);
 	bActivateOnInputHeld = false;
 
 	// Ultimate is ServerInitiated — no client prediction, server drives the AoE zone
@@ -24,6 +26,7 @@ UGA_Ghost_R::UGA_Ghost_R()
 
 	DamageEffectClass = UBBDamageEffect::StaticClass();
 	NapalmZoneClass = ABBNapalmZone::StaticClass();
+	WarningVisualClass = ABBPrimitiveBurstActor::StaticClass();
 }
 
 bool UGA_Ghost_R::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
@@ -64,8 +67,30 @@ void UGA_Ghost_R::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 
 	FVector SpawnLocation = GetAimLocation();
 	SpawnLocation.Z = Hunter->GetActorLocation().Z;
+	const FVector HunterLocation = Hunter->GetActorLocation();
+	FVector TargetOffset = SpawnLocation - HunterLocation;
+	TargetOffset.Z = 0.0f;
+	if (TargetOffset.SizeSquared() > FMath::Square(MaxRange))
+	{
+		TargetOffset = TargetOffset.GetSafeNormal() * MaxRange;
+		SpawnLocation.X = HunterLocation.X + TargetOffset.X;
+		SpawnLocation.Y = HunterLocation.Y + TargetOffset.Y;
+	}
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_R, EBBAbilityAnimationPhase::Fire);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_R_Warning, SpawnLocation, FVector::UpVector);
+	if (WarningVisualClass)
+	{
+		FActorSpawnParameters VisualParams;
+		VisualParams.Owner = Hunter;
+		VisualParams.Instigator = Hunter;
+		VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBurstActor* Warning = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+			WarningVisualClass, SpawnLocation, FRotator::ZeroRotator, VisualParams))
+		{
+			Warning->InitBurst(SpawnLocation + FVector(0.0f, 0.0f, 12.0f), 500.0f, 0.45f,
+				FLinearColor(1.0f, 0.12f, 0.08f, 1.0f), true);
+		}
+	}
 
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
 	const ABreachbornePlayerState* ShooterPS = GetBBPlayerState();

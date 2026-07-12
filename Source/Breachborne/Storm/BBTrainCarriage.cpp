@@ -117,10 +117,14 @@ ABBTrainCarriage::ABBTrainCarriage()
 void ABBTrainCarriage::BeginPlay()
 {
 	Super::BeginPlay();
+	SetActorTickEnabled(HasAuthority());
 
-	FrontKillZone->OnComponentBeginOverlap.AddDynamic(this, &ABBTrainCarriage::OnFrontKillZoneOverlap);
-	InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &ABBTrainCarriage::OnCircleImmuneOverlap);
-	InteractSphere->OnComponentEndOverlap.AddDynamic(this, &ABBTrainCarriage::OnCircleImmuneEndOverlap);
+	if (HasAuthority())
+	{
+		FrontKillZone->OnComponentBeginOverlap.AddDynamic(this, &ABBTrainCarriage::OnFrontKillZoneOverlap);
+		InteractSphere->OnComponentBeginOverlap.AddDynamic(this, &ABBTrainCarriage::OnCircleImmuneOverlap);
+		InteractSphere->OnComponentEndOverlap.AddDynamic(this, &ABBTrainCarriage::OnCircleImmuneEndOverlap);
+	}
 
 	// Safety net: catch unexpected blocking hits on carriage mesh
 	CarriageMesh->OnComponentHit.AddDynamic(this, &ABBTrainCarriage::OnCarriageMeshHit);

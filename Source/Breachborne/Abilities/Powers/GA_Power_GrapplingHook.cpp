@@ -7,6 +7,7 @@
 UGA_Power_GrapplingHook::UGA_Power_GrapplingHook()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+	ConfigureRangeIndicator(EBBRangeIndicatorMode::Directional, Range);
 }
 
 void UGA_Power_GrapplingHook::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

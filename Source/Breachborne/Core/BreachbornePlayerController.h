@@ -234,6 +234,7 @@ private:
 	void InitializeAbilitySmoke();
 	void UpdateAbilitySmoke(float DeltaTime);
 	void UpdateDeathSmoke(float DeltaTime);
+	void UpdateHitSmoke(float DeltaTime);
 	bool ActivateAbilitySmokeInput(const FGameplayTag& InputTag, const TCHAR* ActionName);
 
 	UFUNCTION(Server, Reliable)
@@ -244,6 +245,12 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerBeginWispHealSmoke();
+
+	UFUNCTION(Server, Reliable)
+	void ServerPrepareHitSmoke();
+
+	UFUNCTION(Server, Reliable)
+	void ServerReportHitSmoke(int32 AttackerIndex);
 
 	void ApplyWispHealSmokeTick();
 
@@ -514,12 +521,18 @@ private:
 
 	bool bAbilitySmokeEnabled = false;
 	bool bAbilitySmokePrepared = false;
+	bool bAbilitySmokeReadyLogged = false;
 	bool bAbilitySmokeComplete = false;
 	bool bDeathSmokeEnabled = false;
 	bool bDeathSmokeTriggered = false;
 	bool bDeathSmokeObserved = false;
 	bool bDeathSmokeWispObserved = false;
 	bool bDeathSmokeHealRequested = false;
+	bool bHitSmokeEnabled = false;
+	bool bHitSmokePrepared = false;
+	bool bHitSmokeFired = false;
+	bool bHitSmokeReleased = false;
+	bool bHitSmokeReported = false;
 	int32 AbilitySmokeIndex = 0;
 	int32 AbilitySmokeServerIndex = 0;
 	int32 AbilitySmokeHunterID = 0;
@@ -530,6 +543,8 @@ private:
 	float AbilitySmokeAimAccumulator = 0.0f;
 	float AbilitySmokeLobbyRetry = 0.0f;
 	float DeathSmokeTriggerDelay = 0.0f;
+	float HitSmokeElapsed = 0.0f;
+	float HitSmokeAimAccumulator = 0.0f;
 	FTimerHandle DeathSmokeHealTimerHandle;
 	EMatchPhase AbilitySmokeLastPhase = EMatchPhase::Ended;
 

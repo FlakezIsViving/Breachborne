@@ -5,6 +5,7 @@ param(
 	[string]$NetworkImpairmentRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedNetworkImpairment",
 	[string]$ReconnectRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedReconnect",
 	[string]$DeathWispRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedDeathWisp",
+	[string]$HitSmokeRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedHitSmoke",
 	[string]$UnrealPak = "C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealPak.exe",
 	[int]$ExpectedHudsonCueCount = 17
 )
@@ -23,6 +24,7 @@ $ResolvedAbilitySmokeRoot = $ExecutionContext.SessionState.Path.GetUnresolvedPro
 $ResolvedNetworkImpairmentRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($NetworkImpairmentRoot)
 $ResolvedReconnectRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ReconnectRoot)
 $ResolvedDeathWispRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($DeathWispRoot)
+$ResolvedHitSmokeRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($HitSmokeRoot)
 $ClientExe = Join-Path $ResolvedBuildsRoot "WindowsClient\Breachborne\Binaries\Win64\Breachborne.exe"
 $ServerExe = Join-Path $ResolvedBuildsRoot "WindowsServer\Breachborne\Binaries\Win64\BreachborneServer.exe"
 $ClientUtoc = Join-Path $ResolvedBuildsRoot "WindowsClient\Breachborne\Content\Paks\Breachborne-Windows.utoc"
@@ -39,6 +41,7 @@ Require-Path $ResolvedAbilitySmokeRoot "packaged ability-smoke logs root"
 Require-Path $ResolvedNetworkImpairmentRoot "packaged network-impairment logs root"
 Require-Path $ResolvedReconnectRoot "packaged reconnect logs root"
 Require-Path $ResolvedDeathWispRoot "packaged death/wisp logs root"
+Require-Path $ResolvedHitSmokeRoot "packaged LMB hit-smoke logs root"
 
 $BuildCompletedAt = (Get-Item -LiteralPath $BuildSummary).LastWriteTime
 $ProjectRoot = Split-Path -Parent $PSScriptRoot | Split-Path -Parent
@@ -184,6 +187,38 @@ if ((Get-Item -LiteralPath $DeathWispSummaryPath).LastWriteTime -lt $BuildComple
 	throw "Death/wisp evidence predates the current package."
 }
 
+$HitEvidence = @()
+foreach ($Pair in @("1, 2", "3, 4", "5, 6")) {
+	$MatchingRun = Get-ChildItem -LiteralPath $ResolvedHitSmokeRoot -Directory |
+		Where-Object {
+			$SummaryPath = Join-Path $_.FullName "HitSummary.txt"
+			if (-not (Test-Path -LiteralPath $SummaryPath)) { return $false }
+			$Text = Get-Content -LiteralPath $SummaryPath -Raw
+			return $Text -match 'LMB hit smoke:\s+PASS' -and
+				$Text -match "Hunters:\s+$([regex]::Escape($Pair))" -and
+				$Text -match 'Authoritative LMB damage reports:\s+2/2'
+		} |
+		Sort-Object LastWriteTime -Descending |
+		Select-Object -First 1
+	if (-not $MatchingRun) {
+		throw "No passing packaged LMB hit smoke found for hunters $Pair."
+	}
+
+	$HitSummaryPath = Join-Path $MatchingRun.FullName "HitSummary.txt"
+	$HitReviewPath = Join-Path $MatchingRun.FullName "ReviewSummary.txt"
+	Require-Path $HitReviewPath "LMB hit-smoke log review for hunters $Pair"
+	$HitReviewText = Get-Content -LiteralPath $HitReviewPath -Raw
+	if ($HitReviewText -notmatch 'log review:\s+PASS' -or
+		$HitReviewText -notmatch 'Critical findings:\s+0' -or
+		$HitReviewText -notmatch 'GameplayCue overflow findings:\s+0') {
+		throw "LMB hit-smoke log review failed for hunters $Pair`: $HitReviewPath"
+	}
+	if ((Get-Item -LiteralPath $HitSummaryPath).LastWriteTime -lt $BuildCompletedAt) {
+		throw "LMB hit-smoke evidence for hunters $Pair predates the current package."
+	}
+	$HitEvidence += $MatchingRun.FullName
+}
+
 $LatestHandshake = Get-ChildItem -LiteralPath $ResolvedLogsRoot -Directory |
 	Sort-Object LastWriteTime -Descending |
 	Select-Object -First 1
@@ -251,6 +286,8 @@ $Summary = @(
 	"Reconnect evidence: $($LatestReconnect.FullName)",
 	"Death/wisp/revive: PASS (GAS death, wisp possession, healing revive, hunter repossession)",
 	"Death/wisp evidence: $($LatestDeathWisp.FullName)",
+	"Authoritative LMB hits: PASS (6/6 hunters, 3 matches)",
+	"LMB hit evidence: $($HitEvidence -join '; ')",
 	"Critical log findings: 0"
 )
 $Summary | Set-Content -LiteralPath $VerificationSummary -Encoding UTF8

@@ -41,6 +41,10 @@ lethal GAS damage reaches HealthSet depletion, replicated wisp possession, cappe
 revive, and victim-client hunter repossession; it does not prove the two bars are visible,
 proximity priority is readable, or ability visuals clean up when their caster dies.
 
+Damage precondition: `.\Scripts\Playtest\TestPackagedFullRosterHitSmoke.ps1` must pass. It proves
+each hunter's LMB can produce authoritative enemy health loss; it does not prove visual hitbox
+agreement or any RMB/Shift/Q/R damage, healing, movement, or crowd-control outcome.
+
 1. Ghost versus Eluna: complete both six-item hunter sections.
 2. Kingpin versus Hudson: complete both six-item hunter sections, including Hudson's ten-second
    sustained-fire check.

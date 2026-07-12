@@ -247,6 +247,7 @@ void ABreachbornePlayerController::PlayerTick(float DeltaTime)
 		{
 			UpdateAbilitySmoke(DeltaTime);
 			UpdateDeathSmoke(DeltaTime);
+			UpdateHitSmoke(DeltaTime);
 		}
 		else
 		{
@@ -277,9 +278,11 @@ void ABreachbornePlayerController::InitializeAbilitySmoke()
 
 	bAbilitySmokeEnabled = true;
 	bDeathSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBDeathSmoke"));
+	bHitSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBHitSmoke"));
 	UE_LOG(LogBreachborne, Warning,
-		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d death=%d"),
-		AbilitySmokeIndex, AbilitySmokeHunterID, bDeathSmokeEnabled ? 1 : 0);
+		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d death=%d hit=%d"),
+		AbilitySmokeIndex, AbilitySmokeHunterID, bDeathSmokeEnabled ? 1 : 0,
+		bHitSmokeEnabled ? 1 : 0);
 }
 
 void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
@@ -333,6 +336,62 @@ void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
 					*GetNameSafe(Hunter), HealthSet ? HealthSet->GetHealth() : -1.0f);
 			}
 		}
+	}
+}
+
+void ABreachbornePlayerController::UpdateHitSmoke(float DeltaTime)
+{
+	if (!bHitSmokeEnabled || !bAbilitySmokeComplete || bHitSmokeReported)
+	{
+		return;
+	}
+
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
+	UBBAbilitySystemComponent* ASC = GetBBASC();
+	if (!Hunter || !ASC)
+	{
+		return;
+	}
+
+	HitSmokeElapsed += DeltaTime;
+	HitSmokeAimAccumulator += DeltaTime;
+	if (HitSmokeAimAccumulator >= 0.05f)
+	{
+		HitSmokeAimAccumulator = 0.0f;
+		const float TargetX = AbilitySmokeIndex == 1 ? 100.0f : -100.0f;
+		Hunter->ServerSetAimLocation(FVector(TargetX, 0.0f, Hunter->GetActorLocation().Z));
+	}
+
+	if (AbilitySmokeIndex == 1 && !bHitSmokePrepared && HitSmokeElapsed >= 0.5f)
+	{
+		bHitSmokePrepared = true;
+		ServerPrepareHitSmoke();
+	}
+
+	const float FireTime = AbilitySmokeIndex == 1 ? 1.5f : 5.0f;
+	if (!bHitSmokeFired && HitSmokeElapsed >= FireTime)
+	{
+		bHitSmokeFired = true;
+		ActivateAbilitySmokeInput(BBGameplayTags::InputTag_LMB, TEXT("HIT_LMB"));
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_HIT_SMOKE|CLIENT_FIRE|index=%d hunter=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID);
+	}
+	if (bHitSmokeFired && !bHitSmokeReleased && HitSmokeElapsed >= FireTime + 1.0f)
+	{
+		bHitSmokeReleased = true;
+		ASC->InputTagReleased(BBGameplayTags::InputTag_LMB);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_HIT_SMOKE|CLIENT_RELEASE|index=%d hunter=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID);
+	}
+	if (bHitSmokeReleased && HitSmokeElapsed >= FireTime + 2.0f)
+	{
+		bHitSmokeReported = true;
+		ServerReportHitSmoke(AbilitySmokeIndex);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_HIT_SMOKE|CLIENT_COMPLETE|index=%d hunter=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID);
 	}
 }
 
@@ -409,7 +468,7 @@ void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
 
 	AHunterCharacter* Hunter = Cast<AHunterCharacter>(GetPawn());
 	UBBAbilitySystemComponent* ASC = GetBBASC();
-	if (!Hunter || !ASC || ASC->GetActivatableAbilities().Num() < 5)
+	if (!Hunter)
 	{
 		return;
 	}
@@ -418,6 +477,19 @@ void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
 	{
 		bAbilitySmokePrepared = true;
 		ServerPrepareAbilitySmoke(AbilitySmokeIndex);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_ABILITY_SMOKE|PREPARE_REQUEST|index=%d hunter=%d"),
+			AbilitySmokeIndex, AbilitySmokeHunterID);
+	}
+
+	if (!ASC || ASC->GetActivatableAbilities().Num() < 5)
+	{
+		return;
+	}
+
+	if (!bAbilitySmokeReadyLogged)
+	{
+		bAbilitySmokeReadyLogged = true;
 		AbilitySmokeActionDelay = 2.0f;
 		UE_LOG(LogBreachborne, Warning,
 			TEXT("BB_ABILITY_SMOKE|READY|index=%d hunter=%d abilities=%d"),
@@ -536,6 +608,105 @@ void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int3
 	UE_LOG(LogBreachborne, Warning,
 		TEXT("BB_ABILITY_SMOKE|SERVER_PREPARED|index=%d hunter=%d location=%s ground=%d"),
 		SmokeIndex, PS->GetHunterID(), *TargetLocation.ToCompactString(), bGroundHit ? 1 : 0);
+}
+
+void ABreachbornePlayerController::ServerPrepareHitSmoke_Implementation()
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBHitSmoke"))
+		|| AbilitySmokeServerIndex != 1 || !GetWorld())
+	{
+		return;
+	}
+
+	int32 PreparedCount = 0;
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ABreachbornePlayerController* SmokeController = Cast<ABreachbornePlayerController>(It->Get());
+		if (!SmokeController || SmokeController->AbilitySmokeServerIndex < 1
+			|| SmokeController->AbilitySmokeServerIndex > 2)
+		{
+			continue;
+		}
+
+		AHunterCharacter* SmokeHunter = Cast<AHunterCharacter>(SmokeController->GetPawn());
+		ABreachbornePlayerState* SmokePS = SmokeController->GetPlayerState<ABreachbornePlayerState>();
+		if (!SmokeHunter || !SmokePS || !SmokePS->GetIsAlive())
+		{
+			continue;
+		}
+
+		const float X = SmokeController->AbilitySmokeServerIndex == 1 ? -100.0f : 100.0f;
+		const FVector TraceStart(X, 0.0f, 5000.0f);
+		const FVector TraceEnd(X, 0.0f, -5000.0f);
+		FHitResult GroundHit;
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BBHitSmokeGround), false, SmokeHunter);
+		const bool bGroundHit = GetWorld()->LineTraceSingleByChannel(
+			GroundHit, TraceStart, TraceEnd, ECC_Visibility, QueryParams);
+		const float GroundZ = bGroundHit ? GroundHit.ImpactPoint.Z + 110.0f : 200.0f;
+		SmokeHunter->SetActorLocation(FVector(X, 0.0f, GroundZ), false, nullptr, ETeleportType::TeleportPhysics);
+		if (UCharacterMovementComponent* Movement = SmokeHunter->GetCharacterMovement())
+		{
+			Movement->StopMovementImmediately();
+			Movement->SetMovementMode(MOVE_Walking);
+		}
+		if (UBBHealthSet* HealthSet = SmokePS->GetHealthSet())
+		{
+			HealthSet->SetShield(0.0f);
+			HealthSet->SetHealth(50000.0f);
+			SmokePS->UpdateHealthProxy();
+		}
+		SmokeHunter->ForceNetUpdate();
+		++PreparedCount;
+	}
+
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_HIT_SMOKE|SERVER_PREPARED|players=%d separation=200"), PreparedCount);
+}
+
+void ABreachbornePlayerController::ServerReportHitSmoke_Implementation(int32 AttackerIndex)
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBHitSmoke"))
+		|| AttackerIndex != AbilitySmokeServerIndex || AttackerIndex < 1 || AttackerIndex > 2
+		|| !GetWorld())
+	{
+		return;
+	}
+
+	ABreachbornePlayerController* VictimController = nullptr;
+	const int32 VictimIndex = AttackerIndex == 1 ? 2 : 1;
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ABreachbornePlayerController* Candidate = Cast<ABreachbornePlayerController>(It->Get());
+		if (Candidate && Candidate->AbilitySmokeServerIndex == VictimIndex)
+		{
+			VictimController = Candidate;
+			break;
+		}
+	}
+
+	ABreachbornePlayerState* VictimPS = VictimController
+		? VictimController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
+	UBBHealthSet* VictimHealth = VictimPS ? VictimPS->GetHealthSet() : nullptr;
+	if (!VictimPS || !VictimHealth)
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_HIT_SMOKE|SERVER_REPORT_FAIL|attacker=%d reason=missing_victim"), AttackerIndex);
+		return;
+	}
+
+	const float HealthAfter = VictimHealth->GetHealth();
+	const float Damage = FMath::Max(0.0f, 50000.0f - HealthAfter);
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_HIT_SMOKE|SERVER_REPORT|attacker=%d hunter=%d victim=%d damage=%.2f health=%.2f success=%d"),
+		AttackerIndex, GetPlayerState<ABreachbornePlayerState>()
+			? GetPlayerState<ABreachbornePlayerState>()->GetHunterID() : -1,
+		VictimIndex, Damage, HealthAfter, Damage > 0.0f ? 1 : 0);
+
+	VictimHealth->SetHealth(50000.0f);
+	VictimHealth->SetShield(0.0f);
+	VictimPS->UpdateHealthProxy();
 }
 
 void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()

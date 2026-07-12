@@ -81,12 +81,13 @@ Success means:
 
 - An opt-in packaged multiplayer smoke now proves lobby flow, hunter selection/grants, initial
   LMB/RMB/Shift/Q/R activations, held-input releases, Q recasts, and cleanup for IDs 1-6. It does
-  not prove damage/CC outcomes, visual replication/readability, or hitbox alignment.
-- The current packaged candidate is fresh and passes normal plus 100 ms/2% loss automated
-  activation gates. An isolated current-source package also passes the lethal GAS damage through
-  wisp possession lifecycle. Interactive ability damage/CC, persistent-ability death cleanup,
-  second-machine, visual, and revive evidence remains outstanding. A reconnect attempt reaches the
-  server, but the replacement is a spectator instead of regaining the disconnected hunter.
+  not prove non-LMB damage/CC outcomes, visual replication/readability, or hitbox alignment. A
+  separate packaged gate proves authoritative LMB health loss for all six hunters.
+- The current packaged candidate is fresh and passes normal plus 100 ms/2% loss activation,
+  six-hunter LMB damage, and lethal GAS damage through healed wisp revive/re-possession gates.
+  Interactive non-LMB damage/CC, persistent-ability death cleanup, second-machine, and visual
+  evidence remains outstanding. A reconnect attempt reaches the server, but the replacement is a
+  spectator instead of regaining the disconnected hunter.
 - The green hunter/shared-VFX baseline and full-roster smoke harness have named checkpoints; keep
   subsequent green network batches checkpointed before broad manual testing.
 - The eight reusable Niagara master assets remain editor work. Compiled primitive fallbacks

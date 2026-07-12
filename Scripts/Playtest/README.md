@@ -184,3 +184,14 @@ The opt-in test completes a normal Ghost/Kingpin ability lifecycle, applies leth
 the shared GAS damage effect, and requires HealthSet depletion, server wisp spawn/possession,
 replicated victim-client wisp possession, repeated healing through the capped revive path, server
 revive, and victim-client hunter repossession. Evidence is under `Saved\Logs\PackagedDeathWisp`.
+
+Require a real authoritative LMB hit and health decrease from every hunter:
+
+```powershell
+.\Scripts\Playtest\TestPackagedFullRosterHitSmoke.ps1
+```
+
+This runs three sequential two-client matches, repositions opponents after the normal activation
+lifecycle, fires each hunter at close range, and requires server-observed health loss. Evidence is
+written under `Saved\Logs\PackagedHitSmoke`. Other abilities and visual hitbox agreement remain in
+the manual matrix.

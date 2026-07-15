@@ -1,6 +1,6 @@
 param(
     [string]$ProjectPath = "C:\Unreal Projects\Breachborne\Breachborne.uproject",
-    [string]$EngineRoot = "C:\Program Files\Epic Games\UE_5.7",
+    [string]$EngineRoot = "C:\UnrealEngine-5.7.4-release",
     [string]$Map = "/Game/Maps/TestMap",
     [switch]$UseBlueprintGameMode
 )

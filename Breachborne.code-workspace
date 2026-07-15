@@ -6,16 +6,16 @@
 		},
 		{
 			"name": "UE5",
-			"path": "C:\\Program Files\\Epic Games\\UE_5.7"
+			"path": "C:\\UnrealEngine-5.7.4-release"
 		}
 	],
 	"settings": {
 		"typescript.tsc.autoDetect": "off",
 		"npm.autoDetect": "off",
 		"terminal.integrated.env.windows": {
-			"PATH": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64;${env:PATH}",
-			"DOTNET_ROOT": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64",
-			"DOTNET_HOST_PATH": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64\\dotnet.exe",
+			"PATH": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64;${env:PATH}",
+			"DOTNET_ROOT": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64",
+			"DOTNET_HOST_PATH": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64\\dotnet.exe",
 			"DOTNET_MULTILEVEL_LOOKUP": "0",
 			"DOTNET_ROLL_FORWARD": "LatestMajor"
 		}
@@ -43,7 +43,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -63,7 +63,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -80,7 +80,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -97,7 +97,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -117,7 +117,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -134,7 +134,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -151,7 +151,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -171,7 +171,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -188,7 +188,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -205,7 +205,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -225,7 +225,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -242,7 +242,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -259,7 +259,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -279,7 +279,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -296,7 +296,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -313,7 +313,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -333,7 +333,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -350,7 +350,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -367,7 +367,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -387,7 +387,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -404,7 +404,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -421,7 +421,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -441,7 +441,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -458,7 +458,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -475,7 +475,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -495,7 +495,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -512,7 +512,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -529,7 +529,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -549,7 +549,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -566,7 +566,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -583,7 +583,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -603,7 +603,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -620,7 +620,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -637,7 +637,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -657,7 +657,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -674,7 +674,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -691,7 +691,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -711,7 +711,7 @@
 				],
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -728,7 +728,7 @@
 				"problemMatcher": "$msCompile",
 				"type": "shell",
 				"options": {
-					"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"cwd": "C:\\UnrealEngine-5.7.4-release"
 				}
 			}
 		]
@@ -743,13 +743,13 @@
 				"preLaunchTask": "Breachborne Win64 Debug Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -759,13 +759,13 @@
 				"preLaunchTask": "Breachborne Win64 DebugGame Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -775,13 +775,13 @@
 				"preLaunchTask": "Breachborne Win64 Development Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -791,13 +791,13 @@
 				"preLaunchTask": "Breachborne Win64 Test Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -807,64 +807,64 @@
 				"preLaunchTask": "Breachborne Win64 Shipping Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
 				"name": "Launch BreachborneEditor (Debug)",
 				"request": "launch",
-				"program": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor-Win64-Debug.exe",
+				"program": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\Win64\\UnrealEditor-Win64-Debug.exe",
 				"preLaunchTask": "BreachborneEditor Win64 Debug Build",
 				"args": [
 					"C:\\Unreal Projects\\Breachborne\\Breachborne.uproject"
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
 				"name": "Launch BreachborneEditor (DebugGame)",
 				"request": "launch",
-				"program": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor-Win64-DebugGame.exe",
+				"program": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\Win64\\UnrealEditor-Win64-DebugGame.exe",
 				"preLaunchTask": "BreachborneEditor Win64 DebugGame Build",
 				"args": [
 					"C:\\Unreal Projects\\Breachborne\\Breachborne.uproject"
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
 				"name": "Launch BreachborneEditor (Development)",
 				"request": "launch",
-				"program": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor.exe",
+				"program": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\Win64\\UnrealEditor.exe",
 				"preLaunchTask": "BreachborneEditor Win64 Development Build",
 				"args": [
 					"C:\\Unreal Projects\\Breachborne\\Breachborne.uproject"
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -874,13 +874,13 @@
 				"preLaunchTask": "BreachborneServer Win64 Debug Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -890,13 +890,13 @@
 				"preLaunchTask": "BreachborneServer Win64 DebugGame Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -906,13 +906,13 @@
 				"preLaunchTask": "BreachborneServer Win64 Development Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -922,13 +922,13 @@
 				"preLaunchTask": "BreachborneServer Win64 Test Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -938,13 +938,13 @@
 				"preLaunchTask": "BreachborneServer Win64 Shipping Build",
 				"args": [
 				],
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7",
+				"cwd": "C:\\UnrealEngine-5.7.4-release",
 				"stopAtEntry": false,
 				"console": "integratedTerminal",
 				"type": "cppvsdbg",
-				"visualizerFile": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
+				"visualizerFile": "C:\\UnrealEngine-5.7.4-release\\Engine\\Extras\\VisualStudioDebugging\\Unreal.natvis",
 				"sourceFileMap": {
-					"C:\\Program Files\\Epic Games\\UE_5.7": "C:\\Program Files\\Epic Games\\UE_5.7"
+					"C:\\UnrealEngine-5.7.4-release": "C:\\UnrealEngine-5.7.4-release"
 				}
 			},
 			{
@@ -952,7 +952,7 @@
 				"type": "coreclr",
 				"request": "launch",
 				"preLaunchTask": "UnrealBuildTool Win64 Development Build",
-				"program": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Build\\BatchFiles\\RunUBT.bat",
+				"program": "C:\\UnrealEngine-5.7.4-release\\Engine\\Build\\BatchFiles\\RunUBT.bat",
 				"args": [
 					"-projectfiles",
 					"-vscode",
@@ -962,15 +962,15 @@
 					"-dotnet"
 				],
 				"env": {
-					"PATH": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64;${env:PATH}",
-					"DOTNET_ROOT": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64",
-					"DOTNET_HOST_PATH": "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64\\dotnet.exe",
+					"PATH": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64;${env:PATH}",
+					"DOTNET_ROOT": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64",
+					"DOTNET_HOST_PATH": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.412\\win-x64\\dotnet.exe",
 					"DOTNET_MULTILEVEL_LOOKUP": "0",
 					"DOTNET_ROLL_FORWARD": "LatestMajor"
 				},
 				"console": "integratedTerminal",
 				"stopAtEntry": false,
-				"cwd": "C:\\Program Files\\Epic Games\\UE_5.7"
+				"cwd": "C:\\UnrealEngine-5.7.4-release"
 			}
 		]
 	}

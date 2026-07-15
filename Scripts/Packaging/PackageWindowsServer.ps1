@@ -15,8 +15,7 @@ if ([string]::IsNullOrWhiteSpace($RunUAT)) {
 	$RunUATCandidates = @(
 		$env:BREACHBORNE_UE_RUNUAT,
 		$(if (-not [string]::IsNullOrWhiteSpace($env:BREACHBORNE_UE_ROOT)) { Join-Path $env:BREACHBORNE_UE_ROOT "Engine\Build\BatchFiles\RunUAT.bat" }),
-		"C:\UnrealEngine-5.7.4-release\Engine\Build\BatchFiles\RunUAT.bat",
-		"C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\RunUAT.bat"
+		"C:\UnrealEngine-5.7.4-release\Engine\Build\BatchFiles\RunUAT.bat"
 	) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
 	$RunUAT = $RunUATCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1

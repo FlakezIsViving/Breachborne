@@ -451,8 +451,27 @@ Run from repository root in PowerShell.
 ### Build Editor
 
 ```powershell
-& 'C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\Build.bat' BreachborneEditor Win64 Development -Project='C:\Unreal Projects\Breachborne\Breachborne.uproject' -WaitMutex -NoHotReloadFromIDE
+& 'C:\UnrealEngine-5.7.4-release\Engine\Build\BatchFiles\Build.bat' BreachborneEditor Win64 Development -Project='C:\Unreal Projects\Breachborne\Breachborne.uproject' -WaitMutex -NoHotReloadFromIDE
 ```
+
+### Editor/toolchain lock
+
+- Use `C:\UnrealEngine-5.7.4-release` for Editor, Game, Server, automation, and packaging. The
+  tracked `Breachborne.code-workspace` and source-editor/network launcher defaults are pinned to
+  this engine.
+- `Breachborne.uproject` has the generic `5.7` association, which can resolve to the Epic Launcher
+  editor when opened directly. Launch `Launch BreachborneEditor (Development)` from VS Code or run:
+
+```powershell
+& 'C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealEditor.exe' 'C:\Unreal Projects\Breachborne\Breachborne.uproject'
+```
+
+- If Unreal reports all LUDUS modules as missing or built for another engine, do not rebuild from
+  that dialog. Close it and confirm the running `UnrealEditor.exe` path is the source engine above.
+- The user may author Niagara/material/content assets while Codex edits source, scripts, or docs.
+  Codex must not build, package, run UHT, or touch the same binary assets until the user saves and
+  closes the editor. Live Coding is limited to small `.cpp` implementation changes; reflected
+  header changes require a closed editor and full build.
 
 ### Build game and server targets
 

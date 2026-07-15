@@ -2,7 +2,7 @@ param(
 	[string]$ProjectPath = "$PSScriptRoot\..\..\Breachborne.uproject",
 	[string]$Map = "/Game/Maps/TestMap",
 	[int]$Port = 7777,
-	[string]$UnrealEditorExe = "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor.exe"
+	[string]$UnrealEditorExe = "C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealEditor.exe"
 )
 
 $ResolvedProject = Resolve-Path -LiteralPath $ProjectPath

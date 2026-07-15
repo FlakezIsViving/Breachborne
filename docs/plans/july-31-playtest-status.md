@@ -68,6 +68,10 @@ Last updated: July 15, 2026.
   acceptance and the freeze are complete.
 - Source control: GitHub `main` is the publication target; generated builds/logs remain ignored and
   Unreal binary assets remain managed by Git LFS.
+- Editor/toolchain consistency: the tracked VS Code workspace, source-editor/network launchers,
+  packaging fallback, and plan commands now use the validated source-built UE 5.7.4 toolchain.
+  Opening the generic `5.7` project association in Epic UE reproduces a Build-ID rejection for all
+  LUDUS modules; launching the source editor mounts the project plugin without module-load errors.
 
 ## Gate board
 
@@ -169,6 +173,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | BB-PT-044 | P1 | Eluna Q/Carry Networking | Q and carried wisps were server-teleported at 20 Hz/5 Hz, producing focused-client jitter and model/camera bouncing | Codex | Resolved and manually accepted | Q uses replicated target attachment and carried wisps attach once. Focused retest `20260715-014500` accepted smooth Q following and substantially improved carried-wisp movement. |
 | BB-PT-045 | P1 | Ghost LMB Networking | Three held-fire ticks exceeded GAS's two-GameplayCue-RPC per-net-update budget | Codex | Packaged regression resolved; manual readability retest optional | Owner predicts the muzzle cue locally and observers use the replicated projectile. Every current-package review reports zero GameplayCue-overflow findings. |
 | BB-PT-046 | P1 | Hudson Q/Networking | Hudson Q preferred actor facing over replicated aim, allowing late movement correction under 100 ms/2% loss to place barbed wire away from the target | Codex | Resolved and packaged | Q now uses `GetAimDirection()` with actor facing only as fallback. Focused normal and impaired reruns pass 4/4; full current-package outcome matrices pass 24/24 in both profiles. |
+| BB-PT-047 | P1 | Editor/Toolchain | VS Code launched Epic UE 5.7 against project and LUDUS DLLs built by source UE 5.7.4, causing a missing/different-engine module dialog | Codex | Resolved in tracked launch configuration | Build IDs proved the mismatch (`47537391` versus `6fb450cd...`); source UE 5.7.4 now launches successfully and mounts the project-local LUDUS plugin. |
 
 ## Daily updates
 
@@ -239,6 +244,10 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Manual retest handoff: added `StartElunaRepairRetest.ps1` so tomorrow's three repaired behaviors
   have exact roles, ordered actions, PASS conditions, and a dedicated result record without asking
   the tester to repeat the already accepted Ghost/Eluna rows.
+- Editor/toolchain repair: corrected all tracked VS Code engine paths plus source editor, headless,
+  local-network, packaging, and plan defaults to source UE 5.7.4. Workspace JSON and six affected
+  PowerShell scripts parse cleanly. The already-running source editor stayed responsive; no build,
+  package, PIE session, or content asset was touched during the repair.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

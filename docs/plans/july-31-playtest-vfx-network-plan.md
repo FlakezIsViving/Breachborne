@@ -616,6 +616,9 @@ passes the complete 04:07 candidate verifier; source passes PureLogic 44/44 and 
 The package passes normal/impaired roster activation 6/6, authoritative LMB hits 6/6,
 normal/impaired non-LMB outcomes 24/24, reset, reconnect, both death/wisp directions, expanded wisp
 rules 12/12, and four-client transport/mapping/lifecycle with zero critical/cue-overflow findings.
+The provisional distribution at `Builds/Distribution/Breachborne-Playtest-20260715-041036` passes
+manifest verification for all 1331 client files and 610 server files. It has no archives and is not
+the final release candidate; archive creation remains behind manual acceptance and the freeze.
 The July 15 three-client Ghost/Eluna sessions at `Saved/Logs/InteractivePlaytest/20260715-001027`
 and `20260715-014500` record the manual findings. The active gate is a three-item Eluna retest: RMB
 latch stability, Shift wisp refund, and Q-started resurrection persistence/enemy cancellation.

@@ -56,9 +56,10 @@ Last updated: July 15, 2026.
   `Scripts/Playtest/VerifyPlaytestDistribution.ps1` rejects missing, changed, duplicate,
   out-of-root, and unexpected files after transfer. Manifest generation and verification are
   Windows PowerShell 5.1-compatible and pass an isolated 8/8 behavioral self-test. July 15
-  `-IncludeServer -ValidateOnly` preflight passes the current client/server inputs without copying
-  or archiving files. Final staging remains deferred until manual repairs and release-candidate
-  freeze are complete.
+  provisional `Breachborne-Playtest-20260715-041036` client/server bundles were staged without
+  archives; independent in-bundle verification passes client 1331/1331 and server 610/610 files
+  with zero failures. Final archives and release-candidate naming remain deferred until manual
+  acceptance and the freeze are complete.
 - Source control: GitHub `main` is the publication target; generated builds/logs remain ignored and
   Unreal binary assets remain managed by Git LFS.
 
@@ -222,6 +223,10 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Ability readiness repair: an impaired Crysta run reproduced BB-PT-038. The authoritative ASC now
   re-publishes its completed granted-spec list after owner-channel settling. Three focused impaired
   Crysta/Void runs and the complete impaired roster pass on the rebuilt package.
+- Provisional distribution: staged the verified client and server under
+  `Builds/Distribution/Breachborne-Playtest-20260715-041036` without archives. Manifest verification
+  passes all 1331 client files and 610 server files with zero failures. This proves the transfer
+  layout and hashes; it is not the final release candidate while manual acceptance remains open.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

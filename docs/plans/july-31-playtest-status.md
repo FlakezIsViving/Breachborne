@@ -42,6 +42,9 @@ Last updated: July 15, 2026.
   The package includes the three Eluna repairs and owner ability-spec replication hardening.
 - Networking/performance cleanup: removed the final legacy DrawDebug multicast API and callers; disabled no-op observer ticks on server-only gameplay actors; made Grappling Hook collision/attachment/destruction server authoritative while replicating latch state for observer visuals; guarded replicated burst fallbacks against pre-initialization world-origin flashes.
 - Manual-test tooling: packaged server plus 1-4 visible clients now launch as one recorded session with isolated logs, exact PIDs, safe cleanup, and automatic critical/cue-overflow review under `Saved/Logs/InteractivePlaytest`.
+- Focused Eluna retest tooling: `StartElunaRepairRetest.ps1` launches only the required three-client
+  topology and writes exact RMB, Shift-wisp, and Q-persistence/cancellation instructions plus a
+  three-row result record. Its `-ValidateOnly` path opens no windows.
 - Ghost/Eluna manual topology: a dedicated three-client wrapper assigns an Eluna owner, allied
   Hudson helper, and opposing Ghost so all 12 rows are executable; it records exact roles and
   stop/review instructions without opening windows until the user confirms readiness.
@@ -233,6 +236,9 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - VFX prompt handoff: locked LUDUS/manual Niagara prompts for all eight masters and six hunters in
   `docs/plans/ludus-vfx-prompt-pack.md`, including exact paths, `User.*` parameters, budgets,
   cleanup, and review evidence. No generated asset is claimed; the authored audit remains `0/8`.
+- Manual retest handoff: added `StartElunaRepairRetest.ps1` so tomorrow's three repaired behaviors
+  have exact roles, ordered actions, PASS conditions, and a dedicated result record without asking
+  the tester to repeat the already accepted Ghost/Eluna rows.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

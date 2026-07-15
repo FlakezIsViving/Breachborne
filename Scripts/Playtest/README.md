@@ -100,6 +100,17 @@ directory. Each pair launcher also creates a session-local `*-ManualAcceptance.m
 separate owner, observer, gameplay, cleanup, result, and notes fields. Stop it with the normal
 `StopPackagedLocalSmoke.ps1` command.
 
+For the post-repair Eluna RMB/Shift/Q retest, use the shorter wrapper instead of repeating all 12
+Ghost/Eluna rows:
+
+```powershell
+.\Scripts\Playtest\StartElunaRepairRetest.ps1
+```
+
+It creates `ElunaRepairRetestInstructions.txt` and a three-row `ElunaRepairRetest.md` result record.
+Run it with `-ValidateOnly` to check the candidate, paths, stale-session state, and port without
+opening windows.
+
 The structured definition covers all 55 presentation rows, including cleanup/stress, range, and
 wisp UI. Verify that it still matches both checklist documents with:
 

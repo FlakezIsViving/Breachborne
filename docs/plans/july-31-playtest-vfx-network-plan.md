@@ -141,8 +141,9 @@ Success means:
 - Wisp bars, range indicators, Hudson sustained fire, and every hunter's owner/observer
   readability still require the manual acceptance matrix.
 - Wisp gameplay priority now has deterministic source and packaged coverage: natural decay,
-  ally freeze/fill, enemy stomp, ally/enemy contest, healing acceleration, healing overridden by
-  contest, carried protection, Eluna pickup, CC drop, and full-channel Eluna R revive pass 10/10.
+  ally freeze/fill, enemy stomp, ally/enemy contest, healing acceleration and persistence, healing
+  overridden by contest, carried protection, Eluna Shift/passive pickup, CC drop, and full-channel
+  Eluna R revive pass 12/12.
   This does not prove bar visibility.
 
 ## Relevant architecture

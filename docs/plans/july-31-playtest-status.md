@@ -72,6 +72,9 @@ Last updated: July 15, 2026.
   packaging fallback, and plan commands now use the validated source-built UE 5.7.4 toolchain.
   Opening the generic `5.7` project association in Epic UE reproduces a Build-ID rejection for all
   LUDUS modules; launching the source editor mounts the project plugin without module-load errors.
+- Repository asset policy: `Scripts/SourceControl/TestRepositoryAssetPolicy.ps1` checks that large
+  tracked files use Git LFS and that rebuildable Unreal/IDE outputs remain ignored. Third-party
+  LUDUS editor binaries remain local ignored tooling; they are not silently added to the repository.
 
 ## Gate board
 
@@ -248,6 +251,9 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
   local-network, packaging, and plan defaults to source UE 5.7.4. Workspace JSON and six affected
   PowerShell scripts parse cleanly. The already-running source editor stayed responsive; no build,
   package, PIE session, or content asset was touched during the repair.
+- Source-control audit: all `1,630` tracked binary assets are in Git LFS; every tracked local file
+  at or above `5 MiB` is LFS-backed. Rebuildable output roots remain ignored. Added a repeatable
+  policy script so later LUDUS/Niagara imports fail review if a large asset bypasses LFS.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

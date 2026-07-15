@@ -43,4 +43,7 @@ public:
 
 	/** Clear match-scoped effects, state/cooldown tags, and pressed input on this persistent ASC. */
 	void ResetForNewMatch();
+
+	/** Re-publish the authoritative ability list after a pawn/hunter grant transition. */
+	void RefreshAbilitySpecReplication();
 };

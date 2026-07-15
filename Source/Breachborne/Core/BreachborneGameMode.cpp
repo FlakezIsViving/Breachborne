@@ -1692,6 +1692,24 @@ void ABreachborneGameMode::GrantHunterAbilities(APlayerController* PlayerControl
 	UE_LOG(LogBreachborne, Log, TEXT("Hunter passives active after grant: player=%s count=%d"),
 		*BBPS->GetPlayerName(), ActivePassiveCount);
 
+	// Grants happen in one burst while the pawn and owner channel are still settling. Re-publish
+	// the completed list after the channel is established so a lost initial delta cannot leave the
+	// owning client without input abilities for the rest of the match.
+	ASC->RefreshAbilitySpecReplication();
+	for (const float Delay : { 0.5f, 1.5f })
+	{
+		FTimerHandle RefreshHandle;
+		GetWorldTimerManager().SetTimer(RefreshHandle,
+			[WeakASC = TWeakObjectPtr<UBBAbilitySystemComponent>(ASC)]()
+			{
+				if (UBBAbilitySystemComponent* GrantedASC = WeakASC.Get())
+				{
+					GrantedASC->RefreshAbilitySpecReplication();
+				}
+			},
+			Delay, false);
+	}
+
 	// Bind to HealthSet's OnHealthDepleted for kill tracking
 	if (UBBHealthSet* HealthSet = BBPS->GetHealthSet())
 	{

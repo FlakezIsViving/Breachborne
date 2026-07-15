@@ -104,7 +104,7 @@ Success means:
 - A July 12 listen-server log proves two clients connected, selected Crysta and Void,
   readied, entered countdown, and spawned into gameplay.
 - The latest Editor, Game, and source-engine Server builds after the Crysta/Void fixes succeeded.
-- July 15 automation is green: `Breachborne.PureLogic` 44/44 and `Breachborne.GameSystems` 52/52,
+- July 15 automation is green: `Breachborne.PureLogic` 44/44 and `Breachborne.GameSystems` 53/53,
   including persistent PlayerState-ASC reset, Eluna Q carrier rules, and server-owned Eluna R
   completion between matches.
 
@@ -117,7 +117,7 @@ Success means:
   contracts covering damage, healing, movement, CC/state, marks, spawned actors, pulls, swaps,
   and recast detonation. A four-client packaged gate also proves exact team/slot/hunter mapping,
   four-player match start, 20/20 primary activations, 8/8 releases, and four completed lifecycles.
-- The July 15 01:26 packaged candidate passes the July 15 01:42 freshness revalidation and passes normal plus 100 ms/2% loss activation,
+- The July 15 03:36 packaged candidate passes the July 15 04:07 freshness revalidation and passes normal plus 100 ms/2% loss activation,
   six-hunter LMB damage, all 24 non-LMB outcome contracts both normally and under 100 ms/2% loss,
   lethal GAS damage through healed wisp revive/re-possession gates, and an injected stale-state
   match-reset regression with clean resets 2/2 plus Ghost post-reset activations 5/5.
@@ -611,10 +611,11 @@ Any agent taking a task must:
 7. Update the status tracker with facts, commands, evidence, and remaining failures.
 8. Never mark a gate green based only on static analysis.
 
-Automated Crysta/Void evidence has been reconciled in the hunter plans. The July 15 01:26 package
-remains the latest complete automated candidate-verifier pass; source passes PureLogic 44/44 and
-GameSystems 53/53. The focused 03:07 package passes Eluna outcomes 4/4 and expanded wisp rules 12/12,
-but has not rerun the complete six-hunter normal/impaired matrix.
+Automated Crysta/Void evidence has been reconciled in the hunter plans. The July 15 03:36 package
+passes the complete 04:07 candidate verifier; source passes PureLogic 44/44 and GameSystems 53/53.
+The package passes normal/impaired roster activation 6/6, authoritative LMB hits 6/6,
+normal/impaired non-LMB outcomes 24/24, reset, reconnect, both death/wisp directions, expanded wisp
+rules 12/12, and four-client transport/mapping/lifecycle with zero critical/cue-overflow findings.
 The July 15 three-client Ghost/Eluna sessions at `Saved/Logs/InteractivePlaytest/20260715-001027`
 and `20260715-014500` record the manual findings. The active gate is a three-item Eluna retest: RMB
 latch stability, Shift wisp refund, and Q-started resurrection persistence/enemy cancellation.

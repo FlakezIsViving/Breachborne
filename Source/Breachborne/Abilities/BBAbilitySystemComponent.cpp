@@ -178,3 +178,18 @@ void UBBAbilitySystemComponent::ResetForNewMatch()
 		}
 	}
 }
+
+void UBBAbilitySystemComponent::RefreshAbilitySpecReplication()
+{
+	if (!IsOwnerActorAuthoritative())
+	{
+		return;
+	}
+
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		MarkAbilitySpecDirty(Spec, true);
+	}
+
+	ForceReplication();
+}

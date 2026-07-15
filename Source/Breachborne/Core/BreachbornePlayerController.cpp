@@ -1044,6 +1044,10 @@ void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int3
 		HealthSet->InitHealth(50000.0f);
 		PS->UpdateHealthProxy();
 	}
+	if (UBBAbilitySystemComponent* ASC = PS->GetBBAbilitySystemComponent())
+	{
+		ASC->RefreshAbilitySpecReplication();
+	}
 	Hunter->ForceNetUpdate();
 	UE_LOG(LogBreachborne, Warning,
 		TEXT("BB_ABILITY_SMOKE|SERVER_PREPARED|index=%d hunter=%d team=%d slot=%d location=%s ground=%d"),

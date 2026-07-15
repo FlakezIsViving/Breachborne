@@ -8,7 +8,7 @@ Last updated: July 15, 2026.
 
 ## Current headline
 
-- Current gate: manually retest the three repaired Eluna behaviors on the July 15 03:07 package
+- Current gate: manually retest the three repaired Eluna behaviors on the July 15 03:36 package
 - Overall status: YELLOW
 - Primary blocker: focused automation is green. Human owner/observer confirmation remains for Eluna
   RMB latch stability, Shift wisp refund, and healing-started resurrection persistence.
@@ -17,8 +17,8 @@ Last updated: July 15, 2026.
   stable cooldown specs, Crysta mark removal and Shift charges, and Void geometry, collision, swap,
   Singularity lifecycle contracts, Eluna Q carrier rules, and Eluna R completion ownership.
 - Build baseline: Editor target and packaged Game/Server targets succeeded on July 15.
-- Latest network evidence: the July 15 01:26 package passes normal and 100 ms/2% loss activation for hunters 1-6, authoritative LMB health loss for all six, and 24/24 hunter-specific RMB/Shift/Q/R outcome contracts both normally and at 100 ms/2% loss. Core death/wisp/healing/revive and cleanup pass in both victim directions; wisp priority and Eluna R revive pass 10/10. Reconnect restores the same hunter/team/slot and exact recorded state. Four-client evidence proves 4/4 transport, exact 2v2 mapping/lifecycle, 20/20 primary activations, and 8/8 releases. Every fresh packaged review reports zero critical or GameplayCue-overflow findings. Visual acceptance remains pending.
-- Wisp lifecycle: the final focused package passes 12/12 at `Saved/Logs/PackagedWispRules/20260715-030814`, including one-heal persistence after the source expires, enemy cancellation, Shift-path pickup, passive pickup, CC drop, carried protection, and Eluna R revive/re-possession. Manual healing continuity still requires confirmation.
+- Latest network evidence: the July 15 03:36 package and 04:07 verifier pass normal and 100 ms/2% loss activation for hunters 1-6, authoritative LMB health loss for all six, and 24/24 hunter-specific RMB/Shift/Q/R outcome contracts both normally and at 100 ms/2% loss. Core death/wisp/healing/revive and cleanup pass in both victim directions; wisp lifecycle passes 12/12. Reconnect restores the same hunter/team/slot and exact recorded state. Four-client evidence proves 4/4 transport, exact 2v2 mapping/lifecycle, 20/20 primary activations, and 8/8 releases. Every fresh packaged review reports zero critical or GameplayCue-overflow findings. Visual acceptance remains pending.
+- Wisp lifecycle: the final full candidate passes 12/12 at `Saved/Logs/PackagedWispRules/20260715-034800`, including one-heal persistence after the source expires, enemy cancellation, Shift-path pickup, passive pickup, CC drop, carried protection, and Eluna R revive/re-possession. Manual healing continuity still requires confirmation.
 - Ability range indicators: shared owner-only hover and active previews cover all six hunters and F/G powers; visual/network retest pending.
 - GameplayCue networking: targeted cue scan paths configured; Hudson minigun cues use one cosmetic multicast per shot with local primitive rendering and no per-shot debug RPCs. Final normal, impaired, hit, death/revive, reconnect, four-client, and 24-contract packaged reviews report zero cue-overflow findings; manual ten-second Hudson firing/readability remains pending.
 - VFX foundation: template enum, palette/parameter schema, numeric palettes, budgets, content roots, and primitive fallback contract locked; Niagara master assets remain unbuilt.
@@ -31,18 +31,12 @@ Last updated: July 15, 2026.
   cancellation cases are pending. Q following and carried-wisp smoothness passed the focused retest;
   RMB latch, Shift refund, and Q-driven resurrection continuity are repaired and await manual retest.
 - Kingpin VFX: replicated primitive wedge, tether, trail, impact, chain, shell, and passive fallbacks compile; live owner/observer readability remains unverified.
-- Latest main package summary: the July 15 01:26 source-toolchain client/server package passes the
-  July 15 01:42 freshness-aware verifier: executables, TestMap, 17/17 Hudson cues, handshake 2/2,
+- Latest main package summary: the July 15 03:36 source-toolchain client/server package passes the
+  July 15 04:07 freshness-aware verifier: executables, TestMap, 17/17 Hudson cues, handshake 2/2,
   transport 4/4, exact 2v2 mappings/lifecycles 4/4, normal/impaired roster smoke 6/6, LMB hits
   6/6, non-LMB outcomes 24/24 normally and impaired, persistent match reset, same-hunter reconnect,
-  both death/wisp directions, wisp rules 10/10, and zero critical/cue-overflow findings.
-  The package includes the repairs from the July 15 manual session and the Hudson Q authoritative-
-  aim correction found during impaired outcome regression.
-- Focused repair package: client/server rebuilt at 03:00/03:07. Wisp rules pass 12/12 at
-  `Saved/Logs/PackagedWispRules/20260715-030814`; Eluna RMB/Shift/Q/R authoritative outcomes pass
-  4/4 at `Saved/Logs/PackagedOutcomeSmoke/20260715-030959`; both reviews have zero critical and cue-
-  overflow findings. The complete six-hunter normal/impaired verifier has not been rerun on this
-  newer focused package, so the 01:26 candidate remains the latest full-matrix evidence.
+  both death/wisp directions, wisp rules 12/12, and zero critical/cue-overflow findings.
+  The package includes the three Eluna repairs and owner ability-spec replication hardening.
 - Networking/performance cleanup: removed the final legacy DrawDebug multicast API and callers; disabled no-op observer ticks on server-only gameplay actors; made Grappling Hook collision/attachment/destruction server authoritative while replicating latch state for observer visuals; guarded replicated burst fallbacks against pre-initialization world-origin flashes.
 - Manual-test tooling: packaged server plus 1-4 visible clients now launch as one recorded session with isolated logs, exact PIDs, safe cleanup, and automatic critical/cue-overflow review under `Saved/Logs/InteractivePlaytest`.
 - Ghost/Eluna manual topology: a dedicated three-client wrapper assigns an Eluna owner, allied
@@ -65,7 +59,8 @@ Last updated: July 15, 2026.
   `-IncludeServer -ValidateOnly` preflight passes the current client/server inputs without copying
   or archiving files. Final staging remains deferred until manual repairs and release-candidate
   freeze are complete.
-- Source control: latest committed planning checkpoint is `8e6a715`; the verified July 13 lifecycle/tooling batch is currently uncommitted. Preserve it when taking over.
+- Source control: GitHub `main` is the publication target; generated builds/logs remain ignored and
+  Unreal binary assets remain managed by Git LFS.
 
 ## Gate board
 
@@ -76,7 +71,7 @@ Use `RED`, `YELLOW`, or `GREEN`. A date passing does not make a gate green.
 | Jul 12 | Green baseline | GREEN | Checkpoint `d425cd9`; Editor/Game/Server build; PureLogic 44/44; GameSystems 28/28; source and packaged handshakes 2/2 | Complete |
 | Jul 13 | Listen-server combat | YELLOW | Packaged smoke selects/spawns all hunters, activates all five inputs, proves LMB damage 6/6, and proves RMB/Shift/Q/R outcomes 24/24 | Interactive movement/aim and owner/observer visual pass pending |
 | Jul 14 | Dedicated server | YELLOW | Fresh package: roster activation, exact 2v2 mapping/lifecycle 4/4, LMB 6/6, non-LMB 24/24 normal and impaired, reconnect, both death/revive directions, and wisp rules 10/10 | Deliberate 2v2 movement/combat and ability-specific visual cleanup pending |
-| Jul 15 | Packaged networking | YELLOW | Jul 15 freshness-aware verifier PASS: executable/map/cue, 2/2 and 4/4 transport, exact 2v2 mapping/lifecycle, normal/impaired roster/outcomes 24/24, reconnect, death/revive, and wisp rules 10/10 | Focused Ghost/Eluna visual retest, deliberate 2v2 combat, and second-machine direct-IP pending |
+| Jul 15 | Packaged networking | YELLOW | 04:07 freshness-aware verifier PASS: executable/map/cue, 2/2 and 4/4 transport, exact 2v2 mapping/lifecycle, normal/impaired roster/outcomes 24/24, reconnect, death/revive, and wisp rules 12/12 | Focused Ghost/Eluna visual retest, deliberate 2v2 combat, and second-machine direct-IP pending |
 | Jul 16 | VFX foundation lock | YELLOW | Cue roots, template enum, palettes, parameter schema, budgets, fallbacks, and narrow cue always-cook root locked; all 17 Hudson cue packages present in client IoStore | Eight Niagara master assets and live ability-level cue invocation pending |
 | Jul 17 | Ghost VFX | YELLOW | Replicated primitive fallbacks cover LMB/RMB/Shift/Q/R/passive; Editor build and automation green | Recorded Ghost/Eluna three-client readability, timing, cleanup, and Low/Medium pass required |
 | Jul 18 | Eluna VFX | YELLOW | Replicated primitive fallbacks cover LMB/RMB/Shift/Q/R/passive; exact zone geometry and server-only Q/R resolution compiled | Three-client owner/observer/helper readability, timing, cleanup, and Low/Medium pass required |
@@ -123,7 +118,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | --- | --- | --- | --- | --- | --- | --- |
 | BB-PT-001 | P0 | Automation | GameSystems access violation at test line 449 | Codex | Resolved | GameSystems 28/28; no crash/ensure on Jul 12 |
 | BB-PT-002 | P1 | Packaging | Packaged candidate must match current source | Codex | Resolved | `Scripts/Playtest/VerifyPlaytestCandidate.ps1` PASS; evidence in `Builds/PlaytestCandidateVerification.txt` |
-| BB-PT-003 | P1 | Networking | Full ability/death/dedicated/package matrix untested | User + Codex | Automated gameplay/package portion resolved; deliberate combat and presentation cleanup remain open | July 15 candidate: 2/2 and 4/4 transport, exact 2v2 mapping/lifecycle 4/4, normal/impaired roster, LMB 6/6, non-LMB 24/24, reconnect, both death/revive directions, and wisp rules 10/10 PASS; total manual presentation is 8/55 |
+| BB-PT-003 | P1 | Networking | Full ability/death/dedicated/package matrix untested | User + Codex | Automated gameplay/package portion resolved; deliberate combat and presentation cleanup remain open | July 15 candidate: 2/2 and 4/4 transport, exact 2v2 mapping/lifecycle 4/4, normal/impaired roster, LMB 6/6, non-LMB 24/24, reconnect, both death/revive directions, and wisp rules 12/12 PASS; total manual presentation is 8/55 |
 | BB-PT-004 | P2 | GameplayCues | No targeted GameplayCueNotifyPaths configured | Codex | Resolved | `/Game/GameplayCues` configured; clean Jul 12 editor startup initialization |
 | BB-PT-005 | P2 | Environment | UDP Messaging cannot bind 25.18.80.222 | Unassigned | Open | Jul 12 log; GameNetDriver still worked |
 | BB-PT-006 | P0 | Wisp | PvP death did not spawn or possess a wisp because GameMode lifecycle wiring was absent | Codex | Resolved | User retest plus `Saved/Logs/Breachborne-backup-2026.07.12-00.26.01.log`: three successful spawn/possession/revive cycles |
@@ -158,7 +153,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | BB-PT-035 | P1 | Ghost Passive/Networking | Ghost passive assumed `WaitGameplayEvent` was one-shot, then registered another persistent listener after every kill; later kills emitted increasing duplicate pulse RPCs | Codex | Package regression clean; exact multi-kill visual retest pending | Manual failure had 13 cue overflows, including 10 passive pulses. Listener is one-shot before re-registering; every fresh current-package review reports zero cue-overflow findings. |
 | BB-PT-036 | P2 | Ghost Q/R Readability | Q laser and R landing telegraphs resolve too quickly for a useful reaction window | Codex | Source tuning implemented; visual retest pending | Tester requested +0.25 to +0.4 seconds. Q now has an explicit 0.3-second thin telegraph before trace/damage; R warning increases from 0.45 to 0.75 seconds. |
 | BB-PT-037 | P1 | Movement/Networking | Remote characters and abilities are smooth in the focused local window and equally jittery in both unfocused packaged windows | Codex | Local focus behavior isolated; separate-machine confirmation required | July 15 tester confirmed the pattern across all abilities. UE 5.7 packaged `t.IdleWhenNotForeground` defaults to 0, but OS/Slate rendering of background windows still differs. Do not retune gameplay replication from this same-machine observation; compare focused clients on separate machines during the weekend smoke. Eluna Q/carried jitter reproduced in focused windows and is tracked separately in BB-PT-044. |
-| BB-PT-038 | P1 | Automation/Readiness | One pre-candidate impaired Void activation run prepared the server pawn but did not replicate owner ability specs before the harness deadline | Codex | Not reproduced; monitor | Failure `Saved/Logs/PackagedNetworkImpairment/20260714-133518`; immediate retry passed, and the rebuilt 14:01 package passes all six hunters at 100 ms/2% loss in `140857`, `141001`, and `141105`. |
+| BB-PT-038 | P1 | Networking/Readiness | Under packet loss, a client could bind its PlayerState ASC but never receive the initial owner ability-spec burst | Codex | Resolved and packaged | Recurrences: Void `20260714-133518`, Crysta `20260715-032515`. Completed grants are now re-published immediately and after owner-channel settling, with smoke preparation as a recovery point. Three focused impaired Crysta/Void runs (`033643`, `033732`, `033822`) and the full impaired roster (`034252`, `034341`, `034430`) pass. |
 | BB-PT-039 | P1 | Crysta R | A predicted client could end Crysta R before the server's first delayed salvo; the zero-delay first timer also never fired | Codex | Resolved and packaged | Non-authority now waits for server-owned completion and salvo zero fires immediately. Three focused reruns passed, then current normal and impaired 24/24 outcome suites passed at `PackagedOutcomeSmoke/20260714-142409` and `PackagedOutcomeNetworkImpairment/20260714-143034`. |
 | BB-PT-040 | P1 | Ghost Cooldowns/Passive | Ghost RMB/Shift/Q/R used obsolete transient GameplayEffects, allowing Shift to activate twice inside its six-second cooldown and leaving the kill passive nothing to reset | Codex | Resolved and manually accepted | Live failure at `InteractivePlaytest/20260715-001027`; focused retest `20260715-014500` accepted cooldowns/reset and logged one eligible removal with zero cue overflow. |
 | BB-PT-041 | P1 | Wisp Healing | Healing-started revival stopped when the heal source expired instead of continuing until enemy contest | Codex | Packaged regression pass; manual retest pending | Failure reached 76-80% then stopped in `20260715-014500`. Persistent latch plus enemy cancellation now pass exact packaged scenarios in `PackagedWispRules/20260715-030814`. |
@@ -220,6 +215,13 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Repair result: final 03:07 package passes Wisp Rules 12/12 and focused Eluna outcomes 4/4. The
   persistent-heal regression also caught and fixed a contested-heal edge where a late pulse could
   remain latched after the enemy left.
+- Final candidate refresh: client/server rebuilt at 03:36; Editor, PureLogic 44/44, and GameSystems
+  53/53 pass. The 04:07 verifier passes every packaged gate: normal/impaired roster 6/6, reset,
+  reconnect, both death/wisp directions, wisp rules 12/12, LMB hits 6/6, normal/impaired outcomes
+  24/24, four-client transport/mapping/lifecycle, and zero critical/cue-overflow findings.
+- Ability readiness repair: an impaired Crysta run reproduced BB-PT-038. The authoritative ASC now
+  re-publishes its completed granted-spec list after owner-channel settling. Three focused impaired
+  Crysta/Void runs and the complete impaired roster pass on the rebuilt package.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

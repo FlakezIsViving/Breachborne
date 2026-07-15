@@ -28,6 +28,10 @@ Last updated: July 15, 2026.
 - VFX asset audit: `Scripts/Playtest/AuditVfxFoundation.ps1` distinguishes fallback readiness
   from authored completion and writes `Builds/VfxFoundationAudit.txt`; the current expected result
   is fallback-ready with `0/8` Niagara masters, not a green authored-assets claim.
+- VFX source inventory: no reusable Niagara system exists in project content. Six Starter Content
+  and four village Cascade systems are available as seeds; source UE 5.7.4 includes Epic's disabled
+  beta Cascade-to-Niagara converter. The conversion route is documented as a restart-required
+  fallback and still requires the exact parameters, budgets, paths, audit, cooking, and live tests.
 - Ghost VFX: LMB, RMB, Q, R, and passive cooldown reset are manually accepted. Shift remains readable
   but fails the strict synchronized-movement row because unfocused local windows jitter.
 - Eluna VFX: LMB is accepted. R full-channel revive and range cancellation work, while remaining
@@ -254,6 +258,10 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Source-control audit: all `1,630` tracked binary assets are in Git LFS; every tracked local file
   at or above `5 MiB` is LFS-backed. Rebuildable output roots remain ignored. Added a repeatable
   policy script so later LUDUS/Niagara imports fail review if a large asset bypasses LFS.
+- VFX content inventory: a binary/name scan found zero Niagara systems and ten existing Cascade
+  systems. Verified UE 5.7.4's converter plugin and Content Browser conversion action in engine
+  source, then documented exact seed mappings and post-conversion requirements in the LUDUS prompt
+  pack. The plugin remains disabled to avoid restarting the user's active editor session.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

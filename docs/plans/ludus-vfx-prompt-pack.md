@@ -243,6 +243,29 @@ secondary rim. R uses an exact warning ring, inward spirals, active core, actor 
 sharp end implosion. Niagara must not select, move, swap, stun, damage, or detect actors.
 ```
 
+## Cascade Conversion Fallback
+
+The July 15 content inventory contains no existing Niagara systems. It does contain these usable
+Cascade seeds:
+
+- `/Game/StarterContent/Particles/P_Sparks` for `NS_BB_ImpactBurst`.
+- `/Game/StarterContent/Particles/P_Explosion` for a second impact/detonation reference.
+- `/Game/StarterContent/Particles/P_Steam_Lit` and
+  `/Game/Fantastic_Village_Pack/effects/PS_FX_particle_windtrail` for projectile trails.
+- `/Game/StarterContent/Particles/P_Ambient_Dust` for a character-aura reference.
+- `/Game/StarterContent/Particles/P_Smoke` for a persistent-zone reference.
+
+Source UE 5.7.4 includes Epic's beta `CascadeToNiagaraConverter` plugin. It is disabled by default
+and requires an editor restart, so enable it only after saving and closing the current authoring
+session. Once enabled, select one or more Cascade particle systems in the Content Browser, right-
+click, and choose **Convert To Niagara System**. Engine source confirms that action duplicates the
+selected Cascade system and runs Epic's converter; it does not alter the original asset.
+
+Converted output is only a seed. Duplicate/move it to the exact master path, remove unsupported or
+expensive modules, add the required `User.*` parameters, set fixed bounds and Low/Medium
+scalability, enforce the prompt's emitter/particle/instance budgets, and run the same audit and
+manual acceptance. A successful conversion does not by itself advance the authored count.
+
 ## Asset Review Prompt
 
 ```text

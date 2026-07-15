@@ -9,6 +9,7 @@
 #include "Breachborne/Combat/BBTargetDummy.h"
 #include "Breachborne/Combat/BBTestAlly.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
+#include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
 
 namespace
@@ -75,6 +76,13 @@ void ABBCrystaLMBProjectile::OnRep_EmpoweredShot()
 {
 	ApplyShotVisuals();
 }
+
+#if WITH_AUTOMATION_TESTS
+void ABBCrystaLMBProjectile::ProcessOverlapForAutomation(AActor* OtherActor)
+{
+	OnProjectileOverlap(CollisionSphere.Get(), OtherActor, nullptr, 0, false, FHitResult());
+}
+#endif
 
 void ABBCrystaLMBProjectile::ApplyShotVisuals()
 {
@@ -164,7 +172,7 @@ bool ABBCrystaLMBProjectile::DetonateMark(UAbilitySystemComponent* TargetASC, AA
 	ApplyDamage(TargetASC, DetonationDamage);
 	FGameplayTagContainer MarkTags;
 	MarkTags.AddTag(BBGameplayTags::State_Crysta_Reverberation);
-	TargetASC->RemoveActiveEffectsWithTags(MarkTags);
+	TargetASC->RemoveActiveEffectsWithGrantedTags(MarkTags);
 
 	FGameplayEventData EventData;
 	EventData.Instigator = GetOwner();

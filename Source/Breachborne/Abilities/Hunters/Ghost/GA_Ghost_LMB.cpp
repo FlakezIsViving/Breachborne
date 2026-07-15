@@ -80,7 +80,13 @@ void UGA_Ghost_LMB::FireShot()
 
 	const FVector AimDir = GetAimDirection();
 	const bool bIsServer = Hunter->HasAuthority();
-	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_LMB_Fire, Hunter->GetActorLocation(), AimDir);
+	// The owner predicts this muzzle cue locally. The replicated projectile is
+	// the observer-readable shot; multicasting every auto-fire tick can exhaust
+	// GAS's per-net-update GameplayCue RPC budget and drop unrelated cues.
+	if (!bIsServer || Hunter->GetNetMode() == NM_Standalone)
+	{
+		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_LMB_Fire, Hunter->GetActorLocation(), AimDir);
+	}
 
 	// Client: draw debug line for muzzle flash direction (cosmetic only)
 	if (!bIsServer)

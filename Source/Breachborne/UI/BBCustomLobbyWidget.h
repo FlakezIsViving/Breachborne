@@ -31,6 +31,7 @@ private:
 	FReply HandleAutoFillClicked();
 	FReply HandleTeamSizeClicked(int32 TeamSize);
 	FReply HandleStartClicked();
+	void HandleStormEnabledChanged(ECheckBoxState NewState);
 	void HandleDescriptionCommitted(const FText& Text, ETextCommit::Type CommitType);
 
 	void RefreshLobby(bool bForce = false);

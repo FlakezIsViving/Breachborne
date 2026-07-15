@@ -5,8 +5,6 @@
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Combat/BBGrenade.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
-#include "GameplayEffect.h"
-#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Ghost_RMB::UGA_Ghost_RMB()
@@ -89,13 +87,5 @@ const FGameplayTagContainer* UGA_Ghost_RMB::GetCooldownTags() const
 
 void UGA_Ghost_RMB::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	UGameplayEffect* CooldownGE = NewObject<UGameplayEffect>(GetTransientPackage());
-	CooldownGE->DurationPolicy = EGameplayEffectDurationType::HasDuration;
-	CooldownGE->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(CooldownDuration));
-	UTargetTagsGameplayEffectComponent& TagComp = CooldownGE->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-	FInheritedTagContainer TagContainer;
-	TagContainer.Added.AddTag(BBGameplayTags::Cooldown_Hunter_Ghost_RMB);
-	TagComp.SetAndApplyTargetTagChanges(TagContainer);
-
-	ApplyGameplayEffectToOwner(Handle, ActorInfo, ActivationInfo, CooldownGE, GetAbilityLevel());
+	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
 }

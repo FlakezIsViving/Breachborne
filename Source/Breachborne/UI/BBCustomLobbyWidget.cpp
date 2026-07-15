@@ -5,6 +5,7 @@
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -92,6 +93,24 @@ TSharedRef<SWidget> UBBCustomLobbyWidget::RebuildWidget()
 			SNew(SEditableTextBox)
 			.HintText(FText::FromString(TEXT("Owner: lobby description")))
 			.OnTextCommitted_UObject(this, &UBBCustomLobbyWidget::HandleDescriptionCommitted)
+		]
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		.Padding(0.0f, 0.0f, 12.0f, 0.0f)
+		.VAlign(VAlign_Center)
+		[
+			SNew(SCheckBox)
+			.IsEnabled_Lambda([this]() { return IsLocalPlayerLobbyOwner(); })
+			.IsChecked_Lambda([this]()
+			{
+				const ABreachborneGameState* GS = GetWorld() ? GetWorld()->GetGameState<ABreachborneGameState>() : nullptr;
+				return GS && GS->GetLobbySettings().bStormEnabled
+					? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+			})
+			.OnCheckStateChanged_UObject(this, &UBBCustomLobbyWidget::HandleStormEnabledChanged)
+			[
+				SNew(STextBlock).Text(FText::FromString(TEXT("Storm")))
+			]
 		]
 		+ SHorizontalBox::Slot()
 		.AutoWidth()
@@ -219,6 +238,14 @@ FReply UBBCustomLobbyWidget::HandleStartClicked()
 	return FReply::Handled();
 }
 
+void UBBCustomLobbyWidget::HandleStormEnabledChanged(ECheckBoxState NewState)
+{
+	if (ABreachbornePlayerController* PC = Cast<ABreachbornePlayerController>(GetOwningPlayer()))
+	{
+		PC->RequestSetStormEnabled(NewState == ECheckBoxState::Checked);
+	}
+}
+
 void UBBCustomLobbyWidget::HandleDescriptionCommitted(const FText& Text, ETextCommit::Type CommitType)
 {
 	if (CommitType != ETextCommit::OnEnter && CommitType != ETextCommit::OnUserMovedFocus)
@@ -262,7 +289,7 @@ void UBBCustomLobbyWidget::RefreshLobby(bool bForce)
 			Settings.MaxPlayers,
 			Settings.TeamSize,
 			Settings.MaxTeams,
-			*Settings.StormShiftPreset.ToString(),
+			Settings.bStormEnabled ? TEXT("On") : TEXT("Off"),
 			bOwner ? TEXT("Owner controls enabled") : TEXT("Only owner can change settings/start"))));
 	}
 
@@ -359,12 +386,13 @@ FString UBBCustomLobbyWidget::BuildLobbyFingerprint() const
 	}
 
 	const FBBLobbySettings& Settings = GS->GetLobbySettings();
-	FString Fingerprint = FString::Printf(TEXT("%d|%d|%d|%s|%s|%s"),
+	FString Fingerprint = FString::Printf(TEXT("%d|%d|%d|%s|%s|%d|%s"),
 		static_cast<int32>(GS->GetMatchPhase()),
 		Settings.TeamSize,
 		Settings.MaxTeams,
 		*Settings.Description,
 		*Settings.StormShiftPreset.ToString(),
+		Settings.bStormEnabled ? 1 : 0,
 		*GetNameSafe(GS->GetLobbyOwnerPlayerState()));
 
 	for (const FBBLobbyTeam& Team : GS->GetLobbyTeams())

@@ -4,6 +4,8 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "Engine/OverlapResult.h"
+#include "EngineUtils.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Breachborne/Characters/HunterCharacter.h"
@@ -66,6 +68,11 @@ void UGA_Kingpin_Shift::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	{
 		ChargeDir = Hunter->GetActorForwardVector().GetSafeNormal2D();
 	}
+	ChargeStartLocation = Hunter->GetActorLocation();
+	ChargeDirection = ChargeDir;
+	PreviousChargeLocation = ChargeStartLocation;
+	ChargeStartTimeSeconds = Hunter->GetWorld() ? Hunter->GetWorld()->GetTimeSeconds() : 0.0f;
+	bChargePathBlocked = false;
 	const float StartMontageDuration = PlayVisualMontage(BBGameplayTags::Ability_Hunter_Kingpin_Shift, EBBAbilityAnimationPhase::Start);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Shift_Start, Hunter->GetActorLocation(), ChargeDir);
 	AddVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Shift_Trail, Hunter->GetActorLocation(), ChargeDir);
@@ -127,16 +134,85 @@ void UGA_Kingpin_Shift::ChargeTick()
 		return;
 	}
 
-	// Small sphere cast at character location for collision detection
-	const FVector Origin = Hunter->GetActorLocation();
+	// Advance an authoritative gameplay path independently of autonomous-proxy movement reconciliation.
+	UWorld* World = Hunter->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	const FVector SweepStart = PreviousChargeLocation;
+	FVector Origin = SweepStart;
+	if (!bChargePathBlocked)
+	{
+		const float ElapsedSeconds = FMath::Clamp(
+			World->GetTimeSeconds() - ChargeStartTimeSeconds, 0.0f, ChargeDuration);
+		const FVector DesiredEnd = ChargeStartLocation + ChargeDirection * ChargeSpeed * ElapsedSeconds;
+		if (!DesiredEnd.Equals(SweepStart, 0.1f))
+		{
+			FCollisionObjectQueryParams WorldObjects;
+			WorldObjects.AddObjectTypesToQuery(ECC_WorldStatic);
+			WorldObjects.AddObjectTypesToQuery(ECC_WorldDynamic);
+			FCollisionQueryParams WorldParams(SCENE_QUERY_STAT(KingpinChargeWorld), false, Hunter);
+			const float WorldSweepRadius = Hunter->GetCapsuleComponent()
+				? Hunter->GetCapsuleComponent()->GetScaledCapsuleRadius() : 42.0f;
+			FHitResult BlockingHit;
+			if (World->SweepSingleByObjectType(BlockingHit, SweepStart, DesiredEnd, FQuat::Identity,
+				WorldObjects, FCollisionShape::MakeSphere(WorldSweepRadius), WorldParams))
+			{
+				Origin = BlockingHit.Location;
+				bChargePathBlocked = true;
+			}
+			else
+			{
+				Origin = DesiredEnd;
+			}
+		}
+	}
+
+	TSet<AActor*> CandidateActors;
 	TArray<FOverlapResult> Overlaps;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(KingpinCharge), false, Hunter);
-	Hunter->GetWorld()->OverlapMultiByObjectType(Overlaps, Origin, FQuat::Identity,
-		FCollisionObjectQueryParams(ECC_Pawn), FCollisionShape::MakeSphere(80.0f), Params);
+	World->OverlapMultiByObjectType(Overlaps, Origin, FQuat::Identity,
+		FCollisionObjectQueryParams(ECC_Pawn), FCollisionShape::MakeSphere(ChargeHitRadius), Params);
 
 	for (const FOverlapResult& Overlap : Overlaps)
 	{
-		AActor* HitActor = Overlap.GetActor();
+		if (AActor* OverlapActor = Overlap.GetActor())
+		{
+			CandidateActors.Add(OverlapActor);
+		}
+	}
+
+	TArray<FHitResult> SweepHits;
+	World->SweepMultiByObjectType(SweepHits, SweepStart, Origin, FQuat::Identity,
+		FCollisionObjectQueryParams(ECC_Pawn), FCollisionShape::MakeSphere(ChargeHitRadius), Params);
+	for (const FHitResult& SweepHit : SweepHits)
+	{
+		if (AActor* SweepActor = SweepHit.GetActor())
+		{
+			CandidateActors.Add(SweepActor);
+		}
+	}
+	for (TActorIterator<AHunterCharacter> It(World); It; ++It)
+	{
+		AHunterCharacter* Candidate = *It;
+		if (Candidate == Hunter)
+		{
+			continue;
+		}
+
+		const FVector ClosestPoint = FMath::ClosestPointOnSegment(
+			Candidate->GetActorLocation(), SweepStart, Origin);
+		const float CandidateDistance = FVector::Dist2D(Candidate->GetActorLocation(), ClosestPoint);
+		if (CandidateDistance <= ChargeHitRadius)
+		{
+			CandidateActors.Add(Candidate);
+		}
+	}
+	PreviousChargeLocation = Origin;
+
+	for (AActor* HitActor : CandidateActors)
+	{
 		if (!HitActor || HitActors.Contains(HitActor))
 		{
 			continue;
@@ -194,6 +270,11 @@ void UGA_Kingpin_Shift::ChargeTick()
 
 void UGA_Kingpin_Shift::EndCharge()
 {
+	if (const AHunterCharacter* Hunter = GetHunterCharacter(); Hunter && Hunter->HasAuthority())
+	{
+		ChargeTick();
+	}
+
 	UWorld* World = GetWorld();
 	if (World)
 	{
@@ -211,7 +292,9 @@ void UGA_Kingpin_Shift::EndCharge()
 
 	if (CachedActorInfo)
 	{
-		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		const AHunterCharacter* Hunter = GetHunterCharacter();
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo,
+			Hunter && Hunter->HasAuthority(), false);
 	}
 }
 

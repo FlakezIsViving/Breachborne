@@ -92,14 +92,16 @@ void UGA_Crysta_R::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 
 	if (!Hunter->HasAuthority())
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		// The server owns the timed salvo sequence and replicates its eventual end.
+		// Ending from the observing client can cancel the server before salvo one.
 		return;
 	}
 
 	SpawnLaneIndicators();
 
 	SalvoTimerHandles.SetNum(5);
-	for (int32 Index = 0; Index < 5; ++Index)
+	FireSalvo(0);
+	for (int32 Index = 1; Index < 5; ++Index)
 	{
 		FTimerDelegate Delegate = FTimerDelegate::CreateUObject(this, &UGA_Crysta_R::FireSalvo, Index);
 		Hunter->GetWorldTimerManager().SetTimer(SalvoTimerHandles[Index], Delegate, SalvoInterval * Index, false);
@@ -187,7 +189,6 @@ void UGA_Crysta_R::HitAlongSegment(const FVector& Start, const FVector& End)
 		DetonateOnce(TargetASC, Actor);
 		ApplyDamage(TargetASC, ShotDamage);
 		ApplyMark(TargetASC);
-		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Crysta_R_Impact, Actor->GetActorLocation(), CachedAimDirection);
 		FActorSpawnParameters BurstParams;
 		BurstParams.Owner = Hunter;
 		BurstParams.Instigator = Hunter;
@@ -276,7 +277,7 @@ void UGA_Crysta_R::DetonateOnce(UAbilitySystemComponent* TargetASC, AActor* Targ
 	ApplyDamage(TargetASC, DetonationDamage);
 	FGameplayTagContainer MarkTags;
 	MarkTags.AddTag(BBGameplayTags::State_Crysta_Reverberation);
-	TargetASC->RemoveActiveEffectsWithTags(MarkTags);
+	TargetASC->RemoveActiveEffectsWithGrantedTags(MarkTags);
 
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{
@@ -289,24 +290,32 @@ void UGA_Crysta_R::DetonateOnce(UAbilitySystemComponent* TargetASC, AActor* Targ
 
 void UGA_Crysta_R::BuildLaneSegments(TArray<FVector>& OutStarts, TArray<FVector>& OutEnds) const
 {
+	CalculateLaneSegments(CachedCastLocation, CachedAimDirection, CachedTargetLocation, MaxRange,
+		LauncherSideOffset, LauncherForwardOffset, OutStarts, OutEnds);
+}
+
+void UGA_Crysta_R::CalculateLaneSegments(const FVector& CastLocation, const FVector& AimDirection,
+	const FVector& TargetLocation, float InMaxRange, float InLauncherSideOffset,
+	float InLauncherForwardOffset, TArray<FVector>& OutStarts, TArray<FVector>& OutEnds)
+{
 	OutStarts.Reset();
 	OutEnds.Reset();
 
-	const FVector Forward = CachedAimDirection.GetSafeNormal2D();
+	const FVector Forward = AimDirection.GetSafeNormal2D();
 	const FVector Right = FVector::CrossProduct(FVector::UpVector, Forward).GetSafeNormal2D();
 	if (Forward.IsNearlyZero() || Right.IsNearlyZero())
 	{
 		return;
 	}
 
-	const FVector StartBase = CachedCastLocation + Forward * LauncherForwardOffset + FVector(0.0f, 0.0f, 95.0f);
-	const FVector ConvergencePoint = CachedTargetLocation + FVector(0.0f, 0.0f, 95.0f);
-	const float ConvergenceDistance = FVector::Dist2D(CachedCastLocation, CachedTargetLocation);
-	const float ExtensionDistance = FMath::Max(0.0f, MaxRange - ConvergenceDistance);
+	const FVector StartBase = CastLocation + Forward * InLauncherForwardOffset + FVector(0.0f, 0.0f, 95.0f);
+	const FVector ConvergencePoint = TargetLocation + FVector(0.0f, 0.0f, 95.0f);
+	const float ConvergenceDistance = FVector::Dist2D(CastLocation, TargetLocation);
+	const float ExtensionDistance = FMath::Max(0.0f, InMaxRange - ConvergenceDistance);
 
 	auto AddSideLane = [&](float SideSign)
 	{
-		const FVector Start = StartBase + Right * SideSign * LauncherSideOffset;
+		const FVector Start = StartBase + Right * SideSign * InLauncherSideOffset;
 		FVector BeamDirection = (ConvergencePoint - Start).GetSafeNormal2D();
 		if (BeamDirection.IsNearlyZero())
 		{

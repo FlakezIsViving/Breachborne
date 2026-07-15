@@ -25,6 +25,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Breachborne|AllyBot")
 	int32 GetTeamID() const { return TeamID; }
 
+	void SetTeamID(int32 InTeamID) { TeamID = InTeamID; }
+
 	UFUNCTION(BlueprintPure, Category = "Breachborne|AllyBot")
 	bool GetIsAlive() const { return true; }
 

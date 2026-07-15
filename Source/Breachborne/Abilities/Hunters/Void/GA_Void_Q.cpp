@@ -37,6 +37,12 @@ void UGA_Void_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const 
 void UGA_Void_Q::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo)
 {
+	const AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		return;
+	}
+
 	if (ABBVoidAnomalyPuddle* Puddle = ActivePuddle.Get())
 	{
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Void_Q_Detonate, Puddle->GetActorLocation(), FVector::UpVector);

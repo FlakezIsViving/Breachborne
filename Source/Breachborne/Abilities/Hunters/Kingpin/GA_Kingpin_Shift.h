@@ -36,6 +36,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Kingpin|Shift")
 	float ChargeDamage = 55.0f;
 
+	/** Includes both character capsules so blocking contact still registers as a charge hit. */
+	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Kingpin|Shift")
+	float ChargeHitRadius = 135.0f;
+
 	/** Impulse applied to knocked-back enemies */
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Kingpin|Shift")
 	float KnockbackForce = 900.0f;
@@ -51,6 +55,11 @@ private:
 	FTimerHandle ChargeTickHandle;
 	FTimerHandle ChargeEndHandle;
 	FTimerHandle ChargeLoopMontageHandle;
+	FVector ChargeStartLocation = FVector::ZeroVector;
+	FVector ChargeDirection = FVector::ForwardVector;
+	FVector PreviousChargeLocation = FVector::ZeroVector;
+	float ChargeStartTimeSeconds = 0.0f;
+	bool bChargePathBlocked = false;
 
 	TSet<TWeakObjectPtr<AActor>> HitActors; // Track per-charge so we don't double-hit
 

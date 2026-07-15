@@ -16,7 +16,6 @@ UGA_Crysta_Shift_Primary::UGA_Crysta_Shift_Primary()
 	AssetTags.AddTag(BBGameplayTags::Ability_Hunter_Crysta_Shift_Primary);
 	SetAssetTags(AssetTags);
 	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Primary);
-	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Dash);
 	DashTrailClass = ABBPrimitiveBeamActor::StaticClass();
 }
 
@@ -81,7 +80,9 @@ const FGameplayTagContainer* UGA_Crysta_Shift_Primary::GetCooldownTags() const
 void UGA_Crysta_Shift_Primary::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
+	FGameplayTagContainer GrantedTags = CooldownTagContainer;
+	GrantedTags.AddTag(BBGameplayTags::Cooldown_Dash);
+	ApplyBBCooldownWithTags(Handle, ActorInfo, ActivationInfo, CooldownDuration, GrantedTags);
 }
 
 UGA_Crysta_Shift_Secondary::UGA_Crysta_Shift_Secondary()
@@ -91,5 +92,4 @@ UGA_Crysta_Shift_Secondary::UGA_Crysta_Shift_Secondary()
 	SetAssetTags(AssetTags);
 	CooldownTagContainer.Reset();
 	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Secondary);
-	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Dash);
 }

@@ -362,6 +362,10 @@ namespace BBHUD
 		{
 		case 1:  return TEXT("Ghost");
 		case 2:  return TEXT("Kingpin");
+		case 3:  return TEXT("Eluna");
+		case 4:  return TEXT("Hudson");
+		case 5:  return TEXT("Crysta");
+		case 6:  return TEXT("Void");
 		default: return FString::Printf(TEXT("Hunter %d"), HunterID);
 		}
 	}

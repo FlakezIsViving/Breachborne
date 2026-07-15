@@ -6,8 +6,6 @@
 #include "Breachborne/Combat/BBNapalmZone.h"
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
-#include "GameplayEffect.h"
-#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Ghost_R::UGA_Ghost_R()
@@ -87,7 +85,7 @@ void UGA_Ghost_R::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 		if (ABBPrimitiveBurstActor* Warning = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
 			WarningVisualClass, SpawnLocation, FRotator::ZeroRotator, VisualParams))
 		{
-			Warning->InitBurst(SpawnLocation + FVector(0.0f, 0.0f, 12.0f), 500.0f, 0.45f,
+			Warning->InitBurst(SpawnLocation + FVector(0.0f, 0.0f, 12.0f), 500.0f, 0.75f,
 				FLinearColor(1.0f, 0.12f, 0.08f, 1.0f), true);
 		}
 	}
@@ -129,13 +127,5 @@ const FGameplayTagContainer* UGA_Ghost_R::GetCooldownTags() const
 
 void UGA_Ghost_R::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	UGameplayEffect* CooldownGE = NewObject<UGameplayEffect>(GetTransientPackage());
-	CooldownGE->DurationPolicy = EGameplayEffectDurationType::HasDuration;
-	CooldownGE->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(CooldownDuration));
-	UTargetTagsGameplayEffectComponent& TagComp = CooldownGE->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-	FInheritedTagContainer TagContainer;
-	TagContainer.Added.AddTag(BBGameplayTags::Cooldown_Hunter_Ghost_R);
-	TagComp.SetAndApplyTargetTagChanges(TagContainer);
-
-	ApplyGameplayEffectToOwner(Handle, ActorInfo, ActivationInfo, CooldownGE, GetAbilityLevel());
+	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
 }

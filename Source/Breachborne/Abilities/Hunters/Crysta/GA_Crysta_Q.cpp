@@ -36,6 +36,12 @@ void UGA_Crysta_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 void UGA_Crysta_Q::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo)
 {
+	const AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		return;
+	}
+
 	if (ABBCrystaBurstZone* Zone = ActiveZone.Get())
 	{
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Crysta_Q_Detonate, Zone->GetActorLocation(), FVector::UpVector);

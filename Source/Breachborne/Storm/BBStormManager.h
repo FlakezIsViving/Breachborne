@@ -39,6 +39,10 @@ public:
 	/** Reset all storm phase, radius, center, and damage timer state back to a new-match baseline. */
 	void ResetStorm();
 
+	/** Enable or suspend storm progression, damage, and visualization. Server authoritative. */
+	void SetStormEnabled(bool bEnabled);
+	bool IsStormEnabled() const { return bStormEnabled; }
+
 protected:
 	// --- Editor-configurable ---
 
@@ -85,6 +89,9 @@ protected:
 
 	UPROPERTY(Replicated)
 	EStormPhaseState PhaseState;
+
+	UPROPERTY(Replicated)
+	bool bStormEnabled = true;
 
 private:
 	// --- Components ---

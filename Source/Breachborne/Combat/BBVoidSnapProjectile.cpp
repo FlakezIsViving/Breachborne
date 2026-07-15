@@ -60,7 +60,8 @@ ABBVoidSnapProjectile::ABBVoidSnapProjectile()
 	ConeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConeMesh"));
 	ConeMesh->SetupAttachment(RootScene);
 	ConeMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	ConeMesh->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	// Engine cone points along local +Z; -90 pitch maps its tip to actor-forward (+X).
+	ConeMesh->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeAsset(TEXT("/Engine/BasicShapes/Cone"));
 	if (ConeAsset.Succeeded())
@@ -188,7 +189,12 @@ void ABBVoidSnapProjectile::TryHitTargets()
 
 bool ABBVoidSnapProjectile::IsActorInsideCone(AActor* Actor) const
 {
-	const FVector ToActor = Actor->GetActorLocation() - GetActorLocation();
+	return Actor && IsLocationInsideCone(Actor->GetActorLocation());
+}
+
+bool ABBVoidSnapProjectile::IsLocationInsideCone(const FVector& Location) const
+{
+	const FVector ToActor = Location - GetActorLocation();
 	const float ForwardDistance = FVector::DotProduct(ToActor.GetSafeNormal2D(), Direction) * ToActor.Size2D();
 	if (ForwardDistance < 0.0f || ForwardDistance > ConeLength)
 	{
@@ -196,7 +202,7 @@ bool ABBVoidSnapProjectile::IsActorInsideCone(AActor* Actor) const
 	}
 	const FVector Closest = GetActorLocation() + Direction * ForwardDistance;
 	const float AllowedRadius = FMath::Lerp(18.0f, ConeRadius, ForwardDistance / FMath::Max(1.0f, ConeLength));
-	return FVector::Dist2D(Actor->GetActorLocation(), Closest) <= AllowedRadius;
+	return FVector::Dist2D(Location, Closest) <= AllowedRadius;
 }
 
 void ABBVoidSnapProjectile::ApplyDamageAndStun(UAbilitySystemComponent* TargetASC, AActor* TargetActor)

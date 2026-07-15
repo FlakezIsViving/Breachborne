@@ -211,6 +211,20 @@ void ABreachbornePlayerState::SetIsAlive(bool bAlive)
 	}
 }
 
+void ABreachbornePlayerState::RestoreMatchProgress(
+	int32 NewLevel, int32 NewXP, int32 NewKills, const FRepInventoryData& NewInventory)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	Level = FMath::Max(1, NewLevel);
+	XP = FMath::Max(0, NewXP);
+	Kills = FMath::Max(0, NewKills);
+	Rep_InventoryData = NewInventory;
+}
+
 void ABreachbornePlayerState::OnRep_TeamID()
 {
 	UE_LOG(LogBreachborne, Verbose, TEXT("PlayerState %s: TeamID replicated to %d"), *GetPlayerName(), TeamID);

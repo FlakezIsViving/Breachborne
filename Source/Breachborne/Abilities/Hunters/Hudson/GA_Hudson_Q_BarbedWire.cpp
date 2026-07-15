@@ -38,10 +38,27 @@ void UGA_Hudson_Q_BarbedWire::ActivateAbility(const FGameplayAbilitySpecHandle H
 		return;
 	}
 
-	const FVector AimDir = GetAimDirection();
+	FVector AimDir = GetAimDirection();
+	if (AimDir.IsNearlyZero())
+	{
+		AimDir = Hunter->GetActorForwardVector().GetSafeNormal2D();
+	}
 	const FVector Desired = Hunter->GetActorLocation() + AimDir * Range;
 	FVector SpawnLocation = Desired;
-	SpawnLocation.Z = Hunter->GetActorLocation().Z - 80.0f;
+	FHitResult GroundHit;
+	FCollisionQueryParams GroundQuery(SCENE_QUERY_STAT(HudsonBarbedWireGround), false, Hunter);
+	const FVector TraceStart = Desired + FVector(0.0f, 0.0f, 1200.0f);
+	const FVector TraceEnd = Desired - FVector(0.0f, 0.0f, 3000.0f);
+	if (Hunter->GetWorld()->LineTraceSingleByChannel(
+		GroundHit, TraceStart, TraceEnd, ECC_Visibility, GroundQuery))
+	{
+		// The wire plate is 92 units below its actor origin.
+		SpawnLocation = GroundHit.ImpactPoint + FVector(0.0f, 0.0f, 92.0f);
+	}
+	else
+	{
+		SpawnLocation.Z = Hunter->GetActorLocation().Z - 80.0f;
+	}
 
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Hudson_Q, EBBAbilityAnimationPhase::Fire);
 	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Hudson_Q_Cast, SpawnLocation, AimDir);

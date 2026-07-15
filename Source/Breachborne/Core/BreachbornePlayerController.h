@@ -11,6 +11,8 @@ class UInputAction;
 class UInputMappingContext;
 class UBBAbilitySystemComponent;
 class UBBGameplayAbility;
+class AHunterCharacter;
+class ABBAllyBot;
 class ABBBasecampActor;
 class ABBWispPawn;
 class ABBDeathboxActor;
@@ -73,6 +75,9 @@ public:
 	void RequestSetStormShiftPreset(FName PresetID);
 
 	UFUNCTION(BlueprintCallable, Category = "Breachborne|Lobby")
+	void RequestSetStormEnabled(bool bEnabled);
+
+	UFUNCTION(BlueprintCallable, Category = "Breachborne|Lobby")
 	void RequestStartLobbyMatch();
 
 	UFUNCTION(BlueprintCallable, Category = "Breachborne|Map")
@@ -111,6 +116,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	virtual void PawnLeavingGame() override;
 	virtual void SetupInputComponent() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -235,7 +241,20 @@ private:
 	void UpdateAbilitySmoke(float DeltaTime);
 	void UpdateDeathSmoke(float DeltaTime);
 	void UpdateHitSmoke(float DeltaTime);
+	void UpdateOutcomeSmoke(float DeltaTime, AHunterCharacter* Hunter, UBBAbilitySystemComponent* ASC);
 	bool ActivateAbilitySmokeInput(const FGameplayTag& InputTag, const TCHAR* ActionName);
+	FGameplayTag GetOutcomeSmokeInputTag(int32 Stage) const;
+	float GetOutcomeSmokeStageDuration(int32 Stage) const;
+	void SampleOutcomeSmoke();
+	bool EvaluateOutcomeSmoke(int32 HunterID, int32 Stage) const;
+	void StartWispRulesSmoke(ABreachbornePlayerController* VictimController, ABBWispPawn* Wisp);
+	void ConfigureWispRulesSmokeStage();
+	void UpdateWispRulesSmoke();
+	bool EvaluateWispRulesSmokeStage(float HPAfter, float RezAfter) const;
+	void FinishWispRulesSmoke();
+
+	UFUNCTION(Client, Reliable)
+	void ClientActivateWispRulesElunaR();
 
 	UFUNCTION(Server, Reliable)
 	void ServerPrepareAbilitySmoke(int32 SmokeIndex);
@@ -251,6 +270,15 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerReportHitSmoke(int32 AttackerIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerPrepareOutcomeSmoke(int32 Stage);
+
+	UFUNCTION(Server, Reliable)
+	void ServerReportOutcomeSmoke(int32 Stage);
+
+	UFUNCTION(Client, Reliable)
+	void ClientConfirmOutcomeSmokePrepared(int32 Stage, bool bSuccess);
 
 	void ApplyWispHealSmokeTick();
 
@@ -313,6 +341,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRequestSetStormShiftPreset(FName PresetID);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRequestSetStormEnabled(bool bEnabled);
 
 	UFUNCTION(Server, Reliable)
 	void ServerRequestStartLobbyMatch();
@@ -523,16 +554,26 @@ private:
 	bool bAbilitySmokePrepared = false;
 	bool bAbilitySmokeReadyLogged = false;
 	bool bAbilitySmokeComplete = false;
+	bool bFourClientSmokeEnabled = false;
 	bool bDeathSmokeEnabled = false;
 	bool bDeathSmokeTriggered = false;
 	bool bDeathSmokeObserved = false;
 	bool bDeathSmokeWispObserved = false;
 	bool bDeathSmokeHealRequested = false;
+	bool bWispRulesSmokeEnabled = false;
 	bool bHitSmokeEnabled = false;
 	bool bHitSmokePrepared = false;
 	bool bHitSmokeFired = false;
 	bool bHitSmokeReleased = false;
 	bool bHitSmokeReported = false;
+	bool bOutcomeSmokeEnabled = false;
+	bool bOutcomeSmokeStagePrepared = false;
+	bool bOutcomeSmokeStageConfirmed = false;
+	bool bOutcomeSmokeStageActivated = false;
+	bool bOutcomeSmokeInputReleased = false;
+	bool bOutcomeSmokeRepressed = false;
+	bool bOutcomeSmokeFollowupActivated = false;
+	bool bOutcomeSmokeServerSampling = false;
 	int32 AbilitySmokeIndex = 0;
 	int32 AbilitySmokeServerIndex = 0;
 	int32 AbilitySmokeHunterID = 0;
@@ -542,10 +583,38 @@ private:
 	float AbilitySmokeActionDelay = 0.0f;
 	float AbilitySmokeAimAccumulator = 0.0f;
 	float AbilitySmokeLobbyRetry = 0.0f;
+	float AbilitySmokeFullLobbyElapsed = 0.0f;
 	float DeathSmokeTriggerDelay = 0.0f;
 	float HitSmokeElapsed = 0.0f;
 	float HitSmokeAimAccumulator = 0.0f;
+	int32 OutcomeSmokeStage = 0;
+	int32 OutcomeSmokeServerStage = INDEX_NONE;
+	float OutcomeSmokeStageElapsed = 0.0f;
+	float OutcomeSmokeInitialTargetHealth = 0.0f;
+	float OutcomeSmokeMinTargetHealth = 0.0f;
+	float OutcomeSmokeMaxTargetHealth = 0.0f;
+	float OutcomeSmokeMaxSourceDisplacement = 0.0f;
+	float OutcomeSmokeMaxTargetDisplacement = 0.0f;
+	int32 OutcomeSmokeSourceStateMask = 0;
+	int32 OutcomeSmokeTargetStateMask = 0;
+	int32 OutcomeSmokeOwnedActorBaseline = 0;
+	int32 OutcomeSmokeOwnedActorPeak = 0;
+	FVector OutcomeSmokeSourceStart = FVector::ZeroVector;
+	FVector OutcomeSmokeTargetStart = FVector::ZeroVector;
+	TWeakObjectPtr<ABreachbornePlayerController> OutcomeSmokeTargetController;
+	TWeakObjectPtr<ABreachbornePlayerController> WispRulesVictimController;
+	TWeakObjectPtr<ABBWispPawn> WispRulesWisp;
+	TWeakObjectPtr<ABBAllyBot> WispRulesAllyBot;
+	int32 WispRulesSmokeStage = INDEX_NONE;
+	int32 WispRulesSmokePassed = 0;
+	float WispRulesSmokeStageElapsed = 0.0f;
+	float WispRulesSmokeStartHP = 0.0f;
+	float WispRulesSmokeStartRez = 0.0f;
+	float WispRulesNaturalHPDrain = 0.0f;
+	bool bWispRulesElunaRActivationRequested = false;
 	FTimerHandle DeathSmokeHealTimerHandle;
+	FTimerHandle OutcomeSmokeSampleTimerHandle;
+	FTimerHandle WispRulesSmokeTimerHandle;
 	EMatchPhase AbilitySmokeLastPhase = EMatchPhase::Ended;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|UI|RangeIndicator")

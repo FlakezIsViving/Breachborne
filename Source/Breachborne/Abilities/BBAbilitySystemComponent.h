@@ -26,6 +26,10 @@ public:
 	 */
 	bool TryActivateAbilityByInputTag(const FGameplayTag& InputTag);
 
+	/** Route an active ability's second press to its authoritative instance. */
+	UFUNCTION(Server, Reliable)
+	void ServerInputTagPressed(FGameplayTag InputTag);
+
 	/**
 	 * Notify active abilities that the input associated with this tag was released.
 	 * Used for held abilities (e.g., LMB auto-fire).
@@ -36,4 +40,7 @@ public:
 	 * Cancel any active ability matching this input tag.
 	 */
 	void CancelAbilityByInputTag(const FGameplayTag& InputTag);
+
+	/** Clear match-scoped effects, state/cooldown tags, and pressed input on this persistent ASC. */
+	void ResetForNewMatch();
 };

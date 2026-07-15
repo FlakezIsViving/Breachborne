@@ -114,6 +114,9 @@ public:
 
 	void BeginGrapplePull(AActor* TargetActor, const FVector& TargetLocation, float InitialSpeed, float MaxSpeed, float StopDistance, float MaxPullDuration, float PullTickInterval);
 
+	/** Stop character-owned movement/pull state before death, respawn, or match reset. Server only. */
+	void ResetTransientCombatState();
+
 protected:
 	virtual void BeginPlay() override;
 

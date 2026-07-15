@@ -63,7 +63,6 @@ void UGA_Hudson_R_SalvageHook::ActivateAbility(const FGameplayAbilitySpecHandle 
 
 	if (!Hunter->HasAuthority())
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 

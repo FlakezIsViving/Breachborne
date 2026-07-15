@@ -53,6 +53,10 @@ bool UBBAbilitySystemComponent::TryActivateAbilityByInputTag(const FGameplayTag&
 					// Ability is already active — route as InputPressed (e.g., Q re-press to toss)
 					AbilitySpecInputPressed(const_cast<FGameplayAbilitySpec&>(Spec));
 					InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+					if (!IsOwnerActorAuthoritative())
+					{
+						ServerInputTagPressed(InputTag);
+					}
 					UE_LOG(LogBreachborne, Verbose, TEXT("TryActivateAbilityByInputTag: %s -> %s (Result: INPUT_PRESSED)"),
 						*InputTag.ToString(), *BBAbility->GetClass()->GetName());
 					return true;
@@ -74,6 +78,26 @@ bool UBBAbilitySystemComponent::TryActivateAbilityByInputTag(const FGameplayTag&
 	UE_LOG(LogBreachborne, Warning, TEXT("TryActivateAbilityByInputTag: No activatable ability succeeded for tag %s (FoundMatching: %d, Activatable: %d)"),
 		*InputTag.ToString(), bFoundMatchingAbility ? 1 : 0, GetActivatableAbilities().Num());
 	return false;
+}
+
+void UBBAbilitySystemComponent::ServerInputTagPressed_Implementation(FGameplayTag InputTag)
+{
+	if (!InputTag.IsValid())
+	{
+		return;
+	}
+
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		const UBBGameplayAbility* BBAbility = Cast<UBBGameplayAbility>(Spec.Ability);
+		if (Spec.IsActive() && BBAbility
+			&& (Spec.DynamicAbilityTags.HasTagExact(InputTag)
+				|| BBAbility->GetAbilityInputTag().MatchesTagExact(InputTag)))
+		{
+			AbilitySpecInputPressed(Spec);
+			return;
+		}
+	}
 }
 
 void UBBAbilitySystemComponent::InputTagReleased(const FGameplayTag& InputTag)
@@ -127,6 +151,30 @@ void UBBAbilitySystemComponent::CancelAbilityByInputTag(const FGameplayTag& Inpu
 					CancelAbilityHandle(Spec.Handle);
 				}
 			}
+		}
+	}
+}
+
+void UBBAbilitySystemComponent::ResetForNewMatch()
+{
+	CancelAllAbilities();
+	RemoveActiveEffects(FGameplayEffectQuery());
+
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		Spec.InputPressed = false;
+	}
+
+	const FGameplayTag StateRoot = FGameplayTag::RequestGameplayTag(FName(TEXT("State")), false);
+	const FGameplayTag CooldownRoot = FGameplayTag::RequestGameplayTag(FName(TEXT("Cooldown")), false);
+	FGameplayTagContainer OwnedTags;
+	GetOwnedGameplayTags(OwnedTags);
+	for (const FGameplayTag& Tag : OwnedTags)
+	{
+		if ((StateRoot.IsValid() && Tag.MatchesTag(StateRoot))
+			|| (CooldownRoot.IsValid() && Tag.MatchesTag(CooldownRoot)))
+		{
+			SetLooseGameplayTagCount(Tag, 0);
 		}
 	}
 }

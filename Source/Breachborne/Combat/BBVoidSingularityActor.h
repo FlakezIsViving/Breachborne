@@ -19,6 +19,14 @@ public:
 
 	void InitSingularity(UAbilitySystemComponent* InSourceASC, AActor* InInstigatorActor, TSubclassOf<UGameplayEffect> InStunGE,
 		int32 InTeamID, float InRadius, float InWarningDelay, float InActiveDuration, bool bEmpowered);
+	float GetEffectiveRadius() const { return Radius; }
+	bool IsVortexActive() const { return bActive; }
+
+#if WITH_AUTOMATION_TESTS
+	bool AreLifecycleTimersScheduledForAutomation() const;
+	void ActivateForAutomation();
+	void FinishForAutomation();
+#endif
 
 protected:
 	virtual void BeginPlay() override;

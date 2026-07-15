@@ -10,7 +10,7 @@ Use `docs/plans/july-31-playtest-status.md` for daily progress, failures, and ev
 Do not silently change a locked decision in this document. Record the proposed change,
 reason, cost, and deadline impact in the status tracker first.
 
-Last audited: July 12, 2026, Europe/Bucharest.
+Last audited: July 15, 2026, Europe/Bucharest.
 
 ## Objective
 
@@ -59,6 +59,35 @@ Success means:
 - No animation expansion, progression redesign, major UI overhaul, final audio pass,
   anti-cheat project, or unrelated refactor before the playtest.
 
+### Optional LUDUS AI authoring route
+
+- LUDUS AI 1.0 early access is an optional post-technical-gate tool for shared skill animations and
+  authored ability VFX inside Unreal Editor. It is an accelerator experiment, not a July 31
+  dependency and does not move the July 23 feature/VFX freeze.
+- The currently installed project plugin identifies itself as beta `0.13.2` (`Version 27`) in
+  `Plugins/LudusAI/LudusAI.uplugin`, despite access to the 1.0 program. Confirm or install the
+  intended 1.0 build before evaluating output so results are attributed to the correct version.
+- The user operates the LUDUS editor window. Codex supplies concise, ability-specific prompts,
+  parameter contracts, timing/radius references, export/import instructions, and review feedback.
+  Direct prompt injection is allowed only if the installed version exposes a documented API,
+  Unreal Python/Blueprint hook, command interface, or another repeatable integration; do not rely
+  on fragile focus-based keystroke automation during production work.
+- Ludus documents a Codex-compatible MCP endpoint at `https://mcp.ludusengine.com/mcp`, but states
+  that MCP provides knowledge search only and does not have the Unreal plugin's project context or
+  editor actions. It may help Codex query Ludus guidance after account authentication; it does not
+  replace the user-operated plugin workflow for generating or editing assets.
+- Generated animation remains optional. Shared animations and hunter recolors are still the
+  accepted baseline, and VFX must carry gameplay readability even when an animation is reused.
+- Generated VFX must use the existing GameplayCue/visual-set integration and preserve authoritative
+  gameplay timing, direction, radius, hit result, lifetime, cleanup, and owner/observer agreement.
+  Validate every accepted result at 1080p Low and Medium and against the applicable manual row.
+- Keep source prompts and relevant generation settings with the asset handoff so another session
+  can reproduce or revise the output. Generated assets are not accepted merely because they import.
+- If LUDUS output is unusable, unstable, too expensive, or cannot meet the network/readability
+  contract quickly, fall back immediately to the reusable Niagara masters and existing primitive
+  effects. Licensed Marketplace/library assets or other generation tools may be evaluated next;
+  record provenance and license before integrating third-party content.
+
 ## Current evidence and risks
 
 ### What is working
@@ -74,21 +103,32 @@ Success means:
 - The editor settings currently use a two-player listen-server PIE session on port 17777.
 - A July 12 listen-server log proves two clients connected, selected Crysta and Void,
   readied, entered countdown, and spawned into gameplay.
-- The latest C++ build after the Crysta/Void fixes succeeded.
-- `Breachborne.PureLogic` ran July 12: 44 passed, 0 failed.
+- The latest Editor, Game, and source-engine Server builds after the Crysta/Void fixes succeeded.
+- July 15 automation is green: `Breachborne.PureLogic` 44/44 and `Breachborne.GameSystems` 52/52,
+  including persistent PlayerState-ASC reset, Eluna Q carrier rules, and server-owned Eluna R
+  completion between matches.
 
 ### Remaining risks
 
 - An opt-in packaged multiplayer smoke now proves lobby flow, hunter selection/grants, initial
   LMB/RMB/Shift/Q/R activations, held-input releases, Q recasts, and cleanup for IDs 1-6. It does
-  not prove non-LMB damage/CC outcomes, visual replication/readability, or hitbox alignment. A
-  separate packaged gate proves authoritative LMB health loss for all six hunters.
-- The current packaged candidate is fresh and passes normal plus 100 ms/2% loss activation,
-  six-hunter LMB damage, and lethal GAS damage through healed wisp revive/re-possession gates.
-  Four-client transport also passes 4/4. Interactive 2v2 team/combat, non-LMB damage/CC,
-  persistent-ability death cleanup, second-machine, and visual evidence remains outstanding. A
-  reconnect attempt reaches the server, but the replacement is a spectator instead of regaining
-  the disconnected hunter.
+  not prove visual replication/readability or hitbox alignment. Separate packaged gates prove
+  authoritative LMB health loss for all six hunters and 24/24 hunter-specific RMB/Shift/Q/R
+  contracts covering damage, healing, movement, CC/state, marks, spawned actors, pulls, swaps,
+  and recast detonation. A four-client packaged gate also proves exact team/slot/hunter mapping,
+  four-player match start, 20/20 primary activations, 8/8 releases, and four completed lifecycles.
+- The July 15 01:26 packaged candidate passes the July 15 01:42 freshness revalidation and passes normal plus 100 ms/2% loss activation,
+  six-hunter LMB damage, all 24 non-LMB outcome contracts both normally and under 100 ms/2% loss,
+  lethal GAS damage through healed wisp revive/re-possession gates, and an injected stale-state
+  match-reset regression with clean resets 2/2 plus Ghost post-reset activations 5/5.
+  Central death cleanup now resets character-owned movement/pulls, destroys hunter-owned ability
+  actors, clears transient combat states, and restarts the server passive after revive; Ghost and
+  Kingpin victim paths pass packaged regression. Four-client transport passes 4/4, and a separate
+  four-client gameplay gate passes exact 2v2 lobby/selection/mapping/spawn/lifecycle 4/4.
+  Interactive 2v2 movement/combat/readability, ability-specific visual cleanup, second-machine, and visual evidence
+  remain outstanding. Playing-phase reconnect now uses a stable direct-IP
+  token persisted in the client's user config and a 60-second server snapshot; a killed client process passes packaged restoration to
+  the same alive hunter, team, slot, transform, health, shield, and inventory.
 - The green hunter/shared-VFX baseline and full-roster smoke harness have named checkpoints; keep
   subsequent green network batches checkpointed before broad manual testing.
 - The eight reusable Niagara master assets remain editor work. Compiled primitive fallbacks
@@ -98,6 +138,10 @@ Success means:
   the direct-IP test.
 - Wisp bars, range indicators, Hudson sustained fire, and every hunter's owner/observer
   readability still require the manual acceptance matrix.
+- Wisp gameplay priority now has deterministic source and packaged coverage: natural decay,
+  ally freeze/fill, enemy stomp, ally/enemy contest, healing acceleration, healing overridden by
+  contest, carried protection, Eluna pickup, CC drop, and full-channel Eluna R revive pass 10/10.
+  This does not prove bar visibility.
 
 ## Relevant architecture
 
@@ -394,8 +438,8 @@ An ability is done only when:
 
 A hunter is done only when every enabled ability passes and the result is recorded in the
 status tracker. Compiling or looking correct in standalone PIE is not sufficient.
-Use `docs/plans/july-31-manual-vfx-acceptance.md` for the focused two-client execution order
-and hunter-specific acceptance checks.
+Use `docs/plans/july-31-manual-vfx-acceptance.md` for the recorded two- or three-client execution
+order, stable row IDs, and hunter-specific acceptance checks.
 
 ## Test and build commands
 
@@ -422,11 +466,12 @@ network version hashes and is rejected as `OutdatedClient`.
 ### Automated tests
 
 Run the suites separately. Combining them with `Quit` previously caused only the first
-suite to be observed.
+suite to be observed. After source-toolchain packaging, use the matching source editor because
+UAT rebuilds editor plugin binaries with that engine's build ID.
 
 ```powershell
-& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Unreal Projects\Breachborne\Breachborne.uproject' -unattended -nop4 -nullrhi -nosound '-ExecCmds=Automation RunTests Breachborne.PureLogic; Quit' -TestExit='Automation Test Queue Empty' -log
-& 'C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Unreal Projects\Breachborne\Breachborne.uproject' -unattended -nop4 -nullrhi -nosound '-ExecCmds=Automation RunTests Breachborne.GameSystems; Quit' -TestExit='Automation Test Queue Empty' -log
+& 'C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Unreal Projects\Breachborne\Breachborne.uproject' -unattended -nop4 -nullrhi -nosound '-ExecCmds=Automation RunTests Breachborne.PureLogic; Quit' -TestExit='Automation Test Queue Empty' -log
+& 'C:\UnrealEngine-5.7.4-release\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' 'C:\Unreal Projects\Breachborne\Breachborne.uproject' -unattended -nop4 -nullrhi -nosound '-ExecCmds=Automation RunTests Breachborne.GameSystems; Quit' -TestExit='Automation Test Queue Empty' -log
 ```
 
 Inspect `Saved/Logs/Breachborne.log` after each suite. A process exit code alone is not
@@ -467,8 +512,20 @@ Then validate the packaged artifacts themselves:
 
 ```powershell
 .\Scripts\Playtest\TestPackagedHeadlessHandshake.ps1 -ClientCount 2
+.\Scripts\Playtest\TestPackagedWispRulesSmoke.ps1
+.\Scripts\Playtest\TestPackagedFullRosterOutcomeSmoke.ps1
+.\Scripts\Playtest\TestPackagedOutcomeNetworkImpairment.ps1
 .\Scripts\Playtest\VerifyPlaytestCandidate.ps1
 ```
+
+To refresh the complete post-package evidence set without manually coordinating ports or allowing
+the two death directions to collide, run:
+
+```powershell
+.\Scripts\Playtest\RefreshPackagedCandidateEvidence.ps1
+```
+
+This is intentionally sequential. `-VerifyOnly` reruns only the freshness-aware verifier.
 
 ### Network emulation
 
@@ -479,8 +536,10 @@ Automated packaged activation gate:
 ```
 
 Current evidence passes hunters 1-6 across three matches with server and both clients confirming
-the configured values in their logs. This does not replace manual hit, damage, persistent-zone,
-cleanup, or visual-agreement testing.
+the configured values in their logs. Authoritative RMB/Shift/Q/R outcomes pass 24/24 both normally
+and in six impaired matches, with all 18 impaired process logs confirming the settings. This does
+not replace manual visual hitbox agreement, persistent-zone presentation, or ability-specific
+visual cleanup under impairment.
 
 In each relevant client console:
 
@@ -552,8 +611,17 @@ Any agent taking a task must:
 7. Update the status tracker with facts, commands, evidence, and remaining failures.
 8. Never mark a gate green based only on static analysis.
 
-The next agent should start with the July 12 red baseline, specifically the crashing
-GameSystems test, before adding any Niagara content.
+Automated Crysta/Void evidence has been reconciled in the hunter plans. The July 15 01:26 package
+remains the latest complete automated candidate-verifier pass; source passes PureLogic 44/44 and
+GameSystems 53/53. The focused 03:07 package passes Eluna outcomes 4/4 and expanded wisp rules 12/12,
+but has not rerun the complete six-hunter normal/impaired matrix.
+The July 15 three-client Ghost/Eluna sessions at `Saved/Logs/InteractivePlaytest/20260715-001027`
+and `20260715-014500` record the manual findings. The active gate is a three-item Eluna retest: RMB
+latch stability, Shift wisp refund, and Q-started resurrection persistence/enemy cancellation.
+Do not infer a visual PASS from the automated candidate: total presentation acceptance is still
+8/55 (hunter/cleanup VFX 6/41, range indicators 0/9, wisp UI 2/5), and Ghost/Eluna is 6/12.
+After Ghost/Eluna, continue the remaining presentation checks and then the separate
+second-machine direct-IP check.
 
 ## Ownership split
 

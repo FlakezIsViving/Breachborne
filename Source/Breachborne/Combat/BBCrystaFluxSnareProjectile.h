@@ -25,6 +25,8 @@ public:
 		TSubclassOf<UGameplayEffect> InGroundedGE, int32 InTeamID, const FVector& InInitialDirection);
 
 	void StartReturn();
+	bool IsReturning() const { return bReturning; }
+	FVector GetCurrentTravelDirection() const { return CurrentDirection; }
 
 protected:
 	virtual void BeginPlay() override;

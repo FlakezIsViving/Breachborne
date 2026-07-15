@@ -14,6 +14,8 @@ class BREACHBORNE_API UGA_Crysta_LMB : public UBBGameplayAbility
 
 public:
 	UGA_Crysta_LMB();
+	static void CalculateShotSpawnLocations(const FVector& Origin, const FVector& Direction, bool bEmpowered,
+		float ForwardOffset, float ShotSpacing, TArray<FVector>& OutLocations);
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -47,7 +49,7 @@ protected:
 
 private:
 	void FireShot();
-	void SpawnProjectile(const FVector& Direction, bool bEmpoweredShot, float ForwardOffset);
+	void SpawnProjectile(const FVector& Direction, bool bEmpoweredShot, const FVector& SpawnLocation);
 
 	FTimerHandle FireTimerHandle;
 };

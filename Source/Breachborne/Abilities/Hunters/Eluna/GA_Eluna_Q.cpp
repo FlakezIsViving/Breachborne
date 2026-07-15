@@ -46,6 +46,11 @@ void UGA_Eluna_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 
 void UGA_Eluna_Q::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
+	const AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		return;
+	}
 
 	ABBMoonlightZone* Zone = ActiveZone.Get();
 	if (Zone && Zone->IsValidLowLevel() && !Zone->IsPendingKillPending())

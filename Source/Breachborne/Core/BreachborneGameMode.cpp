@@ -59,12 +59,31 @@
 #include "Breachborne/Breachborne.h"
 #include "Engine/Blueprint.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
 namespace
 {
+	FString NormalizeReconnectKey(const FString& RawKey)
+	{
+		FString Key = RawKey.TrimStartAndEnd().Left(64).ToLower();
+		if (Key.IsEmpty())
+		{
+			return FString();
+		}
+
+		for (const TCHAR Character : Key)
+		{
+			if (!FChar::IsAlnum(Character) && Character != TEXT('-') && Character != TEXT('_'))
+			{
+				return FString();
+			}
+		}
+		return Key;
+	}
+
 	bool IsHudsonVisualSetReadyForContentDefinition()
 	{
 		return FPaths::FileExists(FPaths::ProjectContentDir() / TEXT("Hunters/Hudson/VIS_Hudson.uasset"));
@@ -84,6 +103,111 @@ namespace
 		}
 
 		return nullptr;
+	}
+
+	bool IsServerPassiveSpec(const FGameplayAbilitySpec& Spec)
+	{
+		const UBBGameplayAbility* Ability = Cast<UBBGameplayAbility>(Spec.Ability);
+		return Ability
+			&& Ability->GetBBNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::ServerOnly
+			&& !Ability->GetAbilityInputTag().IsValid();
+	}
+
+	int32 ActivateServerPassives(UAbilitySystemComponent* ASC)
+	{
+		if (!ASC)
+		{
+			return 0;
+		}
+
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (IsServerPassiveSpec(Spec) && !Spec.IsActive())
+			{
+				ASC->TryActivateAbility(Spec.Handle);
+			}
+		}
+
+		int32 ActivePassiveCount = 0;
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			ActivePassiveCount += IsServerPassiveSpec(Spec) && Spec.IsActive() ? 1 : 0;
+		}
+		return ActivePassiveCount;
+	}
+
+	void CleanupHunterDeathState(AHunterCharacter* Hunter, UAbilitySystemComponent* ASC)
+	{
+		if (!Hunter || !ASC || !Hunter->HasAuthority())
+		{
+			return;
+		}
+
+		Hunter->ResetTransientCombatState();
+
+		FGameplayTagContainer EffectStateTags;
+		EffectStateTags.AddTag(BBGameplayTags::State_Stunned);
+		EffectStateTags.AddTag(BBGameplayTags::State_Dazed);
+		EffectStateTags.AddTag(BBGameplayTags::State_Hooked);
+		EffectStateTags.AddTag(BBGameplayTags::State_Vulnerable);
+		EffectStateTags.AddTag(BBGameplayTags::State_AntiHeal);
+		EffectStateTags.AddTag(BBGameplayTags::State_Slowed);
+		EffectStateTags.AddTag(BBGameplayTags::State_Grounded);
+		EffectStateTags.AddTag(BBGameplayTags::State_Hudson_Hooked);
+		EffectStateTags.AddTag(BBGameplayTags::State_Crysta_Reverberation);
+		EffectStateTags.AddTag(BBGameplayTags::State_Void_SingularityPulled);
+		const int32 RemovedEffects = ASC->RemoveActiveEffects(
+			FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(EffectStateTags));
+
+		const FGameplayTag LooseStateTags[] = {
+			BBGameplayTags::State_Stunned,
+			BBGameplayTags::State_Spiked,
+			BBGameplayTags::State_Gliding,
+			BBGameplayTags::State_Mantling,
+			BBGameplayTags::State_Charging,
+			BBGameplayTags::State_Invulnerable,
+			BBGameplayTags::State_Dazed,
+			BBGameplayTags::State_Hooked,
+			BBGameplayTags::State_Executing,
+			BBGameplayTags::State_Vulnerable,
+			BBGameplayTags::State_AntiHeal,
+			BBGameplayTags::State_Slowed,
+			BBGameplayTags::State_Grounded,
+			BBGameplayTags::State_Hudson_Firing,
+			BBGameplayTags::State_Hudson_Spinning,
+			BBGameplayTags::State_Hudson_SpunUp,
+			BBGameplayTags::State_Hudson_Hovering,
+			BBGameplayTags::State_Hudson_Hooked,
+			BBGameplayTags::State_Crysta_Reverberation,
+			BBGameplayTags::State_Crysta_EmpoweredLMB,
+			BBGameplayTags::State_Void_Empowered,
+			BBGameplayTags::State_Void_Swapping,
+			BBGameplayTags::State_Void_SingularityPulled
+		};
+		for (const FGameplayTag& StateTag : LooseStateTags)
+		{
+			ASC->SetLooseGameplayTagCount(StateTag, 0);
+		}
+
+		TArray<AActor*> OwnedAbilityActors;
+		for (TActorIterator<AActor> It(Hunter->GetWorld()); It; ++It)
+		{
+			AActor* Actor = *It;
+			if (Actor && Actor != Hunter && Actor->GetOwner() == Hunter && !Actor->IsActorBeingDestroyed())
+			{
+				OwnedAbilityActors.Add(Actor);
+			}
+		}
+
+		int32 DestroyedActorCount = 0;
+		for (AActor* Actor : OwnedAbilityActors)
+		{
+			DestroyedActorCount += IsValid(Actor) && Actor->Destroy() ? 1 : 0;
+		}
+
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_DEATH_CLEANUP|hunter=%s actors=%d effects=%d"),
+			*GetNameSafe(Hunter), DestroyedActorCount, RemovedEffects);
 	}
 }
 
@@ -122,8 +246,34 @@ void ABreachborneGameMode::InitGameState()
 	if (UWorld* World = GetWorld())
 	{
 		StormManager = World->SpawnActor<ABBStormManager>();
+		if (StormManager && BBGameState && BBGameState->GetMatchPhase() == EMatchPhase::WaitingForPlayers)
+		{
+			// Frontend matches arm the storm only after the owner starts the match.
+			StormManager->SetStormEnabled(false);
+		}
 		UE_LOG(LogBreachborne, Log, TEXT("GameMode: Spawned StormManager"));
 	}
+}
+
+FString ABreachborneGameMode::InitNewPlayer(APlayerController* NewPlayerController,
+	const FUniqueNetIdRepl& UniqueId, const FString& Options, const FString& Portal)
+{
+	const FString ErrorMessage = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
+	if (!NewPlayerController)
+	{
+		return ErrorMessage;
+	}
+
+	const FString ReconnectKey = NormalizeReconnectKey(
+		UGameplayStatics::ParseOption(Options, TEXT("BBReconnectToken")));
+	if (!ReconnectKey.IsEmpty())
+	{
+		PlayerReconnectKeys.Add(NewPlayerController, ReconnectKey);
+		UE_LOG(LogBreachborne, Log, TEXT("BB_RECONNECT|SERVER|Identity pc=%s key_hash=%08x"),
+			*GetNameSafe(NewPlayerController), GetTypeHash(ReconnectKey));
+	}
+
+	return ErrorMessage;
 }
 
 void ABreachborneGameMode::PostLogin(APlayerController* NewPlayer)
@@ -140,6 +290,12 @@ void ABreachborneGameMode::PostLogin(APlayerController* NewPlayer)
 	NextPlayerIndex++;
 
 	ABreachbornePlayerState* BBPS = NewPlayer->GetPlayerState<ABreachbornePlayerState>();
+	const EMatchPhase CurrentPhase = BBGameState ? BBGameState->GetMatchPhase() : EMatchPhase::WaitingForPlayers;
+	if (!bQuickPlay && CurrentPhase == EMatchPhase::Playing && TryRestoreDisconnectedPlayer(NewPlayer, BBPS))
+	{
+		return;
+	}
+
 	if (BBPS)
 	{
 		BBPS->SetTeamID(AssignedTeamID);
@@ -153,7 +309,6 @@ void ABreachborneGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (!bQuickPlay)
 	{
-		const EMatchPhase CurrentPhase = BBGameState ? BBGameState->GetMatchPhase() : EMatchPhase::WaitingForPlayers;
 		if (CurrentPhase == EMatchPhase::WaitingForPlayers)
 		{
 			AssignLobbyOwnerIfNeeded();
@@ -238,15 +393,37 @@ void ABreachborneGameMode::Logout(AController* Exiting)
 			}
 			DownedHunters.Remove(PlayerKey);
 		}
+		PlayerReconnectKeys.Remove(Cast<APlayerController>(Exiting));
 	}
 
 	Super::Logout(Exiting);
 	AssignLobbyOwnerIfNeeded();
 }
 
+void ABreachborneGameMode::HandlePlayerDisconnect(APlayerController* ExitingPlayer)
+{
+	if (!ExitingPlayer || !ExitingPlayer->HasAuthority())
+	{
+		return;
+	}
+
+	ABreachbornePlayerState* PlayerState = ExitingPlayer->GetPlayerState<ABreachbornePlayerState>();
+	RecordDisconnectedPlayer(ExitingPlayer, PlayerState);
+
+	if (AHunterCharacter* Hunter = Cast<AHunterCharacter>(ExitingPlayer->GetPawn()))
+	{
+		if (UAbilitySystemComponent* ASC = PlayerState ? PlayerState->GetAbilitySystemComponent() : nullptr)
+		{
+			ASC->CancelAllAbilities();
+			CleanupHunterDeathState(Hunter, ASC);
+		}
+	}
+}
+
 void ABreachborneGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	ExpireDisconnectedPlayers();
 
 	if (!BBGameState)
 	{
@@ -270,6 +447,13 @@ void ABreachborneGameMode::Tick(float DeltaSeconds)
 	}
 	else if (BBGameState->GetMatchPhase() == EMatchPhase::PostMatch)
 	{
+		// The packaged wisp matrix owns its process lifetime and needs more than the
+		// normal post-match window to complete its final channelled-resurrection case.
+		if (FParse::Param(FCommandLine::Get(), TEXT("BBWispRulesSmoke")))
+		{
+			return;
+		}
+
 		PostMatchRemaining = FMath::Max(0.0f, PostMatchRemaining - DeltaSeconds);
 		BBGameState->SetPhaseTimeRemaining(PostMatchRemaining);
 		if (PostMatchRemaining <= 0.0f)
@@ -505,6 +689,22 @@ void ABreachborneGameMode::RequestSetStormShiftPreset(APlayerController* PlayerC
 		*Settings.StormShiftPreset.ToString());
 }
 
+void ABreachborneGameMode::RequestSetStormEnabled(APlayerController* PlayerController, bool bEnabled)
+{
+	if (!BBGameState || !IsLobbyOwner(PlayerController) || BBGameState->GetMatchPhase() != EMatchPhase::WaitingForPlayers)
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("BB_LOBBY|SERVER|SetStormEnabledRejected pc=%s enabled=%d"),
+			*GetNameSafe(PlayerController), bEnabled ? 1 : 0);
+		return;
+	}
+
+	FBBLobbySettings Settings = BBGameState->GetLobbySettings();
+	Settings.bStormEnabled = bEnabled;
+	BBGameState->SetLobbySettings(Settings);
+	UE_LOG(LogBreachborne, Warning, TEXT("BB_LOBBY|SERVER|SetStormEnabled owner=%s enabled=%d"),
+		*GetNameSafe(PlayerController), Settings.bStormEnabled ? 1 : 0);
+}
+
 void ABreachborneGameMode::RequestStartLobbyMatch(APlayerController* PlayerController)
 {
 	FString Reason;
@@ -592,6 +792,7 @@ void ABreachborneGameMode::InitializeLobbyState()
 	LobbySettings.MaxTeams = FMath::Max(1, FMath::CeilToInt(static_cast<float>(LobbySettings.MaxPlayers) / static_cast<float>(LobbySettings.TeamSize)));
 	LobbySettings.Description = TEXT("Custom Breach lobby");
 	LobbySettings.StormShiftPreset = TEXT("Default");
+	LobbySettings.bStormEnabled = true;
 	LobbySettings.bAllowSpectators = true;
 
 	SquadSize = LobbySettings.TeamSize;
@@ -1097,8 +1298,15 @@ void ABreachborneGameMode::StartGameplayMatch()
 
 	if (StormManager)
 	{
-		StormManager->ResetStorm();
-		StormManager->StartStorm();
+		const bool bStormEnabled = BBGameState->GetLobbySettings().bStormEnabled;
+		StormManager->SetStormEnabled(bStormEnabled);
+		if (bStormEnabled)
+		{
+			StormManager->ResetStorm();
+			StormManager->StartStorm();
+		}
+		UE_LOG(LogBreachborne, Warning, TEXT("BB_STORM_SETTING|SERVER|MatchStart enabled=%d"),
+			bStormEnabled ? 1 : 0);
 	}
 
 	// Clear stale downed-state actors before spawning the new match's hunters.
@@ -1187,6 +1395,7 @@ void ABreachborneGameMode::ResetToHunterSelect()
 		return;
 	}
 
+	DisconnectedPlayers.Reset();
 	BBGameState->SetMatchPhase(EMatchPhase::Resetting);
 	BBGameState->InitTeams(MaxTeams);
 	BBGameState->ResetMatchClock();
@@ -1194,7 +1403,7 @@ void ABreachborneGameMode::ResetToHunterSelect()
 
 	if (StormManager)
 	{
-		StormManager->ResetStorm();
+		StormManager->SetStormEnabled(false);
 	}
 
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
@@ -1295,6 +1504,29 @@ void ABreachborneGameMode::SpawnPlayerForMatch(APlayerController* PlayerControll
 		return;
 	}
 
+	if (UBBAbilitySystemComponent* ASC = PS->GetBBAbilitySystemComponent())
+	{
+		if (FParse::Param(FCommandLine::Get(), TEXT("BBMatchResetSmoke")))
+		{
+			ASC->AddLooseGameplayTag(BBGameplayTags::State_Dead);
+			ASC->AddLooseGameplayTag(BBGameplayTags::State_Wisp);
+			if (PS->GetHunterID() == 1)
+			{
+				ASC->AddLooseGameplayTag(BBGameplayTags::Cooldown_Hunter_Ghost_Shift);
+			}
+			UE_LOG(LogBreachborne, Warning,
+				TEXT("BB_MATCH_RESET_SMOKE|SERVER|Injected player=%s hunter=%d dead=1 wisp=1 ghost_shift_cd=%d"),
+				*PS->GetPlayerName(), PS->GetHunterID(), PS->GetHunterID() == 1 ? 1 : 0);
+		}
+		const bool bHadDeadState = ASC->HasMatchingGameplayTag(BBGameplayTags::State_Dead);
+		const bool bHadWispState = ASC->HasMatchingGameplayTag(BBGameplayTags::State_Wisp);
+		ASC->ResetForNewMatch();
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_MATCH_RESET|SERVER|AbilitySystem player=%s dead_before=%d wisp_before=%d dead_after=%d wisp_after=%d"),
+			*PS->GetPlayerName(), bHadDeadState ? 1 : 0, bHadWispState ? 1 : 0,
+			ASC->HasMatchingGameplayTag(BBGameplayTags::State_Dead) ? 1 : 0,
+			ASC->HasMatchingGameplayTag(BBGameplayTags::State_Wisp) ? 1 : 0);
+	}
 	ClearHunterAbilities(PlayerController);
 	const FTransform DropTransform = GetDropTransformForPlayer(PS);
 	UE_LOG(LogBreachborne, Warning, TEXT("BB_NETFLOW|SERVER|SpawnPlayerForMatch pc=%s player=%s team=%d hunter=%d loc=%s"),
@@ -1453,17 +1685,12 @@ void ABreachborneGameMode::GrantHunterAbilities(APlayerController* PlayerControl
 			FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, BBPS);
 			FGameplayAbilitySpecHandle GrantedHandle = ASC->GiveAbility(Spec);
 
-			// Auto-activate ServerOnly abilities (passives) immediately after grant
-			const UBBGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
-			if (AbilityCDO && AbilityCDO->GetBBNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::ServerOnly
-				&& !AbilityCDO->GetAbilityInputTag().IsValid())
-			{
-				ASC->TryActivateAbility(GrantedHandle);
-			}
-
 			UE_LOG(LogBreachborne, Log, TEXT("Granted ability %s to %s"), *AbilityClass->GetName(), *BBPS->GetPlayerName());
 		}
 	}
+	const int32 ActivePassiveCount = ActivateServerPassives(ASC);
+	UE_LOG(LogBreachborne, Log, TEXT("Hunter passives active after grant: player=%s count=%d"),
+		*BBPS->GetPlayerName(), ActivePassiveCount);
 
 	// Bind to HealthSet's OnHealthDepleted for kill tracking
 	if (UBBHealthSet* HealthSet = BBPS->GetHealthSet())
@@ -1532,6 +1759,7 @@ void ABreachborneGameMode::OnHunterKilled(UAbilitySystemComponent* VictimASC, UA
 	if (VictimHunter)
 	{
 		VictimASC->CancelAllAbilities();
+		CleanupHunterDeathState(VictimHunter, VictimASC);
 		VictimHunter->SetActorHiddenInGame(true);
 		VictimHunter->SetActorEnableCollision(false);
 		VictimHunter->GetCharacterMovement()->DisableMovement();
@@ -1597,6 +1825,155 @@ void ABreachborneGameMode::OnHunterKilled(UAbilitySystemComponent* VictimASC, UA
 		UE_LOG(LogBreachborne, Warning, TEXT("BB_MATCH|SERVER|WinCheckSkipped aliveTeams=%d matchStartAliveTeams=%d"),
 			BBGameState->GetAliveTeamCount(),
 			MatchStartAliveTeamCount);
+	}
+}
+
+void ABreachborneGameMode::RecordDisconnectedPlayer(AController* Exiting, ABreachbornePlayerState* PlayerState)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(Exiting);
+	const FString* ReconnectKey = PlayerController ? PlayerReconnectKeys.Find(PlayerController) : nullptr;
+	if (!ReconnectKey || ReconnectKey->IsEmpty() || !PlayerState || !PlayerState->GetIsAlive()
+		|| !BBGameState || BBGameState->GetMatchPhase() != EMatchPhase::Playing || !GetWorld())
+	{
+		return;
+	}
+
+	AHunterCharacter* Hunter = Cast<AHunterCharacter>(PlayerController->GetPawn());
+	UBBHealthSet* HealthSet = PlayerState->GetHealthSet();
+	if (!Hunter || !HealthSet || PlayerState->GetTeamID() < 0 || PlayerState->GetLobbySlotIndex() < 0
+		|| !IsHunterSelectable(PlayerState->GetHunterID()))
+	{
+		return;
+	}
+
+	FBBDisconnectedPlayerRecord Record;
+	Record.TeamID = PlayerState->GetTeamID();
+	Record.HunterID = PlayerState->GetHunterID();
+	Record.LobbySlotIndex = PlayerState->GetLobbySlotIndex();
+	Record.Level = PlayerState->GetHunterLevel();
+	Record.XP = PlayerState->GetXP();
+	Record.Kills = PlayerState->GetKills();
+	Record.Transform = Hunter->GetActorTransform();
+	Record.Health = HealthSet->GetHealth();
+	Record.MaxHealth = HealthSet->GetMaxHealth();
+	Record.Shield = HealthSet->GetShield();
+	Record.MaxShield = HealthSet->GetMaxShield();
+	Record.Inventory = PlayerState->GetInventoryData();
+	Record.ExpiresAtWorldSeconds = GetWorld()->GetTimeSeconds() + ReconnectGracePeriodSeconds;
+	DisconnectedPlayers.Add(*ReconnectKey, Record);
+
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_RECONNECT|SERVER|Recorded player=%s key_hash=%08x team=%d slot=%d hunter=%d health=%.1f/%.1f shield=%.1f/%.1f gold=%d shards=%d location=%s grace=%.1f"),
+		*PlayerState->GetPlayerName(), GetTypeHash(*ReconnectKey), Record.TeamID, Record.LobbySlotIndex,
+		Record.HunterID, Record.Health, Record.MaxHealth, Record.Shield, Record.MaxShield,
+		Record.Inventory.Gold, Record.Inventory.UpgradeShards, *Record.Transform.GetLocation().ToCompactString(),
+		ReconnectGracePeriodSeconds);
+}
+
+bool ABreachborneGameMode::TryRestoreDisconnectedPlayer(
+	APlayerController* NewPlayer, ABreachbornePlayerState* PlayerState)
+{
+	const FString* ReconnectKey = NewPlayer ? PlayerReconnectKeys.Find(NewPlayer) : nullptr;
+	if (!ReconnectKey || ReconnectKey->IsEmpty() || !PlayerState || !GetWorld())
+	{
+		return false;
+	}
+
+	FBBDisconnectedPlayerRecord* StoredRecord = DisconnectedPlayers.Find(*ReconnectKey);
+	if (!StoredRecord)
+	{
+		return false;
+	}
+
+	if (StoredRecord->ExpiresAtWorldSeconds <= GetWorld()->GetTimeSeconds())
+	{
+		DisconnectedPlayers.Remove(*ReconnectKey);
+		return false;
+	}
+
+	const FBBDisconnectedPlayerRecord Record = *StoredRecord;
+	DisconnectedPlayers.Remove(*ReconnectKey);
+
+	const bool bLobbySlotRestored = BBGameState
+		&& BBGameState->SetLobbySlot(Record.TeamID, Record.LobbySlotIndex, PlayerState);
+	if (!bLobbySlotRestored)
+	{
+		PlayerState->SetTeamID(Record.TeamID);
+		PlayerState->SetLobbySlotIndex(Record.LobbySlotIndex);
+		PlayerState->SetIsSpectator(false);
+	}
+	PlayerState->SetHunterID(Record.HunterID);
+	PlayerState->SetReadyForMatch(true);
+	PlayerState->SetHunterLocked(true);
+	PlayerState->SetIsAlive(false);
+	PlayerState->RestoreMatchProgress(Record.Level, Record.XP, Record.Kills, Record.Inventory);
+
+	SpawnPlayerForMatch(NewPlayer);
+	AHunterCharacter* RestoredHunter = Cast<AHunterCharacter>(NewPlayer->GetPawn());
+	if (!RestoredHunter || !PlayerState->GetIsAlive())
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_RECONNECT|SERVER|RestoreFailed player=%s key_hash=%08x reason=spawn_failed"),
+			*PlayerState->GetPlayerName(), GetTypeHash(*ReconnectKey));
+		return false;
+	}
+
+	RestoredHunter->SetActorLocationAndRotation(
+		Record.Transform.GetLocation(), Record.Transform.Rotator(), false, nullptr, ETeleportType::TeleportPhysics);
+	if (UCharacterMovementComponent* Movement = RestoredHunter->GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+	}
+	if (UGliderComponent* Glider = RestoredHunter->GetGliderComponent())
+	{
+		Glider->CancelForMantle();
+	}
+
+	if (UBBHealthSet* HealthSet = PlayerState->GetHealthSet())
+	{
+		HealthSet->SetMaxHealth(FMath::Max(1.0f, Record.MaxHealth));
+		HealthSet->SetHealth(FMath::Clamp(Record.Health, 1.0f, HealthSet->GetMaxHealth()));
+		HealthSet->SetMaxShield(FMath::Max(0.0f, Record.MaxShield));
+		HealthSet->SetShield(FMath::Clamp(Record.Shield, 0.0f, HealthSet->GetMaxShield()));
+		PlayerState->UpdateHealthProxy();
+	}
+	RestoredHunter->ForceNetUpdate();
+
+	if (ABreachbornePlayerController* BBPC = Cast<ABreachbornePlayerController>(NewPlayer))
+	{
+		BBPC->ClientEnterGameplayPhase();
+	}
+
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_RECONNECT|SERVER|Restored player=%s key_hash=%08x team=%d slot=%d hunter=%d pawn=%s health=%.1f/%.1f shield=%.1f/%.1f gold=%d shards=%d location=%s"),
+		*PlayerState->GetPlayerName(), GetTypeHash(*ReconnectKey), PlayerState->GetTeamID(),
+		PlayerState->GetLobbySlotIndex(), PlayerState->GetHunterID(), *GetNameSafe(RestoredHunter),
+		PlayerState->GetHealthSet() ? PlayerState->GetHealthSet()->GetHealth() : -1.0f,
+		PlayerState->GetHealthSet() ? PlayerState->GetHealthSet()->GetMaxHealth() : -1.0f,
+		PlayerState->GetHealthSet() ? PlayerState->GetHealthSet()->GetShield() : -1.0f,
+		PlayerState->GetHealthSet() ? PlayerState->GetHealthSet()->GetMaxShield() : -1.0f,
+		PlayerState->GetInventoryData().Gold, PlayerState->GetInventoryData().UpgradeShards,
+		*RestoredHunter->GetActorLocation().ToCompactString());
+	return true;
+}
+
+void ABreachborneGameMode::ExpireDisconnectedPlayers()
+{
+	if (!GetWorld() || DisconnectedPlayers.IsEmpty())
+	{
+		return;
+	}
+
+	const double Now = GetWorld()->GetTimeSeconds();
+	for (auto It = DisconnectedPlayers.CreateIterator(); It; ++It)
+	{
+		if (It.Value().ExpiresAtWorldSeconds <= Now)
+		{
+			UE_LOG(LogBreachborne, Warning,
+				TEXT("BB_RECONNECT|SERVER|Expired key_hash=%08x hunter=%d team=%d"),
+				GetTypeHash(It.Key()), It.Value().HunterID, It.Value().TeamID);
+			It.RemoveCurrent();
+		}
 	}
 }
 
@@ -1694,14 +2071,16 @@ bool ABreachborneGameMode::ReviveDownedHunter(ABreachbornePlayerState* VictimPS,
 	VictimPS->UpdateHealthProxy();
 
 	PlayerController->Possess(Hunter);
+	const int32 ActivePassiveCount = ActivateServerPassives(ASC);
 	if (BBGameState)
 	{
 		BBGameState->UpdateTeamAliveCount(VictimPS->GetTeamID(), 1);
 	}
 	DownedHunters.Remove(PlayerKey);
 
-	UE_LOG(LogBreachborne, Warning, TEXT("WispRevive: player=%s health=%.0f location=%s"),
-		*VictimPS->GetPlayerName(), HealthSet->GetHealth(), *SafeReviveLocation.ToCompactString());
+	UE_LOG(LogBreachborne, Warning, TEXT("WispRevive: player=%s health=%.0f location=%s passives=%d"),
+		*VictimPS->GetPlayerName(), HealthSet->GetHealth(), *SafeReviveLocation.ToCompactString(),
+		ActivePassiveCount);
 	return true;
 }
 
@@ -1888,6 +2267,7 @@ void ABreachborneGameMode::DevRespawnHunter(UAbilitySystemComponent* VictimASC)
 
 	// Update PlayerState
 	VictimPS->SetIsAlive(true);
+	const int32 ActivePassiveCount = ActivateServerPassives(VictimASC);
 	if (BBGameState)
 	{
 		BBGameState->UpdateTeamAliveCount(VictimPS->GetTeamID(), 1);
@@ -1897,5 +2277,6 @@ void ABreachborneGameMode::DevRespawnHunter(UAbilitySystemComponent* VictimASC)
 	VictimPS->UpdateHealthProxy();
 
 	UE_LOG(LogBreachborne, Warning, TEXT(""));
-	UE_LOG(LogBreachborne, Warning, TEXT("=== DEV RESPAWN: %s ==="), *VictimPS->GetPlayerName());
+	UE_LOG(LogBreachborne, Warning, TEXT("=== DEV RESPAWN: %s (passives=%d) ==="),
+		*VictimPS->GetPlayerName(), ActivePassiveCount);
 }

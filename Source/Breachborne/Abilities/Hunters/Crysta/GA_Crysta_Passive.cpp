@@ -43,21 +43,23 @@ void UGA_Crysta_Passive::EndAbility(const FGameplayAbilitySpecHandle Handle, con
 
 void UGA_Crysta_Passive::OnReverberationDetonated(FGameplayTag Tag, const FGameplayEventData* Payload)
 {
-	ReduceCooldownTag(BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Primary);
-	ReduceCooldownTag(BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Secondary);
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	ReduceActiveCooldownTag(ASC, BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Primary, ShiftCooldownReduction);
+	ReduceActiveCooldownTag(ASC, BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Secondary, ShiftCooldownReduction);
 	if (AHunterCharacter* Hunter = GetHunterCharacter())
 	{
 		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Crysta_Passive_Detonate, Hunter->GetActorLocation());
 	}
 }
 
-void UGA_Crysta_Passive::ReduceCooldownTag(FGameplayTag CooldownTag)
+bool UGA_Crysta_Passive::ReduceActiveCooldownTag(UAbilitySystemComponent* ASC, FGameplayTag CooldownTag, float ReductionSeconds)
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
+	if (!ASC || !CooldownTag.IsValid() || ReductionSeconds <= 0.0f)
 	{
-		return;
+		return false;
 	}
+
+	bool bReducedAny = false;
 	FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(CooldownTag));
 	for (const FActiveGameplayEffectHandle& Handle : ASC->GetActiveEffects(Query))
 	{
@@ -68,14 +70,16 @@ void UGA_Crysta_Passive::ReduceCooldownTag(FGameplayTag CooldownTag)
 		}
 		const float WorldTime = ASC->GetWorld()->GetTimeSeconds();
 		const float Remaining = ActiveGE->GetDuration() - (WorldTime - ActiveGE->StartWorldTime);
-		const float NewRemaining = FMath::Max(0.0f, Remaining - ShiftCooldownReduction);
+		const float NewRemaining = FMath::Max(0.0f, Remaining - ReductionSeconds);
 		if (NewRemaining <= 0.0f)
 		{
 			ASC->RemoveActiveGameplayEffect(Handle);
 		}
 		else
 		{
-			const_cast<FActiveGameplayEffect*>(ActiveGE)->StartWorldTime = WorldTime - (ActiveGE->GetDuration() - NewRemaining);
+			ASC->ModifyActiveEffectStartTime(Handle, -ReductionSeconds);
 		}
+		bReducedAny = true;
 	}
+	return bReducedAny;
 }

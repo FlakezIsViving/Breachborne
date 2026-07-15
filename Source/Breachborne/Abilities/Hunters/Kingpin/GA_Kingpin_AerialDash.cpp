@@ -18,7 +18,6 @@ UGA_Kingpin_AerialDash::UGA_Kingpin_AerialDash()
 	SetAssetTags(AssetTags);
 
 	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Hunter_Kingpin_AerialDash);
-	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Dash); // tagged for takedown-reset query
 }
 
 bool UGA_Kingpin_AerialDash::CanActivateAbility(
@@ -114,5 +113,7 @@ const FGameplayTagContainer* UGA_Kingpin_AerialDash::GetCooldownTags() const
 void UGA_Kingpin_AerialDash::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
+	FGameplayTagContainer GrantedTags = CooldownTagContainer;
+	GrantedTags.AddTag(BBGameplayTags::Cooldown_Dash);
+	ApplyBBCooldownWithTags(Handle, ActorInfo, ActivationInfo, CooldownDuration, GrantedTags);
 }

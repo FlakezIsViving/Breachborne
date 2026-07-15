@@ -24,6 +24,7 @@ class BREACHBORNE_API ABBMoonlightZone : public AActor
 public:
 	ABBMoonlightZone();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void Tick(float DeltaTime) override;
 
 	/**
 	 * Initialize the zone with heal parameters. Call immediately after spawn.
@@ -42,9 +43,11 @@ public:
 	/** The ally this zone is attached to (nullptr if not attached). */
 	AHunterCharacter* GetAttachedAlly() const;
 
+	/** The hunter, wisp, or test ally this zone is attached to. */
+	AActor* GetAttachedTarget() const { return AttachedAlly.Get(); }
+
 protected:
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|MoonlightZone")
 	TObjectPtr<USphereComponent> HealSphere;
@@ -71,6 +74,8 @@ private:
 	void UpdateTravel(float DeltaTime);
 	void TryAttachToAlly();
 	bool TryAttachAlongPath(const FVector& From, const FVector& To);
+	void AttachToTarget(AActor* Target);
+	void DetachFromTarget();
 	void RefreshVisualState();
 	void SpawnPulse(bool bFinalBurst);
 
@@ -104,4 +109,5 @@ private:
 
 	FVector ThrowStartLocation;
 	FVector ThrowTargetLocation;
+	FVector LastAttachedTargetLocation = FVector::ZeroVector;
 };

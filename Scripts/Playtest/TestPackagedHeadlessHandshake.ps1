@@ -9,6 +9,8 @@ param(
 	[string]$OutputRoot = "$PSScriptRoot\..\..\Saved\Logs\PackagedHandshake",
 	[switch]$AbilitySmoke,
 	[int[]]$SmokeHunterIDs = @(),
+	[switch]$WaitForClientJoinBeforeNext,
+	[int]$ClientJoinTimeoutSeconds = 15,
 	[string[]]$ServerExtraArgs = @(),
 	[string[]]$ClientExtraArgs = @()
 )
@@ -29,6 +31,7 @@ if (-not $ClientExe -or -not $ServerExe) {
 }
 
 $HandshakeScript = Join-Path $PSScriptRoot "..\Networking\TestHeadlessDedicatedHandshake.ps1"
+$global:LASTEXITCODE = 0
 & $HandshakeScript `
 	-ProjectPath $ProjectPath `
 	-Port $Port `
@@ -41,6 +44,8 @@ $HandshakeScript = Join-Path $PSScriptRoot "..\Networking\TestHeadlessDedicatedH
 	-Packaged `
 	-AbilitySmoke:$AbilitySmoke `
 	-SmokeHunterIDs $SmokeHunterIDs `
+	-WaitForClientJoinBeforeNext:$WaitForClientJoinBeforeNext `
+	-ClientJoinTimeoutSeconds $ClientJoinTimeoutSeconds `
 	-ServerExtraArgs $ServerExtraArgs `
 	-ClientExtraArgs $ClientExtraArgs
 

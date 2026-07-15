@@ -72,7 +72,11 @@ void UGA_Kingpin_R::FireShell()
 	AHunterCharacter* Hunter = GetHunterCharacter();
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
 	const ABreachbornePlayerState* KingpinPS = GetBBPlayerState();
-	if (!Hunter || !Hunter->HasAuthority() || !SourceASC || !KingpinPS)
+	if (Hunter && !Hunter->HasAuthority())
+	{
+		return;
+	}
+	if (!Hunter || !SourceASC || !KingpinPS)
 	{
 		if (CachedActorInfo)
 		{

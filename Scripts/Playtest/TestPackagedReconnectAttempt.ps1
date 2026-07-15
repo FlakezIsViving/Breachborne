@@ -31,10 +31,11 @@ New-Item -ItemType Directory -Force -Path $RunDirectory | Out-Null
 $Processes = @()
 
 function Start-SmokeClient([int]$Index, [int]$HunterID, [string]$LogName) {
+	$ReconnectToken = "packaged-reconnect-client-$Index"
 	$Arguments = @(
-		"127.0.0.1:$Port", "-game", "-nullrhi", "-unattended", "-nosteam", "-NoSound",
+		"127.0.0.1:$Port`?BBReconnectToken=$ReconnectToken", "-game", "-nullrhi", "-unattended", "-nosteam", "-NoSound",
 		"-stdout", "-FullStdOutLogOutput", "-BBAbilitySmoke", "-BBAbilitySmokeIndex=$Index",
-		"-BBAbilitySmokeHunter=$HunterID"
+		"-BBAbilitySmokeHunter=$HunterID", "-BBReconnectToken=$ReconnectToken"
 	)
 	return Start-Process -FilePath $ClientExe.FullName -ArgumentList $Arguments -WindowStyle Hidden `
 		-RedirectStandardOutput (Join-Path $RunDirectory $LogName) `
@@ -68,8 +69,8 @@ try {
 	Start-Sleep -Seconds 2
 
 	$ReconnectArguments = @(
-		"127.0.0.1:$Port", "-game", "-nullrhi", "-unattended", "-nosteam", "-NoSound",
-		"-stdout", "-FullStdOutLogOutput"
+		"127.0.0.1:$Port`?BBReconnectToken=packaged-reconnect-client-2", "-game", "-nullrhi", "-unattended", "-nosteam", "-NoSound",
+		"-stdout", "-FullStdOutLogOutput", "-BBReconnectToken=packaged-reconnect-client-2"
 	)
 	$ReconnectClient = Start-Process -FilePath $ClientExe.FullName -ArgumentList $ReconnectArguments `
 		-WindowStyle Hidden -RedirectStandardOutput (Join-Path $RunDirectory "ReconnectClient.log") `
@@ -83,6 +84,11 @@ finally {
 			Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
 		}
 	}
+}
+
+& (Join-Path $PSScriptRoot "ReviewInteractivePlaytest.ps1") -SessionDirectory $RunDirectory
+if ($LASTEXITCODE -ne 0) {
+	exit $LASTEXITCODE
 }
 
 $ServerText = Get-Content -LiteralPath (Join-Path $RunDirectory "Server.log") -Raw
@@ -106,8 +112,28 @@ if ($Client1Text -notmatch "BB_ABILITY_SMOKE\|COMPLETE\|index=1 hunter=1" -or
 if ($ReconnectText -notmatch "Welcomed by server") {
 	$Failures += "The replacement client was not welcomed by the server."
 }
-if ($ServerText -notmatch "BB_LOBBY\|SERVER\|LateJoinSpectator player=.* phase=4") {
-	$Failures += "The replacement client was not recorded as a Playing-phase spectator."
+$RecordedMatch = [regex]::Match($ServerText, 'BB_RECONNECT\|SERVER\|Recorded player=.*? team=(?<team>\d+) slot=(?<slot>\d+) hunter=(?<hunter>\d+) health=(?<health>[\d.]+)/(?<maxHealth>[\d.]+) shield=(?<shield>[\d.]+)/(?<maxShield>[\d.]+) gold=(?<gold>\d+) shards=(?<shards>\d+) location=(?<location>V\(.*?\)) grace=')
+$RestoredMatch = [regex]::Match($ServerText, 'BB_RECONNECT\|SERVER\|Restored player=.*? team=(?<team>\d+) slot=(?<slot>\d+) hunter=(?<hunter>\d+) pawn=HunterCharacter.*? health=(?<health>[\d.]+)/(?<maxHealth>[\d.]+) shield=(?<shield>[\d.]+)/(?<maxShield>[\d.]+) gold=(?<gold>\d+) shards=(?<shards>\d+) location=(?<location>V\(.*?\))')
+if (-not $RecordedMatch.Success -or $RecordedMatch.Groups['team'].Value -ne '1' -or
+	$RecordedMatch.Groups['slot'].Value -ne '0' -or $RecordedMatch.Groups['hunter'].Value -ne '2') {
+	$Failures += "The disconnected Eluna player was not recorded for restoration."
+}
+if (-not $RestoredMatch.Success -or $RestoredMatch.Groups['team'].Value -ne '1' -or
+	$RestoredMatch.Groups['slot'].Value -ne '0' -or $RestoredMatch.Groups['hunter'].Value -ne '2') {
+	$Failures += "The replacement client did not reclaim the disconnected Eluna hunter."
+}
+if ($RecordedMatch.Success -and $RestoredMatch.Success) {
+	foreach ($Field in @('health', 'maxHealth', 'shield', 'maxShield', 'gold', 'shards', 'location')) {
+		if ($RecordedMatch.Groups[$Field].Value -ne $RestoredMatch.Groups[$Field].Value) {
+			$Failures += "Reconnect state mismatch for $Field`: recorded=$($RecordedMatch.Groups[$Field].Value) restored=$($RestoredMatch.Groups[$Field].Value)."
+		}
+	}
+}
+if ($ServerText -match "BB_LOBBY\|SERVER\|LateJoinSpectator player=.* phase=4") {
+	$Failures += "The reconnecting client was incorrectly assigned as a Playing-phase spectator."
+}
+if ($ReconnectText -notmatch "BB_NETFLOW\|CLIENT\|EnterGameplayPhase") {
+	$Failures += "The reconnecting client did not enter the gameplay input/frontend state."
 }
 foreach ($Text in @($ServerText, $Client1Text, $Client2Text, $ReconnectText)) {
 	if ($Text -match $FailurePattern) {
@@ -116,13 +142,13 @@ foreach ($Text in @($ServerText, $Client1Text, $Client2Text, $ReconnectText)) {
 	}
 }
 
-$Result = if ($Failures.Count -eq 0) { "PASS_WITH_LIMITATION" } else { "FAIL" }
+$Result = if ($Failures.Count -eq 0) { "PASS" } else { "FAIL" }
 $Summary = @(
 	"Breachborne packaged reconnect attempt: $Result",
 	"Timestamp: $(Get-Date -Format o)",
 	"Initial gameplay: PASS",
 	"Transport reconnect: $(if ($JoinCount -eq 3) { 'PASS' } else { 'FAIL' })",
-	"Match-state restoration: UNSUPPORTED (replacement joins as spectator)",
+	"Match-state restoration: $(if ($Failures.Count -eq 0) { 'PASS (same team, slot, hunter, transform, health, shield, inventory)' } else { 'FAIL' })",
 	"Successful joins: $JoinCount",
 	"Evidence: $RunDirectory"
 )

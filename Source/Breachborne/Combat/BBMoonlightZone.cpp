@@ -8,6 +8,7 @@
 #include "Breachborne/Combat/BBPrimitiveBeamActor.h"
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Combat/BBPrimitiveVisuals.h"
+#include "Breachborne/Wisp/BBWispPawn.h"
 #include "Breachborne/Breachborne.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -15,12 +16,40 @@
 #include "Engine/OverlapResult.h"
 #include "Net/UnrealNetwork.h"
 
+namespace
+{
+	bool IsEligibleMoonlightTarget(AActor* Actor, int32 SourceTeam, AActor* Caster)
+	{
+		if (!Actor || Actor == Caster)
+		{
+			return false;
+		}
+
+		if (const AHunterCharacter* Hunter = Cast<AHunterCharacter>(Actor))
+		{
+			const ABreachbornePlayerState* PS = Hunter->GetPlayerState<ABreachbornePlayerState>();
+			return PS && PS->GetIsAlive() && PS->GetTeamID() == SourceTeam;
+		}
+		if (const ABBWispPawn* Wisp = Cast<ABBWispPawn>(Actor))
+		{
+			const ABreachbornePlayerState* PS = Wisp->GetOwningPlayerState();
+			return PS && PS->GetTeamID() == SourceTeam;
+		}
+		if (const ABBTestAlly* TestAlly = Cast<ABBTestAlly>(Actor))
+		{
+			return TestAlly->GetTeamID() == SourceTeam;
+		}
+		return false;
+	}
+}
+
 ABBMoonlightZone::ABBMoonlightZone()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	SetReplicatingMovement(true);
-	SetNetUpdateFrequency(20.0f);
+	SetNetUpdateFrequency(60.0f);
+	SetMinNetUpdateFrequency(30.0f);
 
 	HealSphere = CreateDefaultSubobject<USphereComponent>(TEXT("HealSphere"));
 	RootComponent = HealSphere;
@@ -67,6 +96,7 @@ AHunterCharacter* ABBMoonlightZone::GetAttachedAlly() const
 void ABBMoonlightZone::InitZone(AHunterCharacter* InSourceHunter, float InHealPerTick, float InTickInterval, float InHealRadius, float InDuration, float InSelfHealFraction, float InWispHealMultiplier, float InBurstHeal)
 {
 	SourceHunter = InSourceHunter;
+	AttachedAlly = InSourceHunter;
 	HealPerTick = InHealPerTick;
 	TickInterval = InTickInterval;
 	HealRadius = InHealRadius;
@@ -77,6 +107,7 @@ void ABBMoonlightZone::InitZone(AHunterCharacter* InSourceHunter, float InHealPe
 	bVisualInitialized = true;
 	bInitialized = true;
 
+	AttachToTarget(InSourceHunter);
 	RefreshVisualState();
 	ForceNetUpdate();
 }
@@ -112,9 +143,30 @@ void ABBMoonlightZone::Tick(float DeltaTime)
 	// Server-only: travel and follow attached ally
 	if (HasAuthority())
 	{
-		if (AttachedAlly.IsValid())
+		if (AActor* AttachedTarget = AttachedAlly.Get())
 		{
-			SetActorLocation(AttachedAlly->GetActorLocation());
+			bool bTargetCanCarryZone = true;
+			if (const AHunterCharacter* AttachedHunter = Cast<AHunterCharacter>(AttachedTarget))
+			{
+				const ABreachbornePlayerState* AttachedPS = AttachedHunter->GetPlayerState<ABreachbornePlayerState>();
+				bTargetCanCarryZone = AttachedPS && AttachedPS->GetIsAlive();
+			}
+
+			if (bTargetCanCarryZone)
+			{
+				// Replicated attachment follows the locally smoothed target. Do not
+				// fight it with server SetActorLocation updates every frame.
+				LastAttachedTargetLocation = AttachedTarget->GetActorLocation();
+			}
+			else
+			{
+				UE_LOG(LogBreachborne, Log, TEXT("[Q_ATTACH] Zone dropped because %s is no longer alive"),
+					*AttachedTarget->GetName());
+				const FVector DropLocation = LastAttachedTargetLocation;
+				DetachFromTarget();
+				SetActorLocation(DropLocation);
+				ForceNetUpdate();
+			}
 		}
 		else if (bIsTraveling)
 		{
@@ -200,7 +252,7 @@ void ABBMoonlightZone::TickHeal()
 		}
 
 		ABreachbornePlayerState* AllyPS = Ally->GetPlayerState<ABreachbornePlayerState>();
-		if (!AllyPS || AllyPS->GetTeamID() != SourceTeam)
+		if (!AllyPS || !AllyPS->GetIsAlive() || AllyPS->GetTeamID() != SourceTeam)
 		{
 			continue;
 		}
@@ -230,6 +282,21 @@ void ABBMoonlightZone::TickHeal()
 				AllyASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 				++HealCount;
 			}
+		}
+	}
+
+	// Wisps are separate pawns, not HunterCharacters. ApplyHeal feeds the
+	// authoritative wisp resolver, where enemy contest can suppress progress.
+	TArray<AActor*> OverlappingWisps;
+	HealSphere->GetOverlappingActors(OverlappingWisps, ABBWispPawn::StaticClass());
+	for (AActor* Actor : OverlappingWisps)
+	{
+		ABBWispPawn* Wisp = Cast<ABBWispPawn>(Actor);
+		const ABreachbornePlayerState* WispPS = Wisp ? Wisp->GetOwningPlayerState() : nullptr;
+		if (WispPS && WispPS->GetTeamID() == SourceTeam)
+		{
+			Wisp->ApplyHeal(HealPerTick * WispHealMultiplier);
+			++HealCount;
 		}
 	}
 
@@ -289,7 +356,7 @@ void ABBMoonlightZone::ApplyBurstHeal()
 		}
 
 		ABreachbornePlayerState* AllyPS = Ally->GetPlayerState<ABreachbornePlayerState>();
-		if (!AllyPS || AllyPS->GetTeamID() != SourceTeam)
+		if (!AllyPS || !AllyPS->GetIsAlive() || AllyPS->GetTeamID() != SourceTeam)
 		{
 			continue;
 		}
@@ -316,6 +383,19 @@ void ABBMoonlightZone::ApplyBurstHeal()
 				AllyASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 				++HealCount;
 			}
+		}
+	}
+
+	TArray<AActor*> OverlappingWisps;
+	HealSphere->GetOverlappingActors(OverlappingWisps, ABBWispPawn::StaticClass());
+	for (AActor* Actor : OverlappingWisps)
+	{
+		ABBWispPawn* Wisp = Cast<ABBWispPawn>(Actor);
+		const ABreachbornePlayerState* WispPS = Wisp ? Wisp->GetOwningPlayerState() : nullptr;
+		if (WispPS && WispPS->GetTeamID() == SourceTeam)
+		{
+			Wisp->ApplyHeal(BurstHeal * WispHealMultiplier);
+			++HealCount;
 		}
 	}
 
@@ -357,6 +437,11 @@ void ABBMoonlightZone::TossToLocation(const FVector& TargetLocation)
 		return;
 	}
 
+	if (AActor* PreviousTarget = AttachedAlly.Get())
+	{
+		SetActorLocation(PreviousTarget->GetActorLocation());
+	}
+	DetachFromTarget();
 	ThrowStartLocation = GetActorLocation();
 	ThrowTargetLocation = TargetLocation;
 	bTossed = true;
@@ -448,25 +533,10 @@ void ABBMoonlightZone::TryAttachToAlly()
 				continue;
 			}
 
-			// Accept HunterCharacter or BBTestAlly as long as they're on the same team
-			int32 ActorTeam = -1;
-			if (AHunterCharacter* Hunter = Cast<AHunterCharacter>(Actor))
+			if (IsEligibleMoonlightTarget(Actor, SourceTeam, Caster))
 			{
-				if (ABreachbornePlayerState* PS = Hunter->GetPlayerState<ABreachbornePlayerState>())
-				{
-					ActorTeam = PS->GetTeamID();
-				}
-			}
-			else if (ABBTestAlly* TestAlly = Cast<ABBTestAlly>(Actor))
-			{
-				ActorTeam = TestAlly->GetTeamID();
-			}
-
-			if (ActorTeam == SourceTeam)
-			{
-				AttachedAlly = Actor;
+				AttachToTarget(Actor);
 				bIsTraveling = false;
-				ForceNetUpdate();
 				UE_LOG(LogBreachborne, Warning, TEXT("[Q_TOSS] Zone ATTACHED to %s at %s"),
 					*Actor->GetName(), *GetActorLocation().ToCompactString());
 				break;
@@ -524,20 +594,7 @@ bool ABBMoonlightZone::TryAttachAlongPath(const FVector& From, const FVector& To
 			continue;
 		}
 
-		int32 ActorTeam = -1;
-		if (AHunterCharacter* Hunter = Cast<AHunterCharacter>(Actor))
-		{
-			if (ABreachbornePlayerState* PS = Hunter->GetPlayerState<ABreachbornePlayerState>())
-			{
-				ActorTeam = PS->GetTeamID();
-			}
-		}
-		else if (ABBTestAlly* TestAlly = Cast<ABBTestAlly>(Actor))
-		{
-			ActorTeam = TestAlly->GetTeamID();
-		}
-
-		if (ActorTeam != SourceTeam)
+		if (!IsEligibleMoonlightTarget(Actor, SourceTeam, Caster))
 		{
 			continue;
 		}
@@ -561,12 +618,39 @@ bool ABBMoonlightZone::TryAttachAlongPath(const FVector& From, const FVector& To
 	const FVector AttachLoc = From + PathDir.GetSafeNormal() * Candidates[0].DistAlongPath;
 
 	SetActorLocation(AttachLoc);
-	AttachedAlly = BestAlly;
+	AttachToTarget(BestAlly);
 	bIsTraveling = false;
-	ForceNetUpdate();
 
 	UE_LOG(LogBreachborne, Warning, TEXT("[Q_TOSS] Zone ATTACHED along path to %s at %s (dist=%.1f)"),
 		*BestAlly->GetName(), *AttachLoc.ToCompactString(), Candidates[0].DistAlongPath);
 
 	return true;
+}
+
+void ABBMoonlightZone::AttachToTarget(AActor* Target)
+{
+	if (!HasAuthority() || !Target)
+	{
+		return;
+	}
+
+	AttachedAlly = Target;
+	LastAttachedTargetLocation = Target->GetActorLocation();
+	SetReplicateMovement(false);
+	AttachToActor(Target, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	SetActorRelativeLocation(FVector::ZeroVector);
+	ForceNetUpdate();
+}
+
+void ABBMoonlightZone::DetachFromTarget()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	AttachedAlly.Reset();
+	SetReplicateMovement(true);
+	ForceNetUpdate();
 }

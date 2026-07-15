@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "BreachborneTypes.h"
+#include "Breachborne/Items/BBInventoryTypes.h"
 #include "BreachborneGameMode.generated.h"
 
 class ABBStormManager;
@@ -13,6 +14,23 @@ class ABBDeathboxActor;
 class AHunterCharacter;
 class UBBHunterDefinition;
 class UAbilitySystemComponent;
+
+struct FBBDisconnectedPlayerRecord
+{
+	int32 TeamID = -1;
+	int32 HunterID = 0;
+	int32 LobbySlotIndex = -1;
+	int32 Level = 1;
+	int32 XP = 0;
+	int32 Kills = 0;
+	FTransform Transform = FTransform::Identity;
+	float Health = 0.0f;
+	float MaxHealth = 0.0f;
+	float Shield = 0.0f;
+	float MaxShield = 0.0f;
+	FRepInventoryData Inventory;
+	double ExpiresAtWorldSeconds = 0.0;
+};
 
 /**
  * Server-only GameMode. Handles lobby, team assignment, match phases, spawning,
@@ -28,6 +46,8 @@ public:
 	ABreachborneGameMode();
 
 	virtual void InitGameState() override;
+	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
+		const FString& Options, const FString& Portal = TEXT("")) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -44,8 +64,10 @@ public:
 	void RequestSetLobbyTeamSize(APlayerController* PlayerController, int32 TeamSize);
 	void RequestSetLobbyDescription(APlayerController* PlayerController, const FString& Description);
 	void RequestSetStormShiftPreset(APlayerController* PlayerController, FName PresetID);
+	void RequestSetStormEnabled(APlayerController* PlayerController, bool bEnabled);
 	void RequestStartLobbyMatch(APlayerController* PlayerController);
 	bool DebugValidateHunterDefinition(int32 HunterID) const;
+	void HandlePlayerDisconnect(APlayerController* ExitingPlayer);
 
 protected:
 	/** Number of players per squad (3 or 4) */
@@ -80,6 +102,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Wisp", meta = (ClampMin = "0.01", ClampMax = "1.0"))
 	float WispReviveHealthFraction = 0.5f;
+
+	/** Time an alive Playing-phase client may reclaim its hunter after disconnecting. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Networking", meta = (ClampMin = "5.0"))
+	float ReconnectGracePeriodSeconds = 60.0f;
 
 private:
 	/** Tracks how many players have been assigned so far for round-robin team assignment */
@@ -121,6 +147,9 @@ private:
 	void SpawnPlayerForMatch(APlayerController* PlayerController);
 	FTransform GetDropTransformForPlayer(const ABreachbornePlayerState* PlayerState) const;
 	void ClearHunterAbilities(APlayerController* PlayerController);
+	void RecordDisconnectedPlayer(AController* Exiting, ABreachbornePlayerState* PlayerState);
+	bool TryRestoreDisconnectedPlayer(APlayerController* NewPlayer, ABreachbornePlayerState* PlayerState);
+	void ExpireDisconnectedPlayers();
 
 	/** Grant all abilities from a HunterDefinition to a player's ASC */
 	void GrantHunterAbilities(APlayerController* PlayerController, const UBBHunterDefinition* HunterDef);
@@ -151,6 +180,8 @@ private:
 	void HandleDeathboxReviveComplete(ABBDeathboxActor* Deathbox, AHunterCharacter* Reviver);
 
 	TMap<TWeakObjectPtr<ABreachbornePlayerState>, TWeakObjectPtr<AHunterCharacter>> DownedHunters;
+	TMap<TWeakObjectPtr<APlayerController>, FString> PlayerReconnectKeys;
+	TMap<FString, FBBDisconnectedPlayerRecord> DisconnectedPlayers;
 
 public:
 	void HandleTrainDeath(class AHunterCharacter* Hunter, const FVector& Location);

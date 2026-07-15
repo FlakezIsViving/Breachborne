@@ -163,5 +163,8 @@ struct FBBLobbySettings
 	FName StormShiftPreset = TEXT("Default");
 
 	UPROPERTY(BlueprintReadOnly, Category = "Breachborne|Lobby")
+	bool bStormEnabled = true;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Breachborne|Lobby")
 	bool bAllowSpectators = true;
 };

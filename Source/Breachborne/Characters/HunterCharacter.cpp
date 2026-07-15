@@ -706,3 +706,34 @@ void AHunterCharacter::EndGrapplePull()
 	GrappleInitialDistance = 0.0f;
 	GrappleElapsedSeconds = 0.0f;
 }
+
+void AHunterCharacter::ResetTransientCombatState()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	EndHookPull(false);
+	EndGrapplePull();
+
+	if (GliderComponent)
+	{
+		GliderComponent->CancelForMantle();
+	}
+	if (MantleComponent)
+	{
+		MantleComponent->NotifyMantleFinished();
+	}
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+	}
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		if (UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance())
+		{
+			AnimInstance->StopAllMontages(0.1f);
+		}
+	}
+}

@@ -105,6 +105,49 @@ ABBWispPawn::ABBWispPawn()
 	SetReplicatingMovement(true);
 }
 
+FBBWispTickResult ABBWispPawn::ResolveWispTick(const FBBWispTickInput& Input)
+{
+	FBBWispTickResult Result;
+	Result.HP = FMath::Clamp(Input.CurrentHP, 0.0f, FMath::Max(0.0f, Input.MaxHP));
+	Result.Rez = FMath::Clamp(Input.CurrentRez, 0.0f, 1.0f);
+
+	if (Input.bCarried)
+	{
+		Result.TotalReviveMultiplier = Input.MaxReviveMultiplier;
+	}
+	else
+	{
+		Result.ProximityMultiplier = (Input.bAllyNearby || Input.bHealingActive) && !Input.bEnemyNearby ? 1.0f : 0.0f;
+		const float ProgressPerBaseTick = Input.RezFillRate * Input.DeltaTime;
+		const float HealReviveProgress = FMath::Max(0.0f, Input.HealAmount) * Input.HealToReviveConversion;
+		Result.HealMultiplier = ProgressPerBaseTick > 0.0f
+			? HealReviveProgress / ProgressPerBaseTick
+			: 0.0f;
+		Result.TotalReviveMultiplier = Input.bEnemyNearby
+			? 0.0f
+			: FMath::Min(Result.ProximityMultiplier + Result.HealMultiplier, Input.MaxReviveMultiplier);
+	}
+
+	Result.bDecayPaused = Result.TotalReviveMultiplier > 0.0f;
+	if (Result.bDecayPaused)
+	{
+		Result.Rez = FMath::Min(
+			Result.Rez + Input.RezFillRate * Input.DeltaTime * Result.TotalReviveMultiplier,
+			1.0f);
+		return Result;
+	}
+
+	Result.Rez = FMath::Max(Result.Rez - Input.RezDecayRate * Input.DeltaTime, 0.0f);
+	const float DrainMultiplier = Input.bEnemyNearby ? Input.StompDrainMultiplier : 1.0f;
+	Result.HP = FMath::Max(Result.HP - Input.BaseDrainRate * DrainMultiplier * Input.DeltaTime, 0.0f);
+	return Result;
+}
+
+bool ABBWispPawn::ResolveHealingReviveLatch(bool bWasLatched, bool bReceivedHealing, bool bEnemyNearby)
+{
+	return !bEnemyNearby && (bWasLatched || bReceivedHealing);
+}
+
 void ABBWispPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -115,6 +158,7 @@ void ABBWispPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(ABBWispPawn, ReplicatedMaxWispHP);
 	DOREPLIFETIME(ABBWispPawn, OwningPlayerState);
 	DOREPLIFETIME(ABBWispPawn, ExecutingHunter);
+	DOREPLIFETIME(ABBWispPawn, CarriedBy);
 }
 
 void ABBWispPawn::InitWisp(ABreachbornePlayerState* OwnerPS)
@@ -129,6 +173,7 @@ void ABBWispPawn::InitWisp(ABreachbornePlayerState* OwnerPS)
 	RezBarProgress = 0.0f;
 	ExecutingHunter = nullptr;
 	HealAccumulated = 0.0f;
+	bHealingReviveLatched = false;
 
 	// Update proximity sphere radius from tuning constant
 	if (ProximitySphere)
@@ -314,6 +359,8 @@ void ABBWispPawn::SetCarrier(AHunterCharacter* Carrier)
 	if (Carrier)
 	{
 		CarriedBy = Carrier;
+		ApplyCarrierState();
+		ForceNetUpdate();
 		UE_LOG(LogBreachborne, Log, TEXT("WispPawn: %s picked up by %s"),
 			OwningPlayerState ? *OwningPlayerState->GetPlayerName() : TEXT("Unknown"),
 			*Carrier->GetName());
@@ -321,9 +368,48 @@ void ABBWispPawn::SetCarrier(AHunterCharacter* Carrier)
 	else
 	{
 		CarriedBy = nullptr;
+		ApplyCarrierState();
+		ForceNetUpdate();
 		UE_LOG(LogBreachborne, Log, TEXT("WispPawn: %s dropped"),
 			OwningPlayerState ? *OwningPlayerState->GetPlayerName() : TEXT("Unknown"));
 	}
+}
+
+void ABBWispPawn::ApplyCarrierState()
+{
+	if (CarriedBy)
+	{
+		if (UCharacterMovementComponent* CMC = GetCharacterMovement())
+		{
+			CMC->StopMovementImmediately();
+			CMC->DisableMovement();
+		}
+		SetActorEnableCollision(false);
+		if (HasAuthority())
+		{
+			SetReplicateMovement(false);
+		}
+		AttachToActor(CarriedBy, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		SetActorRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+	}
+	else
+	{
+		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		SetActorEnableCollision(true);
+		if (HasAuthority())
+		{
+			SetReplicateMovement(true);
+		}
+		if (UCharacterMovementComponent* CMC = GetCharacterMovement())
+		{
+			CMC->SetMovementMode(MOVE_Walking);
+		}
+	}
+}
+
+void ABBWispPawn::OnRep_CarriedBy()
+{
+	ApplyCarrierState();
 }
 
 void ABBWispPawn::ServerWispTick()
@@ -351,11 +437,22 @@ void ABBWispPawn::ServerWispTick()
 	// --- Carried by Eluna: max revive speed, no drain ---
 	if (CarriedBy != nullptr)
 	{
-		const FVector CarrierLoc = CarriedBy->GetActorLocation();
-		SetActorLocation(CarrierLoc + FVector(0.0f, 0.0f, 80.0f));
-
 		const float PrevProgress = RezBarProgress;
-		RezBarProgress = FMath::Min(RezBarProgress + RezFillRate * WispTickInterval * MaxReviveMultiplier, 1.0f);
+		FBBWispTickInput TickInput;
+		TickInput.CurrentHP = ReplicatedWispHP;
+		TickInput.MaxHP = ReplicatedMaxWispHP;
+		TickInput.CurrentRez = RezBarProgress;
+		TickInput.DeltaTime = WispTickInterval;
+		TickInput.BaseDrainRate = BaseDrainRate;
+		TickInput.StompDrainMultiplier = StompDrainMultiplier;
+		TickInput.RezFillRate = RezFillRate;
+		TickInput.RezDecayRate = RezDecayRate;
+		TickInput.HealToReviveConversion = HealToReviveConversion;
+		TickInput.MaxReviveMultiplier = MaxReviveMultiplier;
+		TickInput.bCarried = true;
+		const FBBWispTickResult TickResult = ResolveWispTick(TickInput);
+		ReplicatedWispHP = TickResult.HP;
+		RezBarProgress = TickResult.Rez;
 
 		UE_LOG(LogBreachborne, Log, TEXT("Wisp: CARRIED — Rez %.1f%% -> %.1f%% (+%.2f%%)"),
 			PrevProgress * 100.0f, RezBarProgress * 100.0f, (RezBarProgress - PrevProgress) * 100.0f);
@@ -437,22 +534,28 @@ void ABBWispPawn::ServerWispTick()
 	// Track previous state for transition logging
 	const EWispState PrevState = WispState;
 
-	// Enemy contest has priority over ordinary ally proximity. Eluna carry is
-	// handled above and intentionally bypasses this branch.
-	const bool bCanProximityRevive = bAllyNearby && !bEnemyNearby;
-	if (bCanProximityRevive && WispState == EWispState::Active)
+	// A heal starts a persistent revival source. Enemy contest clears it; Eluna
+	// carry is handled above and deliberately bypasses this branch.
+	const bool bReceivedHealing = HealAccumulated > 0.0f;
+	bHealingReviveLatched = ResolveHealingReviveLatch(
+		bHealingReviveLatched, bReceivedHealing, bEnemyNearby);
+	const bool bHasReviveHealing = bHealingReviveLatched;
+	const bool bCanRevive = !bEnemyNearby && (bAllyNearby || bHasReviveHealing);
+	if (bCanRevive && WispState == EWispState::Active)
 	{
 		WispState = EWispState::BeingRevived;
 		ReviveStartTime = GetWorld()->GetTimeSeconds();
-		UE_LOG(LogBreachborne, Warning, TEXT("Wisp: REVIVE STARTED | Ally=%s Dist=%.0f | Rate=%.2f/s | EstTime=%.1fs"),
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("Wisp: REVIVE STARTED | Source=%s | Ally=%s Dist=%.0f | Rate=%.2f/s | EstTime=%.1fs"),
+			bAllyNearby ? TEXT("Proximity") : TEXT("Healing"),
 			*NearestAllyName, NearestAllyDist, RezFillRate, 1.0f / RezFillRate);
 	}
-	else if (!bCanProximityRevive && WispState == EWispState::BeingRevived)
+	else if (!bCanRevive && WispState == EWispState::BeingRevived)
 	{
 		WispState = EWispState::Active;
 		const float Elapsed = (ReviveStartTime > 0.0f) ? (GetWorld()->GetTimeSeconds() - ReviveStartTime) : 0.0f;
 		ReviveStartTime = -1.0f;
-		UE_LOG(LogBreachborne, Warning, TEXT("Wisp: REVIVE INTERRUPTED after %.2fs | RezBar=%.1f%% | Ally left"),
+		UE_LOG(LogBreachborne, Warning, TEXT("Wisp: REVIVE INTERRUPTED after %.2fs | RezBar=%.1f%% | Source removed or contested"),
 			Elapsed, RezBarProgress * 100.0f);
 	}
 
@@ -464,70 +567,38 @@ void ABBWispPawn::ServerWispTick()
 			NearestAllyDist);
 	}
 
-	// --- Calculate revive fill rate ---
-	// Proximity contributes 1.0x when ally is nearby and no enemy is contesting
-	float ProximityMultiplier = 0.0f;
-	if (bAllyNearby && !bEnemyNearby)
-	{
-		ProximityMultiplier = 1.0f;
-	}
-
-	// Heals accumulated since last tick convert to revive progress
-	float HealMultiplier = 0.0f;
-	float HealConsumed = 0.0f;
-	if (HealAccumulated > 0.0f)
-	{
-		const float HealReviveProgress = HealAccumulated * HealToReviveConversion;
-		HealMultiplier = (RezFillRate * WispTickInterval > 0.0f)
-			? (HealReviveProgress / (RezFillRate * WispTickInterval))
-			: 0.0f;
-		HealConsumed = HealAccumulated;
-		HealAccumulated = 0.0f;
-	}
-
-	// Healing freezes decay and accelerates revive while uncontested. Enemy
-	// presence overrides every ordinary source; Eluna carry is the sole exception.
-	const float TotalMultiplier = bEnemyNearby
-		? 0.0f
-		: FMath::Min(ProximityMultiplier + HealMultiplier, MaxReviveMultiplier);
-
-	// Decay is paused if ANY revive source is active (ally proximity or heals)
-	const bool bDecayPaused = TotalMultiplier > 0.0f;
-
 	const float PreTickHP = ReplicatedWispHP;
 	const float PreTickRez = RezBarProgress;
+	const float HealConsumed = HealAccumulated;
+	HealAccumulated = 0.0f;
 
-	// Apply revive progress
-	if (TotalMultiplier > 0.0f)
-	{
-		RezBarProgress = FMath::Min(RezBarProgress + RezFillRate * WispTickInterval * TotalMultiplier, 1.0f);
-	}
-
-	// Apply decay if no revive source is active
-	if (!bDecayPaused)
-	{
-		if (RezBarProgress > 0.0f)
-		{
-			RezBarProgress = FMath::Max(RezBarProgress - RezDecayRate * WispTickInterval, 0.0f);
-		}
-
-		// HP drains (base rate, or stomp rate if enemy present)
-		float DrainRate = BaseDrainRate;
-		if (bEnemyNearby)
-		{
-			DrainRate *= StompDrainMultiplier;
-		}
-		ReplicatedWispHP = FMath::Max(ReplicatedWispHP - DrainRate * WispTickInterval, 0.0f);
-	}
+	FBBWispTickInput TickInput;
+	TickInput.CurrentHP = ReplicatedWispHP;
+	TickInput.MaxHP = ReplicatedMaxWispHP;
+	TickInput.CurrentRez = RezBarProgress;
+	TickInput.HealAmount = HealConsumed;
+	TickInput.DeltaTime = WispTickInterval;
+	TickInput.BaseDrainRate = BaseDrainRate;
+	TickInput.StompDrainMultiplier = StompDrainMultiplier;
+	TickInput.RezFillRate = RezFillRate;
+	TickInput.RezDecayRate = RezDecayRate;
+	TickInput.HealToReviveConversion = HealToReviveConversion;
+	TickInput.MaxReviveMultiplier = MaxReviveMultiplier;
+	TickInput.bAllyNearby = bAllyNearby;
+	TickInput.bHealingActive = bHasReviveHealing;
+	TickInput.bEnemyNearby = bEnemyNearby;
+	const FBBWispTickResult TickResult = ResolveWispTick(TickInput);
+	ReplicatedWispHP = TickResult.HP;
+	RezBarProgress = TickResult.Rez;
 
 	// Comprehensive tick log
 	UE_LOG(LogBreachborne, VeryVerbose, TEXT("[WISP_TICK] %s | HP=%.1f -> %.1f/%.1f | Rez=%.1f%% -> %.1f%% | ProxMult=%.1f | Heal=%.1f->Mult=%.2f | TotalMult=%.1f | DecayPaused=%s | Enemy=%s"),
 		OwningPlayerState ? *OwningPlayerState->GetPlayerName() : TEXT("Unknown"),
 		PreTickHP, ReplicatedWispHP, ReplicatedMaxWispHP,
 		PreTickRez * 100.0f, RezBarProgress * 100.0f,
-		ProximityMultiplier, HealConsumed, HealMultiplier,
-		TotalMultiplier,
-		bDecayPaused ? TEXT("YES") : TEXT("NO"),
+		TickResult.ProximityMultiplier, HealConsumed, TickResult.HealMultiplier,
+		TickResult.TotalReviveMultiplier,
+		TickResult.bDecayPaused ? TEXT("YES") : TEXT("NO"),
 		bEnemyNearby ? TEXT("YES") : TEXT("NO"));
 
 	// Check for revive completion

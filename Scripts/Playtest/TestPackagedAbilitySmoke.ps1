@@ -16,6 +16,13 @@ foreach ($HunterID in @($HunterA, $HunterB)) {
 	}
 }
 
+$ExistingRunDirectories = @{}
+if (Test-Path -LiteralPath $OutputRoot) {
+	Get-ChildItem -LiteralPath $OutputRoot -Directory | ForEach-Object {
+		$ExistingRunDirectories[$_.FullName] = $true
+	}
+}
+
 $HandshakeScript = Join-Path $PSScriptRoot "TestPackagedHeadlessHandshake.ps1"
 & $HandshakeScript `
 	-Port $Port `
@@ -32,10 +39,16 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $RunDirectory = Get-ChildItem -LiteralPath $OutputRoot -Directory |
-	Sort-Object LastWriteTime -Descending |
+	Where-Object { -not $ExistingRunDirectories.ContainsKey($_.FullName) } |
+	Sort-Object CreationTime -Descending |
 	Select-Object -First 1
 if (-not $RunDirectory) {
-	throw "Ability smoke evidence directory was not created."
+	throw "A new ability-smoke evidence directory was not created."
+}
+
+& (Join-Path $PSScriptRoot "ReviewInteractivePlaytest.ps1") -SessionDirectory $RunDirectory.FullName
+if ($LASTEXITCODE -ne 0) {
+	exit $LASTEXITCODE
 }
 
 $Failures = @()

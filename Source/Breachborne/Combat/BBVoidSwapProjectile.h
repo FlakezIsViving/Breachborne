@@ -20,6 +20,7 @@ public:
 
 	void InitSwapProjectile(AHunterCharacter* InSourceHunter, const FVector& InLaunchLocation, const FVector& InTargetLocation,
 		float InTravelDuration, float InRadius, bool bInEmpowered);
+	static bool IsActorEligibleForSwap(const AActor* Actor);
 
 protected:
 	virtual void BeginPlay() override;
@@ -55,7 +56,6 @@ private:
 	void ExecuteSwap();
 	FVector GetArcPoint(float Alpha) const;
 	void GatherEligibleActors(const FVector& Center, TArray<AActor*>& OutActors) const;
-	bool IsActorEligible(AActor* Actor) const;
 	void TeleportActor(AActor* Actor, const FVector& NewLocation) const;
 
 	UPROPERTY()

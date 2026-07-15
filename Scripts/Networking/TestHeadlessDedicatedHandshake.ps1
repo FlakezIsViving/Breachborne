@@ -11,6 +11,8 @@ param(
 	[switch]$Packaged,
 	[switch]$AbilitySmoke,
 	[int[]]$SmokeHunterIDs = @(),
+	[switch]$WaitForClientJoinBeforeNext,
+	[int]$ClientJoinTimeoutSeconds = 15,
 	[string[]]$ServerExtraArgs = @(),
 	[string[]]$ClientExtraArgs = @()
 )
@@ -106,6 +108,23 @@ try {
 			-RedirectStandardError (Join-Path $RunDirectory "Client$Index.err") `
 			-PassThru
 		$SpawnedProcesses += $Client
+
+		if ($WaitForClientJoinBeforeNext) {
+			$ServerLogPath = Join-Path $RunDirectory "Server.log"
+			$JoinDeadline = (Get-Date).AddSeconds($ClientJoinTimeoutSeconds)
+			$ObservedJoinCount = 0
+			do {
+				Start-Sleep -Milliseconds 100
+				if (Test-Path -LiteralPath $ServerLogPath) {
+					$LiveServerText = Get-Content -LiteralPath $ServerLogPath -Raw -ErrorAction SilentlyContinue
+					$ObservedJoinCount = ([regex]::Matches($LiveServerText, "Join succeeded:")).Count
+				}
+			} while ($ObservedJoinCount -lt $Index -and (Get-Date) -lt $JoinDeadline -and -not $Client.HasExited)
+
+			if ($ObservedJoinCount -lt $Index) {
+				throw "Client $Index did not join within $ClientJoinTimeoutSeconds seconds; refusing to launch clients out of order."
+			}
+		}
 	}
 
 	Start-Sleep -Seconds $ConnectionSeconds
@@ -176,3 +195,5 @@ $Summary | ForEach-Object { Write-Host $_ }
 if ($Failures.Count -gt 0) {
 	exit 1
 }
+
+exit 0

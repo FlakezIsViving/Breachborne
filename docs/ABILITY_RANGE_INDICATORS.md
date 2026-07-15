@@ -55,22 +55,33 @@ gameplay and the indicator agree.
 
 ## Manual Test Matrix
 
-Run PIE as a listen server with two clients, then repeat the targeting checks on the remote
-client.
+Run these checks in the recorded packaged owner/observer sessions from
+`docs/plans/july-31-manual-vfx-acceptance.md`. The current acceptance candidate uses a hidden
+dedicated server; do not substitute PIE or infer a PASS from source geometry.
 
-1. Select each hunter and hover LMB, RMB, Shift, Q, and R. Confirm exactly one thin grey range
+Hover and aiming are deliberately separate interactions. Leave the pointer over a HUD ability
+slot only to inspect the owner-centered maximum-range ring; no world target is expected while the
+pointer remains on the slot. Then move the pointer back into the world and activate the hotkey to
+inspect the short live aim/landing/footprint preview. The player never needs the pointer over the
+HUD and world target simultaneously.
+
+1. `RI-01` Select each hunter and hover LMB, RMB, Shift, Q, and R. Confirm exactly one thin grey range
    circle appears around the owning hunter and no circle appears on the other client.
-2. Hold LMB and RMB. Confirm the aim line follows the world cursor and disappears on release.
-3. Press Shift, Q, and R. Confirm the active preview lasts briefly and does not remain stuck after
+2. `RI-02` Hold LMB and RMB. Confirm the aim line follows the world cursor and disappears on release.
+3. `RI-03` Press Shift, Q, and R. Confirm the active preview lasts briefly and does not remain stuck after
    death, respawn, or pawn replacement.
-4. For ground areas, aim inside and beyond maximum range. Confirm the center stops at the outer
+4. `RI-04` For ground areas, aim inside and beyond maximum range. Confirm the center stops at the outer
    cast circle while the footprint remains centered on the clamped point.
-5. For Void Q, confirm the 620-unit footprint extends outside the 1650-unit cast circle at maximum
+5. `RI-05` For Void Q, confirm the 620-unit footprint extends outside the 1650-unit cast circle at maximum
    range.
-6. Equip each F/G power and hover both slots. Confirm the correct power metadata follows the slot,
+6. `RI-06` Equip each F/G power and hover both slots. Confirm the correct power metadata follows the slot,
    including after swapping F and G.
-7. Start Tactical Nuke targeting. Confirm the cast ring and impact footprint remain until LMB
+7. `RI-07` Start Tactical Nuke targeting. Confirm the cast ring and impact footprint remain until LMB
    confirms or RMB/Escape cancels.
-8. Confirm cooldown failures do not create a live firing preview; hover previews should still work.
-9. Retest Hudson RMB press/release and Crysta held RMB to ensure the preview lifecycle does not
+8. `RI-08` Confirm cooldown failures do not create a live firing preview; hover previews should still work.
+9. `RI-09` Retest Hudson RMB press/release and Crysta held RMB to ensure the preview lifecycle does not
    interfere with gameplay input release.
+
+Run hunter-specific portions during the three recorded pair sessions. Run F/G powers, Tactical
+Nuke, cooldown rejection, death, and pawn-replacement cases during cleanup/stress. A row is not
+complete until every hunter or power named by that row has passed.

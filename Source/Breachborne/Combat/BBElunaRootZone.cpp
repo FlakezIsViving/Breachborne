@@ -8,6 +8,7 @@
 #include "Breachborne/Breachborne.h"
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Combat/BBPrimitiveVisuals.h"
+#include "Breachborne/Combat/BBStunTagEffect.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -139,6 +140,16 @@ void ABBElunaRootZone::ApplyRootAndDamage()
 				SpecHandle.Data->SetSetByCallerMagnitude(BBGameplayTags::SetByCaller_Damage, BaseDamage);
 				SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 				++HitCount;
+			}
+		}
+		if (TargetASC)
+		{
+			FGameplayEffectSpecHandle RootSpec = SourceASC->MakeOutgoingSpec(
+				UBBStunTagEffect::StaticClass(), 1.0f, SourceASC->MakeEffectContext());
+			if (RootSpec.IsValid())
+			{
+				RootSpec.Data->SetDuration(RootDuration, false);
+				SourceASC->ApplyGameplayEffectSpecToTarget(*RootSpec.Data.Get(), TargetASC);
 			}
 		}
 	}

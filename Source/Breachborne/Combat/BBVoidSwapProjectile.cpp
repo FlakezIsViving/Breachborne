@@ -235,7 +235,7 @@ void ABBVoidSwapProjectile::GatherEligibleActors(const FVector& Center, TArray<A
 			continue;
 		}
 		Seen.Add(Actor);
-		if (IsActorEligible(Actor))
+		if (IsActorEligibleForSwap(Actor))
 		{
 			OutActors.Add(Actor);
 		}
@@ -246,9 +246,9 @@ void ABBVoidSwapProjectile::GatherEligibleActors(const FVector& Center, TArray<A
 	}
 }
 
-bool ABBVoidSwapProjectile::IsActorEligible(AActor* Actor) const
+bool ABBVoidSwapProjectile::IsActorEligibleForSwap(const AActor* Actor)
 {
-	if (!Actor || Actor == this)
+	if (!Actor)
 	{
 		return false;
 	}

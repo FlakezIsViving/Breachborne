@@ -88,6 +88,9 @@ protected:
 	FName QuickPlayMapName = TEXT("/Game/Maps/TestMap");
 
 private:
+	/** Stable for this client process so a direct-IP reconnect can reclaim its active match slot. */
+	FString ReconnectToken;
+
 	UPROPERTY()
 	TObjectPtr<UUserWidget> ActiveFrontendWidget;
 

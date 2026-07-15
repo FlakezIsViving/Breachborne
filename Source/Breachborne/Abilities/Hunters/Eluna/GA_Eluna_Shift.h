@@ -8,7 +8,7 @@
  * Eluna Shift — Lunar Dash (Ground version).
  *
  * Two-charge dash usable anywhere (ground or air). Launches in input direction.
- * Passing through an ally refunds 50% of this dash's cooldown and reduces Q CD by 1s.
+ * Passing through an allied wisp collects it and fully refunds this dash.
  * LocalPredicted. 6s cooldown per charge (2 charges).
  */
 UCLASS()
@@ -25,6 +25,9 @@ public:
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
 
+	/** Authoritative path collection shared by activation and packaged regression smoke. */
+	bool TryCollectWispAlongPath(const FVector& DashStart, const FVector& DashEnd);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Shift")
 	float DashDistance = 600.0f;
@@ -39,17 +42,9 @@ protected:
 	float CooldownDuration = 6.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Shift")
-	float AllyCooldownRefundFraction = 0.5f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Shift")
-	float QCooldownReduction = 1.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Eluna|Shift")
-	float AllyDetectionRadius = 100.0f;
+	float WispDetectionRadius = 100.0f;
 
 private:
-	bool CheckAllyPassThrough();
-
 	UPROPERTY()
 	FGameplayTagContainer CooldownTagContainer;
 };

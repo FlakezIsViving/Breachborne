@@ -6,8 +6,9 @@
 #include "Breachborne/Breachborne.h"
 #include "Breachborne/Combat/BBPrimitiveBeamActor.h"
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
+#include "Breachborne/Wisp/BBWispPawn.h"
+#include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 
 // ------------------------------------------------------------------
 // Ground Dash
@@ -24,7 +25,6 @@ UGA_Eluna_GroundDash::UGA_Eluna_GroundDash()
 	SetAssetTags(AssetTags);
 
 	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Hunter_Eluna_GroundDash);
-	CooldownTagContainer.AddTag(BBGameplayTags::Cooldown_Dash);
 }
 
 bool UGA_Eluna_GroundDash::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
@@ -85,7 +85,7 @@ void UGA_Eluna_GroundDash::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		}
 	}
 	Hunter->LaunchCharacter(LaunchVelocity, true, true);
-	if (CheckAllyPassThrough() && Hunter->HasAuthority())
+	if (Hunter->HasAuthority() && TryCollectWispAlongPath(DashStart, DashStart + DashDir * DashDistance))
 	{
 		FActorSpawnParameters PulseParams;
 		PulseParams.Owner = Hunter;
@@ -94,14 +94,14 @@ void UGA_Eluna_GroundDash::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
 			ABBPrimitiveBurstActor::StaticClass(), Hunter->GetActorLocation(), FRotator::ZeroRotator, PulseParams))
 		{
-			Pulse->InitBurst(Hunter->GetActorLocation(), AllyDetectionRadius * 1.5f, 0.22f,
+			Pulse->InitBurst(Hunter->GetActorLocation(), WispDetectionRadius * 1.5f, 0.22f,
 				FLinearColor(0.30f, 0.79f, 0.94f, 1.0f));
 		}
 	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
-bool UGA_Eluna_GroundDash::CheckAllyPassThrough()
+bool UGA_Eluna_GroundDash::TryCollectWispAlongPath(const FVector& DashStart, const FVector& DashEnd)
 {
 	AHunterCharacter* Hunter = GetHunterCharacter();
 	if (!Hunter)
@@ -115,79 +115,64 @@ bool UGA_Eluna_GroundDash::CheckAllyPassThrough()
 		return false;
 	}
 
-	const FVector SourceLoc = Hunter->GetActorLocation();
 	const int32 SourceTeam = SourcePS->GetTeamID();
-
-	// Sphere sweep for allies within detection radius
-	TArray<AActor*> OverlappingActors;
-	UKismetSystemLibrary::SphereOverlapActors(
-		Hunter->GetWorld(),
-		SourceLoc,
-		AllyDetectionRadius,
-		TArray<TEnumAsByte<EObjectTypeQuery>>{ UEngineTypes::ConvertToObjectType(ECC_Pawn) },
-		AHunterCharacter::StaticClass(),
-		TArray<AActor*>{ Hunter },
-		OverlappingActors
-	);
-
-	bool bPassedThroughAlly = false;
-	for (AActor* Actor : OverlappingActors)
+	FVector ClippedDashEnd = DashEnd;
+	FHitResult WorldHit;
+	FCollisionQueryParams WorldParams(SCENE_QUERY_STAT(ElunaDashWorldClip), false, Hunter);
+	FCollisionObjectQueryParams WorldObjects;
+	WorldObjects.AddObjectTypesToQuery(ECC_WorldStatic);
+	if (Hunter->GetWorld()->LineTraceSingleByObjectType(
+		WorldHit, DashStart, DashEnd, WorldObjects, WorldParams))
 	{
-		AHunterCharacter* Ally = Cast<AHunterCharacter>(Actor);
-		if (!Ally || Ally == Hunter)
+		ClippedDashEnd = WorldHit.Location;
+	}
+
+	ABBWispPawn* CollectedWisp = nullptr;
+	float ClosestDistanceAlongDash = TNumericLimits<float>::Max();
+	const FVector DashDelta = ClippedDashEnd - DashStart;
+	const float DashLengthSquared = DashDelta.SizeSquared();
+	for (TActorIterator<ABBWispPawn> It(Hunter->GetWorld()); It; ++It)
+	{
+		ABBWispPawn* Wisp = *It;
+		const ABreachbornePlayerState* WispPS = Wisp ? Wisp->GetOwningPlayerState() : nullptr;
+		if (!Wisp || Wisp->GetCarrier() || !WispPS || WispPS->GetTeamID() != SourceTeam
+			|| Wisp->GetWispState() == EWispState::Revived
+			|| Wisp->GetWispState() == EWispState::BeingExecuted)
 		{
 			continue;
 		}
 
-		ABreachbornePlayerState* AllyPS = Ally->GetPlayerState<ABreachbornePlayerState>();
-		if (AllyPS && AllyPS->GetTeamID() == SourceTeam)
+		const FVector WispLocation = Wisp->GetActorLocation();
+		if (FMath::PointDistToSegment(WispLocation, DashStart, ClippedDashEnd) > WispDetectionRadius)
 		{
-			bPassedThroughAlly = true;
-			break;
+			continue;
+		}
+
+		const float DistanceAlongDash = DashLengthSquared > KINDA_SMALL_NUMBER
+			? FVector::DotProduct(WispLocation - DashStart, DashDelta) / DashLengthSquared
+			: 0.0f;
+		if (DistanceAlongDash < ClosestDistanceAlongDash)
+		{
+			ClosestDistanceAlongDash = DistanceAlongDash;
+			CollectedWisp = Wisp;
 		}
 	}
-
-	if (!bPassedThroughAlly)
+	if (!CollectedWisp)
 	{
 		return false;
 	}
 
-	// Refund 50% of this dash's cooldown
+	CollectedWisp->SetCarrier(Hunter);
+
+	// CommitAbility has already applied the cooldown. Remove this dash's
+	// specific cooldown effect so collecting the wisp refunds one use.
 	UBBAbilitySystemComponent* ASC = GetBBAbilitySystemComponent();
 	if (ASC)
 	{
-		// Remove active cooldown effect for this dash
-		FGameplayTagContainer DashCooldownTags;
-		DashCooldownTags.AddTag(BBGameplayTags::Cooldown_Hunter_Eluna_GroundDash);
-		ASC->RemoveActiveEffectsWithTags(DashCooldownTags);
-
-		// Re-apply cooldown at reduced duration
-		const float RefundedDuration = CooldownDuration * (1.0f - AllyCooldownRefundFraction);
-		if (RefundedDuration > 0.1f)
-		{
-			ApplyBBCooldown(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), RefundedDuration);
-		}
-
-		// Reduce Q cooldown by 1 second
-		FGameplayTagContainer QCooldownTag;
-		QCooldownTag.AddTag(BBGameplayTags::Cooldown_Hunter_Eluna_Q);
-		// Reduce Q cooldown by removing the existing cooldown effect and re-applying with reduced duration
-		TArray<FActiveGameplayEffectHandle> ActiveEffects = ASC->GetActiveEffectsWithAllTags(QCooldownTag);
-		for (const FActiveGameplayEffectHandle& EffectHandle : ActiveEffects)
-		{
-			const FActiveGameplayEffect* ActiveEffect = ASC->GetActiveGameplayEffect(EffectHandle);
-			if (ActiveEffect)
-			{
-				const float NewRemaining = FMath::Max(0.0f, ActiveEffect->GetTimeRemaining(ASC->GetWorld()->GetTimeSeconds()) - QCooldownReduction);
-				ASC->RemoveActiveGameplayEffect(EffectHandle);
-				if (NewRemaining > 0.01f)
-				{
-					// Re-apply cooldown with reduced duration
-					ApplyBBCooldown(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), NewRemaining);
-				}
-			}
-		}
+		ASC->RemoveActiveEffectsWithGrantedTags(*GetCooldownTags());
 	}
+	UE_LOG(LogBreachborne, Warning, TEXT("BB_ELUNA_SHIFT|WISP_COLLECTED|wisp=%s|cooldown_refund=full"),
+		*CollectedWisp->GetName());
 
 	return true;
 }
@@ -199,7 +184,9 @@ const FGameplayTagContainer* UGA_Eluna_GroundDash::GetCooldownTags() const
 
 void UGA_Eluna_GroundDash::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
+	FGameplayTagContainer GrantedTags = *GetCooldownTags();
+	GrantedTags.AddTag(BBGameplayTags::Cooldown_Dash);
+	ApplyBBCooldownWithTags(Handle, ActorInfo, ActivationInfo, CooldownDuration, GrantedTags);
 }
 
 // ------------------------------------------------------------------
@@ -239,6 +226,5 @@ const FGameplayTagContainer* UGA_Eluna_AerialDash::GetCooldownTags() const
 {
 	static FGameplayTagContainer AerialCooldownTags;
 	AerialCooldownTags.AddTag(BBGameplayTags::Cooldown_Hunter_Eluna_AerialDash);
-	AerialCooldownTags.AddTag(BBGameplayTags::Cooldown_Dash);
 	return &AerialCooldownTags;
 }

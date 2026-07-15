@@ -69,17 +69,39 @@ void UGA_Crysta_LMB::FireShot()
 	if (bEmpowered)
 	{
 		ASC->SetLooseGameplayTagCount(BBGameplayTags::State_Crysta_EmpoweredLMB, 0);
-		const float HalfSpacing = EmpoweredShotSpacing * 0.5f;
-		SpawnProjectile(AimDir, true, SpawnForwardOffset + HalfSpacing);
-		SpawnProjectile(AimDir, true, FMath::Max(20.0f, SpawnForwardOffset - HalfSpacing));
 	}
-	else
+
+	TArray<FVector> SpawnLocations;
+	CalculateShotSpawnLocations(Hunter->GetActorLocation(), AimDir, bEmpowered,
+		SpawnForwardOffset, EmpoweredShotSpacing, SpawnLocations);
+	for (const FVector& SpawnLocation : SpawnLocations)
 	{
-		SpawnProjectile(AimDir, false, SpawnForwardOffset);
+		SpawnProjectile(AimDir, bEmpowered, SpawnLocation);
 	}
 }
 
-void UGA_Crysta_LMB::SpawnProjectile(const FVector& Direction, bool bEmpoweredShot, float ForwardOffset)
+void UGA_Crysta_LMB::CalculateShotSpawnLocations(const FVector& Origin, const FVector& Direction, bool bEmpowered,
+	float ForwardOffset, float ShotSpacing, TArray<FVector>& OutLocations)
+{
+	OutLocations.Reset();
+	const FVector ShotDirection = Direction.GetSafeNormal();
+	if (ShotDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	if (!bEmpowered)
+	{
+		OutLocations.Add(Origin + ShotDirection * ForwardOffset);
+		return;
+	}
+
+	const float HalfSpacing = FMath::Max(0.0f, ShotSpacing) * 0.5f;
+	OutLocations.Add(Origin + ShotDirection * (ForwardOffset + HalfSpacing));
+	OutLocations.Add(Origin + ShotDirection * FMath::Max(20.0f, ForwardOffset - HalfSpacing));
+}
+
+void UGA_Crysta_LMB::SpawnProjectile(const FVector& Direction, bool bEmpoweredShot, const FVector& SpawnLocation)
 {
 	AHunterCharacter* Hunter = GetHunterCharacter();
 	const ABreachbornePlayerState* PS = GetBBPlayerState();
@@ -94,7 +116,6 @@ void UGA_Crysta_LMB::SpawnProjectile(const FVector& Direction, bool bEmpoweredSh
 	Params.Instigator = Hunter;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	const FVector SpawnLocation = Hunter->GetActorLocation() + Direction * ForwardOffset;
 	ABBCrystaLMBProjectile* Projectile = Hunter->GetWorld()->SpawnActor<ABBCrystaLMBProjectile>(
 		ProjectileClass, SpawnLocation, Direction.Rotation(), Params);
 	if (Projectile)

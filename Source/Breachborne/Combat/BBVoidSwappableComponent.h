@@ -12,6 +12,7 @@ class BREACHBORNE_API UBBVoidSwappableComponent : public UActorComponent
 
 public:
 	UBBVoidSwappableComponent();
+	void PrepareOwnerForSwap();
 
 protected:
 	virtual void BeginPlay() override;

@@ -4,6 +4,8 @@
 #include "Breachborne/Abilities/BBGameplayAbility.h"
 #include "GA_Crysta_Passive.generated.h"
 
+class UAbilitySystemComponent;
+
 UCLASS()
 class BREACHBORNE_API UGA_Crysta_Passive : public UBBGameplayAbility
 {
@@ -11,6 +13,7 @@ class BREACHBORNE_API UGA_Crysta_Passive : public UBBGameplayAbility
 
 public:
 	UGA_Crysta_Passive();
+	static bool ReduceActiveCooldownTag(UAbilitySystemComponent* ASC, FGameplayTag CooldownTag, float ReductionSeconds);
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -23,7 +26,6 @@ protected:
 
 private:
 	void OnReverberationDetonated(FGameplayTag Tag, const FGameplayEventData* Payload);
-	void ReduceCooldownTag(FGameplayTag CooldownTag);
 
 	FDelegateHandle DetonationEventHandle;
 };

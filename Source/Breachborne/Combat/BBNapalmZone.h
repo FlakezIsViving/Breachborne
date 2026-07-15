@@ -46,7 +46,7 @@ protected:
 	float ZoneDuration = 5.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|NapalmZone")
-	float WarningDuration = 0.45f;
+	float WarningDuration = 0.75f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|NapalmZone")
 	float DamageTickInterval = 0.5f;

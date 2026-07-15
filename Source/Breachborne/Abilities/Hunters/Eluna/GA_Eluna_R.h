@@ -68,6 +68,9 @@ private:
 	/** Break the channel early (out of range, target died, etc.) */
 	void BreakChannel();
 
+	/** Whether authoritative channel state says Eluna is currently interrupted. */
+	bool IsInterruptedByCrowdControl() const;
+
 	/** Clean up channel state and end ability */
 	void EndChannel(bool bWasCancelled);
 

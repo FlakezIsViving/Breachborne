@@ -70,6 +70,10 @@ public:
 	/** Local-only HUD metadata. This does not participate in gameplay authority. */
 	const FBBAbilityRangeIndicatorInfo& GetRangeIndicatorInfo() const { return RangeIndicatorInfo; }
 
+	/** Build a network-safe cooldown spec with runtime duration and granted tags. */
+	static FGameplayEffectSpecHandle BuildBBCooldownSpec(UAbilitySystemComponent* ASC, float Duration,
+		const FGameplayTagContainer& GrantedTags, float AbilityLevel = 1.0f);
+
 protected:
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 
@@ -95,6 +99,10 @@ protected:
 
 	/** Apply a cooldown using a transient cooldown GE */
 	void ApplyBBCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, float Duration) const;
+
+	/** Apply a cooldown with explicit granted tags while keeping GetCooldownTags limited to activation checks. */
+	void ApplyBBCooldownWithTags(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, float Duration, const FGameplayTagContainer& GrantedTags) const;
 
 	/** Fire a one-shot GameplayCue through the owning ASC. */
 	void ExecuteVisualCue(FGameplayTag CueTag, const FVector& Location = FVector::ZeroVector, const FVector& Normal = FVector::UpVector) const;

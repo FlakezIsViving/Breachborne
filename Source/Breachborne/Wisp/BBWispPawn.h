@@ -13,6 +13,35 @@ class AHunterCharacter;
 class ABreachbornePlayerState;
 class ABBWispPawn;
 
+struct FBBWispTickInput
+{
+	float CurrentHP = 100.0f;
+	float MaxHP = 100.0f;
+	float CurrentRez = 0.0f;
+	float HealAmount = 0.0f;
+	float DeltaTime = 0.2f;
+	float BaseDrainRate = 2.0f;
+	float StompDrainMultiplier = 3.0f;
+	float RezFillRate = 0.20f;
+	float RezDecayRate = 0.165f;
+	float HealToReviveConversion = 0.005f;
+	float MaxReviveMultiplier = 2.0f;
+	bool bAllyNearby = false;
+	bool bHealingActive = false;
+	bool bEnemyNearby = false;
+	bool bCarried = false;
+};
+
+struct FBBWispTickResult
+{
+	float HP = 0.0f;
+	float Rez = 0.0f;
+	float ProximityMultiplier = 0.0f;
+	float HealMultiplier = 0.0f;
+	float TotalReviveMultiplier = 0.0f;
+	bool bDecayPaused = false;
+};
+
 UENUM(BlueprintType)
 enum class EWispState : uint8
 {
@@ -46,6 +75,12 @@ public:
 
 	/** Server: initialize the wisp with its owning player state */
 	void InitWisp(ABreachbornePlayerState* OwnerPS);
+
+	/** Pure rule resolver shared by runtime logic and automation coverage. */
+	static FBBWispTickResult ResolveWispTick(const FBBWispTickInput& Input);
+
+	/** Healing starts a persistent revive; enemy contest is the only ordinary cancellation. */
+	static bool ResolveHealingReviveLatch(bool bWasLatched, bool bReceivedHealing, bool bEnemyNearby);
 
 	/** Server: begin execute sequence from an enemy hunter */
 	void ServerBeginExecute(AHunterCharacter* Executor);
@@ -83,7 +118,7 @@ public:
 	AHunterCharacter* GetCarrier() const { return CarriedBy.Get(); }
 
 	/** The hunter currently carrying this wisp (Eluna passive) */
-	UPROPERTY(BlueprintReadOnly, Category = "Breachborne|Wisp")
+	UPROPERTY(ReplicatedUsing = OnRep_CarriedBy, BlueprintReadOnly, Category = "Breachborne|Wisp")
 	TObjectPtr<AHunterCharacter> CarriedBy;
 
 	/** The player who knocked this hunter into wisp state (for kill credit on wisp death) */
@@ -163,6 +198,9 @@ protected:
 	UFUNCTION()
 	void OnRep_WispHP();
 
+	UFUNCTION()
+	void OnRep_CarriedBy();
+
 	// --- Tuning Constants ---
 
 	/** Wisp move speed (cm/s) */
@@ -206,6 +244,8 @@ protected:
 	float MaxReviveMultiplier = 2.0f;
 
 private:
+	void ApplyCarrierState();
+
 	/** Server: periodic tick for HP drain + proximity detection */
 	void ServerWispTick();
 
@@ -230,4 +270,7 @@ private:
 
 	/** Healing accumulated since last tick (converted to revive progress) */
 	float HealAccumulated = 0.0f;
+
+	/** Set by healing and retained until an enemy contests the wisp. */
+	bool bHealingReviveLatched = false;
 };

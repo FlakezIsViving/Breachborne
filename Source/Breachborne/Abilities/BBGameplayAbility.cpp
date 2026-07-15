@@ -2,9 +2,9 @@
 #include "BBAbilitySystemComponent.h"
 #include "BBAbilityVisualSet.h"
 #include "Breachborne/Characters/HunterCharacter.h"
+#include "Breachborne/Combat/BBCooldownEffect.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "GameplayCueInterface.h"
-#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 
 UBBGameplayAbility::UBBGameplayAbility()
 {
@@ -98,29 +98,45 @@ FVector UBBGameplayAbility::GetAimDirection() const
 
 void UBBGameplayAbility::ApplyBBCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, float Duration) const
 {
+	const FGameplayTagContainer* CooldownTags = GetCooldownTags();
+	ApplyBBCooldownWithTags(Handle, ActorInfo, ActivationInfo, Duration,
+		CooldownTags ? *CooldownTags : FGameplayTagContainer());
+}
+
+void UBBGameplayAbility::ApplyBBCooldownWithTags(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	float Duration, const FGameplayTagContainer& GrantedTags) const
+{
 	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid() || Duration <= 0.0f)
 	{
 		return;
 	}
 
-	UGameplayEffect* CooldownGE = NewObject<UGameplayEffect>(GetTransientPackage(), TEXT("GE_BBCooldown"));
-	CooldownGE->DurationPolicy = EGameplayEffectDurationType::HasDuration;
-	CooldownGE->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Duration));
-
-	UTargetTagsGameplayEffectComponent& TagComp = CooldownGE->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-	FInheritedTagContainer TagContainer;
-	TagContainer.Added.AddTag(BBGameplayTags::Effect_Cooldown);
-
-	if (const FGameplayTagContainer* Tags = GetCooldownTags())
+	FGameplayEffectSpecHandle SpecHandle = BuildBBCooldownSpec(ActorInfo->AbilitySystemComponent.Get(), Duration,
+		GrantedTags, GetAbilityLevel(Handle, ActorInfo));
+	if (SpecHandle.IsValid())
 	{
-		for (const FGameplayTag& Tag : *Tags)
-		{
-			TagContainer.Added.AddTag(Tag);
-		}
+		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+	}
+}
+
+FGameplayEffectSpecHandle UBBGameplayAbility::BuildBBCooldownSpec(UAbilitySystemComponent* ASC, float Duration,
+	const FGameplayTagContainer& GrantedTags, float AbilityLevel)
+{
+	if (!ASC || Duration <= 0.0f)
+	{
+		return FGameplayEffectSpecHandle();
 	}
 
-	TagComp.SetAndApplyTargetTagChanges(TagContainer);
-	ApplyGameplayEffectToOwner(Handle, ActorInfo, ActivationInfo, CooldownGE, GetAbilityLevel());
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(UBBCooldownEffect::StaticClass(), AbilityLevel,
+		ASC->MakeEffectContext());
+	if (SpecHandle.IsValid())
+	{
+		SpecHandle.Data->SetDuration(Duration, true);
+		SpecHandle.Data->DynamicGrantedTags.AppendTags(GrantedTags);
+		SpecHandle.Data->DynamicGrantedTags.AddTag(BBGameplayTags::Effect_Cooldown);
+	}
+	return SpecHandle;
 }
 
 void UBBGameplayAbility::ExecuteVisualCue(FGameplayTag CueTag, const FVector& Location, const FVector& Normal) const

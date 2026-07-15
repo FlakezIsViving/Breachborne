@@ -1,6 +1,4 @@
 #include "GA_Ghost_Q.h"
-#include "GameplayEffect.h"
-#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "Breachborne/Characters/HunterCharacter.h"
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
@@ -52,11 +50,12 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 
 	const bool bIsServer = Hunter->HasAuthority();
 
-	const FVector StartLocation = Hunter->GetActorLocation();
-	const FVector AimDir = GetAimDirection();
-	const FVector EndLocation = StartLocation + (AimDir * MaxRange);
-	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Fire);
-	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Fire, StartLocation, AimDir);
+	PendingStartLocation = Hunter->GetActorLocation();
+	PendingAimDirection = GetAimDirection();
+	PendingEndLocation = PendingStartLocation + (PendingAimDirection * MaxRange);
+	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Start);
+	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Telegraph,
+		PendingStartLocation, PendingAimDirection);
 	if (bIsServer && BeamVisualClass)
 	{
 		FActorSpawnParameters VisualParams;
@@ -66,7 +65,43 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 		if (ABBPrimitiveBeamActor* Beam = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
 			BeamVisualClass, FTransform::Identity, VisualParams))
 		{
-			Beam->InitBeam(StartLocation, EndLocation, 25.0f, 0.24f, FLinearColor(0.13f, 0.90f, 0.72f, 1.0f));
+			Beam->InitBeam(PendingStartLocation, PendingEndLocation, 7.0f, FireDelay,
+				FLinearColor(0.55f, 0.58f, 0.60f, 1.0f));
+		}
+	}
+
+	if (bIsServer)
+	{
+		Hunter->GetWorldTimerManager().SetTimer(
+			FireDelayHandle, this, &UGA_Ghost_Q::FireLaser, FireDelay, false);
+	}
+}
+
+void UGA_Ghost_Q::FireLaser()
+{
+	AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		return;
+	}
+
+	const bool bIsServer = true;
+	const FVector StartLocation = PendingStartLocation;
+	const FVector EndLocation = PendingEndLocation;
+	const FVector AimDir = PendingAimDirection;
+	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Fire);
+	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Fire, StartLocation, AimDir);
+	if (BeamVisualClass)
+	{
+		FActorSpawnParameters VisualParams;
+		VisualParams.Owner = Hunter;
+		VisualParams.Instigator = Hunter;
+		VisualParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ABBPrimitiveBeamActor* Beam = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			BeamVisualClass, FTransform::Identity, VisualParams))
+		{
+			Beam->InitBeam(StartLocation, EndLocation, 25.0f, 0.24f,
+				FLinearColor(0.13f, 0.90f, 0.72f, 1.0f));
 		}
 	}
 
@@ -161,7 +196,18 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 		}
 	}
 
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UGA_Ghost_Q::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (AHunterCharacter* Hunter = GetHunterCharacter())
+	{
+		Hunter->GetWorldTimerManager().ClearTimer(FireDelayHandle);
+	}
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 const FGameplayTagContainer* UGA_Ghost_Q::GetCooldownTags() const
@@ -171,13 +217,5 @@ const FGameplayTagContainer* UGA_Ghost_Q::GetCooldownTags() const
 
 void UGA_Ghost_Q::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	UGameplayEffect* CooldownGE = NewObject<UGameplayEffect>(GetTransientPackage());
-	CooldownGE->DurationPolicy = EGameplayEffectDurationType::HasDuration;
-	CooldownGE->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(CooldownDuration));
-	UTargetTagsGameplayEffectComponent& TagComp = CooldownGE->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-	FInheritedTagContainer TagContainer;
-	TagContainer.Added.AddTag(BBGameplayTags::Cooldown_Hunter_Ghost_Q);
-	TagComp.SetAndApplyTargetTagChanges(TagContainer);
-
-	ApplyGameplayEffectToOwner(Handle, ActorInfo, ActivationInfo, CooldownGE, GetAbilityLevel());
+	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
 }

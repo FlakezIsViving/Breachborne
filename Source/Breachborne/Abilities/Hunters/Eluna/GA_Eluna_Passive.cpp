@@ -3,11 +3,14 @@
 #include "Breachborne/Core/BreachbornePlayerState.h"
 #include "Breachborne/Abilities/BBAbilitySystemComponent.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
+#include "Breachborne/Abilities/BBHealthSet.h"
 #include "Breachborne/Combat/BBHealEffect.h"
+#include "Breachborne/Combat/BBPrimitiveBeamActor.h"
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Wisp/BBWispPawn.h"
 #include "Breachborne/Breachborne.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UGA_Eluna_Passive::UGA_Eluna_Passive()
@@ -46,6 +49,9 @@ void UGA_Eluna_Passive::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		0.1f,
 		true
 	);
+
+	// Evaluate once on grant so the passive does not appear to wait for another ability.
+	TickHeal();
 }
 
 void UGA_Eluna_Passive::TickHeal()
@@ -93,7 +99,9 @@ void UGA_Eluna_Passive::TickHeal()
 		}
 
 		ABreachbornePlayerState* AllyPS = Ally->GetPlayerState<ABreachbornePlayerState>();
-		if (AllyPS && AllyPS->GetTeamID() == SourceTeam)
+		const UBBHealthSet* AllyHealth = AllyPS ? AllyPS->GetHealthSet() : nullptr;
+		if (AllyPS && AllyPS->GetTeamID() == SourceTeam && AllyHealth
+			&& AllyHealth->GetHealth() < AllyHealth->GetMaxHealth())
 		{
 			// Apply heal effect to ally
 			if (HealEffectClass)
@@ -112,14 +120,28 @@ void UGA_Eluna_Passive::TickHeal()
 	if (bAppliedHeal)
 	{
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Eluna_Passive, EBBAbilityAnimationPhase::PassivePulse);
+
+		// A small floating plus reads as healing without covering Eluna or the ground.
+		const FVector IndicatorCenter = SourceLoc + FVector(0.0f, 0.0f, 125.0f);
 		FActorSpawnParameters Params;
 		Params.Owner = Hunter;
 		Params.Instigator = Hunter;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
-			ABBPrimitiveBurstActor::StaticClass(), SourceLoc, FRotator::ZeroRotator, Params))
+		if (ABBPrimitiveBeamActor* Horizontal = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), IndicatorCenter, FRotator::ZeroRotator, Params))
 		{
-			Pulse->InitBurst(SourceLoc, HealRadius, 0.24f, FLinearColor(0.43f, 0.78f, 1.0f, 1.0f), true);
+			Horizontal->InitBeam(
+				IndicatorCenter - FVector(32.0f, 0.0f, 0.0f),
+				IndicatorCenter + FVector(32.0f, 0.0f, 0.0f),
+				4.0f, 0.35f, FLinearColor(0.35f, 1.0f, 0.45f));
+		}
+		if (ABBPrimitiveBeamActor* Vertical = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBeamActor>(
+			ABBPrimitiveBeamActor::StaticClass(), IndicatorCenter, FRotator::ZeroRotator, Params))
+		{
+			Vertical->InitBeam(
+				IndicatorCenter - FVector(0.0f, 32.0f, 0.0f),
+				IndicatorCenter + FVector(0.0f, 32.0f, 0.0f),
+				4.0f, 0.35f, FLinearColor(0.35f, 1.0f, 0.45f));
 		}
 	}
 }
@@ -152,29 +174,47 @@ void UGA_Eluna_Passive::TickWispPickup()
 	// Check if currently carrying a wisp — drop if too far
 	if (CarriedWisp.IsValid())
 	{
-		if (bCarrierCrowdControlled
-			|| FVector::Dist(SourceLoc, CarriedWisp->GetActorLocation()) > WispDropDistance)
+		if (CarriedWisp->GetCarrier() != Hunter)
 		{
-			UE_LOG(LogBreachborne, Log, TEXT("Eluna Passive: Dropped carried wisp (CC=%d)"),
-				bCarrierCrowdControlled ? 1 : 0);
-			CarriedWisp->SetCarrier(nullptr);
+			// Another authoritative system dropped it; clear stale passive state.
 			CarriedWisp = nullptr;
-			FActorSpawnParameters Params;
-			Params.Owner = Hunter;
-			Params.Instigator = Hunter;
-			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
-				ABBPrimitiveBurstActor::StaticClass(), SourceLoc, FRotator::ZeroRotator, Params))
-			{
-				Pulse->InitBurst(SourceLoc, WispPickupRadius, 0.2f, FLinearColor(1.0f, 0.48f, 0.78f, 1.0f));
-			}
-
 		}
-		return;
+		else
+		{
+			if (bCarrierCrowdControlled
+				|| FVector::Dist(SourceLoc, CarriedWisp->GetActorLocation()) > WispDropDistance)
+			{
+				UE_LOG(LogBreachborne, Log, TEXT("Eluna Passive: Dropped carried wisp (CC=%d)"),
+					bCarrierCrowdControlled ? 1 : 0);
+				CarriedWisp->SetCarrier(nullptr);
+				CarriedWisp = nullptr;
+				FActorSpawnParameters Params;
+				Params.Owner = Hunter;
+				Params.Instigator = Hunter;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				if (ABBPrimitiveBurstActor* Pulse = Hunter->GetWorld()->SpawnActor<ABBPrimitiveBurstActor>(
+					ABBPrimitiveBurstActor::StaticClass(), SourceLoc, FRotator::ZeroRotator, Params))
+				{
+					Pulse->InitBurst(SourceLoc, WispPickupRadius, 0.2f, FLinearColor(1.0f, 0.48f, 0.78f, 1.0f));
+				}
+			}
+			return;
+		}
 	}
 	if (bCarrierCrowdControlled)
 	{
 		return;
+	}
+
+	// A dash can collect the wisp between passive polling intervals. Adopt that
+	// authoritative carry here so later CC/drop handling remains owned by passive.
+	for (TActorIterator<ABBWispPawn> It(Hunter->GetWorld()); It; ++It)
+	{
+		if (It->GetCarrier() == Hunter)
+		{
+			CarriedWisp = *It;
+			return;
+		}
 	}
 
 	// Find nearby ally wisps

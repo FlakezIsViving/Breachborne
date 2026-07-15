@@ -41,6 +41,18 @@ void UGA_Ghost_Passive::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	// Passive stays active — do NOT call EndAbility
 }
 
+void UGA_Ghost_Passive::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->SetLooseGameplayTagCount(BBGameplayTags::Ability_Hunter_Ghost_Passive, 0);
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
 void UGA_Ghost_Passive::OnKillEvent(FGameplayEventData Payload)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
@@ -72,6 +84,7 @@ void UGA_Ghost_Passive::OnKillEvent(FGameplayEventData Payload)
 	{
 		UE_LOG(LogBreachborne, Verbose, TEXT("Ghost Passive: Kill detected but Shift not on cooldown"));
 	}
+	UE_LOG(LogBreachborne, Warning, TEXT("BB_GHOST_PASSIVE|KILL|cooldowns_removed=%d"), ActiveCooldowns.Num());
 
 	if (AHunterCharacter* Hunter = GetHunterCharacter())
 	{
@@ -100,7 +113,9 @@ void UGA_Ghost_Passive::WaitForNextKill()
 {
 	UAbilityTask_WaitGameplayEvent* WaitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
-		BBGameplayTags::Event_Kill
+		BBGameplayTags::Event_Kill,
+		nullptr,
+		true
 	);
 
 	if (WaitTask)

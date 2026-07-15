@@ -98,6 +98,7 @@ void ABBStormManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ABBStormManager, TargetRadius);
 	DOREPLIFETIME(ABBStormManager, CurrentPhaseIndex);
 	DOREPLIFETIME(ABBStormManager, PhaseState);
+	DOREPLIFETIME(ABBStormManager, bStormEnabled);
 }
 
 UAbilitySystemComponent* ABBStormManager::GetAbilitySystemComponent() const
@@ -107,7 +108,7 @@ UAbilitySystemComponent* ABBStormManager::GetAbilitySystemComponent() const
 
 void ABBStormManager::StartStorm()
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || !bStormEnabled)
 	{
 		return;
 	}
@@ -125,6 +126,22 @@ void ABBStormManager::StartStorm()
 		ActiveShift ? *ActiveShift->GetShiftName().ToString() : TEXT("None"), PhaseConfigs.Num());
 
 	AdvanceToPhase(0);
+}
+
+void ABBStormManager::SetStormEnabled(bool bEnabled)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bStormEnabled = bEnabled;
+	if (!bStormEnabled)
+	{
+		ResetStorm();
+	}
+	ForceNetUpdate();
+	UE_LOG(LogBreachborne, Warning, TEXT("BB_STORM_SETTING|SERVER|Manager enabled=%d"), bStormEnabled ? 1 : 0);
 }
 
 void ABBStormManager::ResetStorm()
@@ -207,6 +224,10 @@ void ABBStormManager::OnPhaseHoldComplete()
 void ABBStormManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (!bStormEnabled)
+	{
+		return;
+	}
 
 	if (HasAuthority())
 	{
@@ -271,7 +292,7 @@ void ABBStormManager::Tick(float DeltaTime)
 
 void ABBStormManager::ApplyStormDamage()
 {
-	if (!HasAuthority() || !AbilitySystemComponent || !StormDamageGE)
+	if (!HasAuthority() || !bStormEnabled || !AbilitySystemComponent || !StormDamageGE)
 	{
 		return;
 	}

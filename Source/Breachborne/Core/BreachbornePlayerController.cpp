@@ -28,7 +28,9 @@
 #include "Breachborne/Abilities/BBGameplayAbility.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Abilities/BBHealthSet.h"
+#include "Breachborne/Abilities/Hunters/Eluna/GA_Eluna_Shift.h"
 #include "Breachborne/Combat/BBDamageEffect.h"
+#include "Breachborne/Combat/BBAllyBot.h"
 #include "Breachborne/Items/BBInventoryManager.h"
 #include "Breachborne/Items/BBEquipmentDefinition.h"
 #include "Breachborne/Items/BBConsumableDefinition.h"
@@ -43,6 +45,219 @@
 #include "Breachborne/Breachborne.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+
+namespace
+{
+	enum EBBOutcomeSmokeStateBits : int32
+	{
+		Outcome_Stunned = 1 << 0,
+		Outcome_Slowed = 1 << 1,
+		Outcome_Grounded = 1 << 2,
+		Outcome_AntiHeal = 1 << 3,
+		Outcome_Hooked = 1 << 4,
+		Outcome_HudsonHooked = 1 << 5,
+		Outcome_Reverberation = 1 << 6,
+		Outcome_CrystaEmpowered = 1 << 7,
+		Outcome_VoidEmpowered = 1 << 8,
+		Outcome_VoidSwapping = 1 << 9,
+		Outcome_VoidPulled = 1 << 10,
+		Outcome_HudsonSpinning = 1 << 11,
+		Outcome_HudsonSpunUp = 1 << 12,
+		Outcome_HudsonHovering = 1 << 13,
+		Outcome_CrystaPrimaryShiftCooldown = 1 << 14,
+		Outcome_CrystaSecondaryShiftCooldown = 1 << 15
+	};
+
+	int32 BuildOutcomeSmokeStateMask(const UAbilitySystemComponent* ASC)
+	{
+		if (!ASC)
+		{
+			return 0;
+		}
+
+		int32 Mask = 0;
+		auto AddIfPresent = [ASC, &Mask](const FGameplayTag& Tag, int32 Bit)
+		{
+			if (ASC->HasMatchingGameplayTag(Tag))
+			{
+				Mask |= Bit;
+			}
+		};
+		AddIfPresent(BBGameplayTags::State_Stunned, Outcome_Stunned);
+		AddIfPresent(BBGameplayTags::State_Slowed, Outcome_Slowed);
+		AddIfPresent(BBGameplayTags::State_Grounded, Outcome_Grounded);
+		AddIfPresent(BBGameplayTags::State_AntiHeal, Outcome_AntiHeal);
+		AddIfPresent(BBGameplayTags::State_Hooked, Outcome_Hooked);
+		AddIfPresent(BBGameplayTags::State_Hudson_Hooked, Outcome_HudsonHooked);
+		AddIfPresent(BBGameplayTags::State_Crysta_Reverberation, Outcome_Reverberation);
+		AddIfPresent(BBGameplayTags::State_Crysta_EmpoweredLMB, Outcome_CrystaEmpowered);
+		AddIfPresent(BBGameplayTags::State_Void_Empowered, Outcome_VoidEmpowered);
+		AddIfPresent(BBGameplayTags::State_Void_Swapping, Outcome_VoidSwapping);
+		AddIfPresent(BBGameplayTags::State_Void_SingularityPulled, Outcome_VoidPulled);
+		AddIfPresent(BBGameplayTags::State_Hudson_Spinning, Outcome_HudsonSpinning);
+		AddIfPresent(BBGameplayTags::State_Hudson_SpunUp, Outcome_HudsonSpunUp);
+		AddIfPresent(BBGameplayTags::State_Hudson_Hovering, Outcome_HudsonHovering);
+		AddIfPresent(BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Primary, Outcome_CrystaPrimaryShiftCooldown);
+		AddIfPresent(BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Secondary, Outcome_CrystaSecondaryShiftCooldown);
+		return Mask;
+	}
+
+	float GetOutcomeCooldownRemaining(const UAbilitySystemComponent* ASC, const FGameplayTag& CooldownTag)
+	{
+		if (!ASC || !CooldownTag.IsValid())
+		{
+			return 0.0f;
+		}
+		const FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(
+			FGameplayTagContainer(CooldownTag));
+		float MaxRemaining = 0.0f;
+		for (const float Remaining : ASC->GetActiveEffectsTimeRemaining(Query))
+		{
+			MaxRemaining = FMath::Max(MaxRemaining, Remaining);
+		}
+		return MaxRemaining;
+	}
+
+	int32 CountOutcomeSmokeOwnedActors(UWorld* World, const AActor* Owner)
+	{
+		if (!World || !Owner)
+		{
+			return 0;
+		}
+
+		int32 Count = 0;
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (!It->IsActorBeingDestroyed() && It->GetOwner() == Owner)
+			{
+				++Count;
+			}
+		}
+		return Count;
+	}
+
+	const TCHAR* GetOutcomeSmokeStageName(int32 Stage)
+	{
+		switch (Stage)
+		{
+		case 0: return TEXT("RMB");
+		case 1: return TEXT("SHIFT");
+		case 2: return TEXT("Q");
+		case 3: return TEXT("R");
+		default: return TEXT("UNKNOWN");
+		}
+	}
+
+	float GetOutcomeSmokeSeparation(int32 HunterID, int32 Stage)
+	{
+		if (Stage == 1)
+		{
+			if (HunterID == 6) return 1200.0f;
+			if (HunterID == 4) return 650.0f;
+			return 300.0f;
+		}
+		if (Stage == 2)
+		{
+			switch (HunterID)
+			{
+			case 2: return 250.0f;
+			case 3: return 250.0f;
+			case 4: return 900.0f;
+			case 5:
+			case 6: return 800.0f;
+			default: return 500.0f;
+			}
+		}
+		if (Stage == 3)
+		{
+			switch (HunterID)
+			{
+			case 3: return 250.0f;
+			case 4: return 700.0f;
+			case 5:
+			case 6: return 800.0f;
+			default: return 600.0f;
+			}
+		}
+		return 450.0f;
+	}
+
+	float GetOutcomeSmokeAttackerAimX(int32 HunterID, int32 Stage, float Separation)
+	{
+		// Keep Void's singularity center offset so its pull has measurable travel.
+		return Separation * 0.5f + ((HunterID == 6 && Stage == 3) ? 250.0f : 0.0f);
+	}
+
+	enum EBBWispRulesSmokeStage : int32
+	{
+		WispRules_Natural = 0,
+		WispRules_Ally,
+		WispRules_Contest,
+		WispRules_Enemy,
+		WispRules_Healing,
+		WispRules_HealingLatched,
+		WispRules_HealingContested,
+		WispRules_CarriedContested,
+		WispRules_ElunaShiftPickup,
+		WispRules_ElunaPickup,
+		WispRules_ElunaCCDrop,
+		WispRules_ElunaRRevive,
+		WispRules_Count
+	};
+
+	const TCHAR* GetWispRulesSmokeStageName(int32 Stage)
+	{
+		switch (Stage)
+		{
+		case WispRules_Natural: return TEXT("natural");
+		case WispRules_Ally: return TEXT("ally");
+		case WispRules_Contest: return TEXT("ally_enemy");
+		case WispRules_Enemy: return TEXT("enemy");
+		case WispRules_Healing: return TEXT("healing");
+		case WispRules_HealingLatched: return TEXT("healing_latched");
+		case WispRules_HealingContested: return TEXT("healing_enemy");
+		case WispRules_CarriedContested: return TEXT("carried_enemy");
+		case WispRules_ElunaShiftPickup: return TEXT("eluna_shift_pickup");
+		case WispRules_ElunaPickup: return TEXT("eluna_pickup");
+		case WispRules_ElunaCCDrop: return TEXT("eluna_cc_drop");
+		case WispRules_ElunaRRevive: return TEXT("eluna_r_revive");
+		default: return TEXT("unknown");
+		}
+	}
+
+	float GetWispRulesSmokeStageDuration(int32 Stage)
+	{
+		if (Stage == WispRules_Healing)
+		{
+			return 0.6f;
+		}
+		if (Stage == WispRules_CarriedContested)
+		{
+			return 0.4f;
+		}
+		if (Stage == WispRules_ElunaPickup)
+		{
+			return 0.3f;
+		}
+		if (Stage == WispRules_HealingLatched)
+		{
+			return 0.9f;
+		}
+		if (Stage == WispRules_ElunaShiftPickup)
+		{
+			return 0.2f;
+		}
+		if (Stage == WispRules_ElunaCCDrop)
+		{
+			return 0.4f;
+		}
+		if (Stage == WispRules_ElunaRRevive)
+		{
+			return 4.2f;
+		}
+		return 0.8f;
+	}
+}
 
 ABreachbornePlayerController::ABreachbornePlayerController()
 {
@@ -259,6 +474,19 @@ void ABreachbornePlayerController::PlayerTick(float DeltaTime)
 	}
 }
 
+void ABreachbornePlayerController::PawnLeavingGame()
+{
+	if (HasAuthority())
+	{
+		if (ABreachborneGameMode* BBGM = GetWorld() ? GetWorld()->GetAuthGameMode<ABreachborneGameMode>() : nullptr)
+		{
+			BBGM->HandlePlayerDisconnect(this);
+		}
+	}
+
+	Super::PawnLeavingGame();
+}
+
 void ABreachbornePlayerController::InitializeAbilitySmoke()
 {
 	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke")))
@@ -268,7 +496,10 @@ void ABreachbornePlayerController::InitializeAbilitySmoke()
 
 	FParse::Value(FCommandLine::Get(), TEXT("BBAbilitySmokeIndex="), AbilitySmokeIndex);
 	FParse::Value(FCommandLine::Get(), TEXT("BBAbilitySmokeHunter="), AbilitySmokeHunterID);
-	if (AbilitySmokeIndex < 1 || AbilitySmokeIndex > 2 || AbilitySmokeHunterID < 1 || AbilitySmokeHunterID > 6)
+	bFourClientSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBFourClientSmoke"));
+	const int32 MaxSmokeIndex = bFourClientSmokeEnabled ? 4 : 2;
+	if (AbilitySmokeIndex < 1 || AbilitySmokeIndex > MaxSmokeIndex
+		|| AbilitySmokeHunterID < 1 || AbilitySmokeHunterID > 6)
 	{
 		UE_LOG(LogBreachborne, Error,
 			TEXT("BB_ABILITY_SMOKE|CONFIG_FAIL|index=%d hunter=%d"),
@@ -278,11 +509,14 @@ void ABreachbornePlayerController::InitializeAbilitySmoke()
 
 	bAbilitySmokeEnabled = true;
 	bDeathSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBDeathSmoke"));
+	bWispRulesSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBWispRulesSmoke"));
 	bHitSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBHitSmoke"));
+	bOutcomeSmokeEnabled = FParse::Param(FCommandLine::Get(), TEXT("BBOutcomeSmoke"));
 	UE_LOG(LogBreachborne, Warning,
-		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d death=%d hit=%d"),
-		AbilitySmokeIndex, AbilitySmokeHunterID, bDeathSmokeEnabled ? 1 : 0,
-		bHitSmokeEnabled ? 1 : 0);
+		TEXT("BB_ABILITY_SMOKE|CONFIG|index=%d hunter=%d four_client=%d death=%d wisp_rules=%d hit=%d outcome=%d"),
+		AbilitySmokeIndex, AbilitySmokeHunterID, bFourClientSmokeEnabled ? 1 : 0,
+		bDeathSmokeEnabled ? 1 : 0, bWispRulesSmokeEnabled ? 1 : 0,
+		bHitSmokeEnabled ? 1 : 0, bOutcomeSmokeEnabled ? 1 : 0);
 }
 
 void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
@@ -317,7 +551,7 @@ void ABreachbornePlayerController::UpdateDeathSmoke(float DeltaTime)
 					*GetNameSafe(Wisp), *GetNameSafe(Wisp->GetOwningPlayerState()),
 					Wisp->GetCurrentWispHP(), Wisp->GetRezBarProgress());
 			}
-			if (!bDeathSmokeHealRequested)
+			if (!bDeathSmokeHealRequested && !bWispRulesSmokeEnabled)
 			{
 				bDeathSmokeHealRequested = true;
 				ServerBeginWispHealSmoke();
@@ -395,6 +629,183 @@ void ABreachbornePlayerController::UpdateHitSmoke(float DeltaTime)
 	}
 }
 
+FGameplayTag ABreachbornePlayerController::GetOutcomeSmokeInputTag(int32 Stage) const
+{
+	switch (Stage)
+	{
+	case 0: return BBGameplayTags::InputTag_RMB;
+	case 1: return BBGameplayTags::InputTag_Shift;
+	case 2: return BBGameplayTags::InputTag_Q;
+	case 3: return BBGameplayTags::InputTag_R;
+	default: return FGameplayTag();
+	}
+}
+
+float ABreachbornePlayerController::GetOutcomeSmokeStageDuration(int32 Stage) const
+{
+	switch (Stage)
+	{
+	case 0: return 4.5f;
+	case 1: return 3.0f;
+	case 2: return 4.5f;
+	case 3: return 6.0f;
+	default: return 0.0f;
+	}
+}
+
+void ABreachbornePlayerController::UpdateOutcomeSmoke(float DeltaTime, AHunterCharacter* Hunter, UBBAbilitySystemComponent* ASC)
+{
+	if (!bOutcomeSmokeEnabled || !Hunter || !ASC || bAbilitySmokeComplete)
+	{
+		return;
+	}
+
+	const float Separation = GetOutcomeSmokeSeparation(AbilitySmokeHunterID, OutcomeSmokeStage);
+	const float AimX = AbilitySmokeIndex == 1
+		? GetOutcomeSmokeAttackerAimX(AbilitySmokeHunterID, OutcomeSmokeStage, Separation)
+		: -Separation * 0.5f;
+	AbilitySmokeAimAccumulator += DeltaTime;
+	if (AbilitySmokeAimAccumulator >= 0.05f)
+	{
+		AbilitySmokeAimAccumulator = 0.0f;
+		const FVector AimLocation(AimX, 0.0f, Hunter->GetActorLocation().Z);
+		Hunter->ServerSetAimLocation(AimLocation);
+		const FRotator AimRotation = (AimLocation - Hunter->GetActorLocation()).Rotation();
+		SetControlRotation(FRotator(0.0f, AimRotation.Yaw, 0.0f));
+	}
+
+	// Client 2 is a controlled target. The attacker controller owns preparation and reporting.
+	if (AbilitySmokeIndex != 1)
+	{
+		return;
+	}
+
+	if (OutcomeSmokeStage >= 4)
+	{
+		bAbilitySmokeComplete = true;
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_COMPLETE|index=1 hunter=%d stages=4 elapsed=%.2f"),
+			AbilitySmokeHunterID, AbilitySmokeElapsed);
+		return;
+	}
+
+	OutcomeSmokeStageElapsed += DeltaTime;
+	if (!bOutcomeSmokeStagePrepared)
+	{
+		if (OutcomeSmokeStageElapsed < 0.0f)
+		{
+			return;
+		}
+		bOutcomeSmokeStagePrepared = true;
+		bOutcomeSmokeStageConfirmed = false;
+		OutcomeSmokeStageElapsed = 0.0f;
+		ServerPrepareOutcomeSmoke(OutcomeSmokeStage);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_PREPARE|hunter=%d stage=%s"),
+			AbilitySmokeHunterID, GetOutcomeSmokeStageName(OutcomeSmokeStage));
+		return;
+	}
+
+	if (!bOutcomeSmokeStageConfirmed)
+	{
+		return;
+	}
+
+	if (!bOutcomeSmokeStageActivated && OutcomeSmokeStageElapsed >= 1.25f)
+	{
+		bOutcomeSmokeStageActivated = true;
+		OutcomeSmokeStageElapsed = 0.0f;
+		const FGameplayTag InputTag = GetOutcomeSmokeInputTag(OutcomeSmokeStage);
+		const FString ActionName = FString::Printf(TEXT("OUTCOME_%s"), GetOutcomeSmokeStageName(OutcomeSmokeStage));
+		ActivateAbilitySmokeInput(InputTag, *ActionName);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_ACTIVATE|hunter=%d stage=%s"),
+			AbilitySmokeHunterID, GetOutcomeSmokeStageName(OutcomeSmokeStage));
+		return;
+	}
+
+	if (!bOutcomeSmokeStageActivated)
+	{
+		return;
+	}
+
+	const FGameplayTag InputTag = GetOutcomeSmokeInputTag(OutcomeSmokeStage);
+	const float RmbReleaseTime = AbilitySmokeHunterID == 4 ? 2.0f : 1.35f;
+	if (!bOutcomeSmokeInputReleased
+		&& ((OutcomeSmokeStage == 0 && OutcomeSmokeStageElapsed >= RmbReleaseTime)
+			|| (OutcomeSmokeStage == 1 && OutcomeSmokeStageElapsed >= 1.0f)))
+	{
+		bOutcomeSmokeInputReleased = true;
+		ASC->InputTagReleased(InputTag);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_RELEASE|hunter=%d stage=%s"),
+			AbilitySmokeHunterID, GetOutcomeSmokeStageName(OutcomeSmokeStage));
+	}
+
+	if (!bOutcomeSmokeRepressed && OutcomeSmokeStage == 2 && OutcomeSmokeStageElapsed >= 1.4f
+		&& (AbilitySmokeHunterID == 5 || AbilitySmokeHunterID == 6))
+	{
+		bOutcomeSmokeRepressed = true;
+		ActivateAbilitySmokeInput(InputTag, TEXT("OUTCOME_Q_REPRESS"));
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_REPRESS|hunter=%d stage=Q"), AbilitySmokeHunterID);
+	}
+
+	if (!bOutcomeSmokeFollowupActivated && OutcomeSmokeStage == 1
+		&& AbilitySmokeHunterID == 5 && OutcomeSmokeStageElapsed >= 0.45f)
+	{
+		bOutcomeSmokeFollowupActivated = true;
+		const bool bActivated = ActivateAbilitySmokeInput(InputTag, TEXT("OUTCOME_SHIFT_SECOND_CHARGE"));
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_FOLLOWUP|hunter=5 stage=SHIFT action=SECOND_CHARGE success=%d"),
+			bActivated ? 1 : 0);
+	}
+
+	if (OutcomeSmokeStageElapsed < GetOutcomeSmokeStageDuration(OutcomeSmokeStage))
+	{
+		return;
+	}
+
+	ASC->InputTagReleased(InputTag);
+	ServerReportOutcomeSmoke(OutcomeSmokeStage);
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_OUTCOME_SMOKE|CLIENT_REPORT|hunter=%d stage=%s"),
+		AbilitySmokeHunterID, GetOutcomeSmokeStageName(OutcomeSmokeStage));
+	++OutcomeSmokeStage;
+	OutcomeSmokeStageElapsed = 0.0f;
+	bOutcomeSmokeStagePrepared = false;
+	bOutcomeSmokeStageConfirmed = false;
+	bOutcomeSmokeStageActivated = false;
+	bOutcomeSmokeInputReleased = false;
+	bOutcomeSmokeRepressed = false;
+	bOutcomeSmokeFollowupActivated = false;
+}
+
+void ABreachbornePlayerController::ClientConfirmOutcomeSmokePrepared_Implementation(int32 Stage, bool bSuccess)
+{
+	if (!bOutcomeSmokeEnabled || AbilitySmokeIndex != 1 || Stage != OutcomeSmokeStage)
+	{
+		return;
+	}
+
+	if (bSuccess)
+	{
+		bOutcomeSmokeStageConfirmed = true;
+		OutcomeSmokeStageElapsed = 0.0f;
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|CLIENT_PREPARED|hunter=%d stage=%s"),
+			AbilitySmokeHunterID, GetOutcomeSmokeStageName(Stage));
+		return;
+	}
+
+	bOutcomeSmokeStagePrepared = false;
+	bOutcomeSmokeStageConfirmed = false;
+	OutcomeSmokeStageElapsed = -0.5f;
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_OUTCOME_SMOKE|CLIENT_PREPARE_RETRY|hunter=%d stage=%s"),
+		AbilitySmokeHunterID, GetOutcomeSmokeStageName(Stage));
+}
+
 void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
 {
 	if (!bAbilitySmokeEnabled || bAbilitySmokeComplete || !GetWorld())
@@ -420,6 +831,7 @@ void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
 		AbilitySmokeLastPhase = Phase;
 		AbilitySmokePhaseElapsed = 0.0f;
 		AbilitySmokeLobbyRetry = 0.0f;
+		AbilitySmokeFullLobbyElapsed = 0.0f;
 		UE_LOG(LogBreachborne, Warning,
 			TEXT("BB_ABILITY_SMOKE|PHASE|index=%d hunter=%d phase=%d"),
 			AbilitySmokeIndex, AbilitySmokeHunterID, static_cast<int32>(Phase));
@@ -427,15 +839,29 @@ void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
 
 	if (Phase == EMatchPhase::WaitingForPlayers)
 	{
-		const int32 DesiredTeam = AbilitySmokeIndex - 1;
+		const int32 DesiredTeam = bFourClientSmokeEnabled
+			? (AbilitySmokeIndex - 1) / 2
+			: AbilitySmokeIndex - 1;
+		const int32 DesiredSlot = bFourClientSmokeEnabled
+			? (AbilitySmokeIndex - 1) % 2
+			: 0;
+		const int32 RequiredPlayers = bFourClientSmokeEnabled ? 4 : 2;
+		if (GS->GetLobbyActivePlayerCount() >= RequiredPlayers)
+		{
+			AbilitySmokeFullLobbyElapsed += DeltaTime;
+		}
+		else
+		{
+			AbilitySmokeFullLobbyElapsed = 0.0f;
+		}
 		if (AbilitySmokeLobbyRetry <= 0.0f)
 		{
-			if (PS->GetTeamID() != DesiredTeam || PS->GetLobbySlotIndex() != 0)
+			if (PS->GetTeamID() != DesiredTeam || PS->GetLobbySlotIndex() != DesiredSlot)
 			{
-				RequestJoinLobbySlot(DesiredTeam, 0);
+				RequestJoinLobbySlot(DesiredTeam, DesiredSlot);
 			}
 			else if (AbilitySmokeIndex == 1 && AbilitySmokePhaseElapsed >= 2.5f
-				&& GS->GetLobbyActivePlayerCount() >= 2)
+				&& AbilitySmokeFullLobbyElapsed >= 1.5f)
 			{
 				RequestStartLobbyMatch();
 			}
@@ -496,12 +922,21 @@ void ABreachbornePlayerController::UpdateAbilitySmoke(float DeltaTime)
 			AbilitySmokeIndex, AbilitySmokeHunterID, ASC->GetActivatableAbilities().Num());
 	}
 
+	if (bOutcomeSmokeEnabled)
+	{
+		UpdateOutcomeSmoke(DeltaTime, Hunter, ASC);
+		return;
+	}
+
 	AbilitySmokeAimAccumulator += DeltaTime;
 	if (AbilitySmokeAimAccumulator >= 0.05f)
 	{
 		AbilitySmokeAimAccumulator = 0.0f;
-		// Fire away from the other smoke client so enemy CC cannot invalidate later activation checks.
-		const float TargetX = AbilitySmokeIndex == 1 ? -1700.0f : 1700.0f;
+		// Fire away from the opposing team so enemy CC cannot invalidate later activation checks.
+		const bool bTeamZero = bFourClientSmokeEnabled
+			? AbilitySmokeIndex <= 2
+			: AbilitySmokeIndex == 1;
+		const float TargetX = bTeamZero ? -1700.0f : 1700.0f;
 		Hunter->ServerSetAimLocation(FVector(TargetX, 0.0f, Hunter->GetActorLocation().Z));
 	}
 
@@ -570,7 +1005,10 @@ bool ABreachbornePlayerController::ActivateAbilitySmokeInput(const FGameplayTag&
 
 void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int32 SmokeIndex)
 {
-	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke")) || SmokeIndex < 1 || SmokeIndex > 2)
+	const bool bFourClientSmoke = FParse::Param(FCommandLine::Get(), TEXT("BBFourClientSmoke"));
+	const int32 MaxSmokeIndex = bFourClientSmoke ? 4 : 2;
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| SmokeIndex < 1 || SmokeIndex > MaxSmokeIndex)
 	{
 		return;
 	}
@@ -583,15 +1021,17 @@ void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int3
 	}
 	AbilitySmokeServerIndex = SmokeIndex;
 
-	const float X = SmokeIndex == 1 ? -350.0f : 350.0f;
-	const FVector TraceStart(X, 0.0f, 5000.0f);
-	const FVector TraceEnd(X, 0.0f, -5000.0f);
+	const bool bTeamZero = bFourClientSmoke ? SmokeIndex <= 2 : SmokeIndex == 1;
+	const float X = bTeamZero ? -350.0f : 350.0f;
+	const float Y = bFourClientSmoke ? ((SmokeIndex % 2) == 1 ? -250.0f : 250.0f) : 0.0f;
+	const FVector TraceStart(X, Y, 5000.0f);
+	const FVector TraceEnd(X, Y, -5000.0f);
 	FHitResult GroundHit;
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BBAbilitySmokeGround), false, Hunter);
 	const bool bGroundHit = GetWorld()->LineTraceSingleByChannel(
 		GroundHit, TraceStart, TraceEnd, ECC_Visibility, QueryParams);
 	const float GroundZ = bGroundHit ? GroundHit.ImpactPoint.Z + 110.0f : 200.0f;
-	const FVector TargetLocation(X, 0.0f, GroundZ);
+	const FVector TargetLocation(X, Y, GroundZ);
 	Hunter->SetActorLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
 	if (UCharacterMovementComponent* Movement = Hunter->GetCharacterMovement())
 	{
@@ -606,8 +1046,9 @@ void ABreachbornePlayerController::ServerPrepareAbilitySmoke_Implementation(int3
 	}
 	Hunter->ForceNetUpdate();
 	UE_LOG(LogBreachborne, Warning,
-		TEXT("BB_ABILITY_SMOKE|SERVER_PREPARED|index=%d hunter=%d location=%s ground=%d"),
-		SmokeIndex, PS->GetHunterID(), *TargetLocation.ToCompactString(), bGroundHit ? 1 : 0);
+		TEXT("BB_ABILITY_SMOKE|SERVER_PREPARED|index=%d hunter=%d team=%d slot=%d location=%s ground=%d"),
+		SmokeIndex, PS->GetHunterID(), PS->GetTeamID(), PS->GetLobbySlotIndex(),
+		*TargetLocation.ToCompactString(), bGroundHit ? 1 : 0);
 }
 
 void ABreachbornePlayerController::ServerPrepareHitSmoke_Implementation()
@@ -709,6 +1150,310 @@ void ABreachbornePlayerController::ServerReportHitSmoke_Implementation(int32 Att
 	VictimPS->UpdateHealthProxy();
 }
 
+void ABreachbornePlayerController::ServerPrepareOutcomeSmoke_Implementation(int32 Stage)
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBOutcomeSmoke"))
+		|| AbilitySmokeServerIndex != 1 || Stage < 0 || Stage >= 4 || !GetWorld())
+	{
+		return;
+	}
+
+	ABreachbornePlayerController* TargetController = nullptr;
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ABreachbornePlayerController* Candidate = Cast<ABreachbornePlayerController>(It->Get());
+		if (Candidate && Candidate->AbilitySmokeServerIndex == 2)
+		{
+			TargetController = Candidate;
+			break;
+		}
+	}
+
+	AHunterCharacter* SourceHunter = Cast<AHunterCharacter>(GetPawn());
+	AHunterCharacter* TargetHunter = TargetController ? Cast<AHunterCharacter>(TargetController->GetPawn()) : nullptr;
+	ABreachbornePlayerState* SourcePS = GetPlayerState<ABreachbornePlayerState>();
+	ABreachbornePlayerState* TargetPS = TargetController
+		? TargetController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
+	UBBAbilitySystemComponent* SourceASC = GetBBASC();
+	UBBAbilitySystemComponent* TargetASC = TargetController ? TargetController->GetBBASC() : nullptr;
+	if (!SourceHunter || !TargetHunter || !SourcePS || !TargetPS || !SourceASC || !TargetASC
+		|| !SourcePS->GetIsAlive() || !TargetPS->GetIsAlive())
+	{
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_OUTCOME_SMOKE|SERVER_PREPARE_WAIT|stage=%s reason=missing_player"),
+			GetOutcomeSmokeStageName(Stage));
+		ClientConfirmOutcomeSmokePrepared(Stage, false);
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(OutcomeSmokeSampleTimerHandle);
+	bOutcomeSmokeServerSampling = false;
+	if (Stage > 0)
+	{
+		SourceASC->CancelAbilityByInputTag(GetOutcomeSmokeInputTag(Stage - 1));
+		TArray<AActor*> OwnedActorsToDestroy;
+		for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+		{
+			if (!It->IsActorBeingDestroyed() && It->GetOwner() == SourceHunter)
+			{
+				OwnedActorsToDestroy.Add(*It);
+			}
+		}
+		for (AActor* OwnedActor : OwnedActorsToDestroy)
+		{
+			OwnedActor->Destroy();
+		}
+	}
+
+	FGameplayTagContainer TransientTargetTags;
+	TransientTargetTags.AddTag(BBGameplayTags::State_Stunned);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Slowed);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Grounded);
+	TransientTargetTags.AddTag(BBGameplayTags::State_AntiHeal);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Hooked);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Hudson_Hooked);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Crysta_Reverberation);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Void_Swapping);
+	TransientTargetTags.AddTag(BBGameplayTags::State_Void_SingularityPulled);
+	TargetASC->RemoveActiveEffectsWithGrantedTags(TransientTargetTags);
+	for (const FGameplayTag& Tag : TransientTargetTags)
+	{
+		TargetASC->SetLooseGameplayTagCount(Tag, 0);
+	}
+
+	const int32 HunterID = SourcePS->GetHunterID();
+	const bool bAlliedTarget = HunterID == 3 && (Stage == 2 || Stage == 3);
+	TargetPS->SetTeamID(bAlliedTarget ? SourcePS->GetTeamID() : (SourcePS->GetTeamID() == 0 ? 1 : 0));
+
+	const float Separation = GetOutcomeSmokeSeparation(HunterID, Stage);
+	auto ResolveGroundLocation = [this](AHunterCharacter* Hunter, float X)
+	{
+		const FVector TraceStart(X, 0.0f, 5000.0f);
+		const FVector TraceEnd(X, 0.0f, -5000.0f);
+		FHitResult GroundHit;
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BBOutcomeSmokeGround), false, Hunter);
+		const bool bGroundHit = GetWorld()->LineTraceSingleByChannel(
+			GroundHit, TraceStart, TraceEnd, ECC_Visibility, QueryParams);
+		return FVector(X, 0.0f, bGroundHit ? GroundHit.ImpactPoint.Z + 110.0f : 200.0f);
+	};
+
+	const FVector SourceLocation = ResolveGroundLocation(SourceHunter, Separation * -0.5f);
+	FVector TargetLocation = ResolveGroundLocation(TargetHunter, Separation * 0.5f);
+	TargetLocation.Z = SourceLocation.Z;
+	const FVector SourceAimLocation(
+		GetOutcomeSmokeAttackerAimX(HunterID, Stage, Separation), 0.0f, SourceLocation.Z);
+	SourceHunter->ResetTransientCombatState();
+	TargetHunter->ResetTransientCombatState();
+	SourceASC->SetLooseGameplayTagCount(BBGameplayTags::State_Gliding, 0);
+	TargetASC->SetLooseGameplayTagCount(BBGameplayTags::State_Gliding, 0);
+	SourceHunter->SetActorLocation(SourceLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	TargetHunter->SetActorLocation(TargetLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	SourceHunter->SetActorRotation(FRotator::ZeroRotator);
+	TargetHunter->SetActorRotation(FRotator(0.0f, 180.0f, 0.0f));
+	SetControlRotation(FRotator::ZeroRotator);
+	TargetController->SetControlRotation(FRotator(0.0f, 180.0f, 0.0f));
+	SourceHunter->ServerSetAimLocation(SourceAimLocation);
+	TargetHunter->ServerSetAimLocation(SourceLocation);
+	for (AHunterCharacter* Hunter : { SourceHunter, TargetHunter })
+	{
+		if (UCharacterMovementComponent* Movement = Hunter->GetCharacterMovement())
+		{
+			Movement->StopMovementImmediately();
+			Movement->SetMovementMode(MOVE_Walking);
+		}
+		Hunter->ForceNetUpdate();
+	}
+
+	if (UBBHealthSet* SourceHealth = SourcePS->GetHealthSet())
+	{
+		SourceHealth->InitMaxHealth(50000.0f);
+		SourceHealth->SetHealth(50000.0f);
+		SourceHealth->SetShield(0.0f);
+		SourcePS->UpdateHealthProxy();
+	}
+	float TargetInitialHealth = bAlliedTarget ? 40000.0f : 50000.0f;
+	if (HunterID == 4 && Stage == 3)
+	{
+		TargetInitialHealth = 10000.0f;
+	}
+	if (UBBHealthSet* TargetHealth = TargetPS->GetHealthSet())
+	{
+		TargetHealth->InitMaxHealth(50000.0f);
+		TargetHealth->SetHealth(TargetInitialHealth);
+		TargetHealth->SetShield(0.0f);
+		TargetPS->UpdateHealthProxy();
+	}
+	SourcePS->ForceNetUpdate();
+	TargetPS->ForceNetUpdate();
+
+	OutcomeSmokeServerStage = Stage;
+	OutcomeSmokeTargetController = TargetController;
+	OutcomeSmokeSourceStart = SourceLocation;
+	OutcomeSmokeTargetStart = TargetLocation;
+	OutcomeSmokeInitialTargetHealth = TargetInitialHealth;
+	OutcomeSmokeMinTargetHealth = TargetInitialHealth;
+	OutcomeSmokeMaxTargetHealth = TargetInitialHealth;
+	OutcomeSmokeMaxSourceDisplacement = 0.0f;
+	OutcomeSmokeMaxTargetDisplacement = 0.0f;
+	OutcomeSmokeSourceStateMask = 0;
+	OutcomeSmokeTargetStateMask = 0;
+	OutcomeSmokeOwnedActorBaseline = CountOutcomeSmokeOwnedActors(GetWorld(), SourceHunter);
+	OutcomeSmokeOwnedActorPeak = OutcomeSmokeOwnedActorBaseline;
+	bOutcomeSmokeServerSampling = true;
+	SampleOutcomeSmoke();
+	GetWorldTimerManager().SetTimer(
+		OutcomeSmokeSampleTimerHandle, this, &ABreachbornePlayerController::SampleOutcomeSmoke,
+		0.05f, true, 0.05f);
+
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_OUTCOME_SMOKE|SERVER_PREPARED|hunter=%d stage=%s separation=%.0f allied=%d target_health=%.1f owned_baseline=%d"),
+		HunterID, GetOutcomeSmokeStageName(Stage), Separation, bAlliedTarget ? 1 : 0,
+		TargetInitialHealth, OutcomeSmokeOwnedActorBaseline);
+	ClientConfirmOutcomeSmokePrepared(Stage, true);
+}
+
+void ABreachbornePlayerController::SampleOutcomeSmoke()
+{
+	if (!bOutcomeSmokeServerSampling || !HasAuthority() || !GetWorld())
+	{
+		return;
+	}
+
+	AHunterCharacter* SourceHunter = Cast<AHunterCharacter>(GetPawn());
+	ABreachbornePlayerController* TargetController = OutcomeSmokeTargetController.Get();
+	AHunterCharacter* TargetHunter = TargetController ? Cast<AHunterCharacter>(TargetController->GetPawn()) : nullptr;
+	ABreachbornePlayerState* TargetPS = TargetController
+		? TargetController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
+	UBBAbilitySystemComponent* SourceASC = GetBBASC();
+	UBBAbilitySystemComponent* TargetASC = TargetController ? TargetController->GetBBASC() : nullptr;
+	const UBBHealthSet* TargetHealth = TargetPS ? TargetPS->GetHealthSet() : nullptr;
+	if (!SourceHunter || !TargetHunter || !TargetHealth)
+	{
+		return;
+	}
+
+	const float Health = TargetHealth->GetHealth();
+	OutcomeSmokeMinTargetHealth = FMath::Min(OutcomeSmokeMinTargetHealth, Health);
+	OutcomeSmokeMaxTargetHealth = FMath::Max(OutcomeSmokeMaxTargetHealth, Health);
+	OutcomeSmokeMaxSourceDisplacement = FMath::Max(
+		OutcomeSmokeMaxSourceDisplacement,
+		FVector::Dist2D(OutcomeSmokeSourceStart, SourceHunter->GetActorLocation()));
+	OutcomeSmokeMaxTargetDisplacement = FMath::Max(
+		OutcomeSmokeMaxTargetDisplacement,
+		FVector::Dist2D(OutcomeSmokeTargetStart, TargetHunter->GetActorLocation()));
+	OutcomeSmokeSourceStateMask |= BuildOutcomeSmokeStateMask(SourceASC);
+	OutcomeSmokeTargetStateMask |= BuildOutcomeSmokeStateMask(TargetASC);
+	OutcomeSmokeOwnedActorPeak = FMath::Max(
+		OutcomeSmokeOwnedActorPeak,
+		CountOutcomeSmokeOwnedActors(GetWorld(), SourceHunter));
+}
+
+bool ABreachbornePlayerController::EvaluateOutcomeSmoke(int32 HunterID, int32 Stage) const
+{
+	const bool bDamage = OutcomeSmokeInitialTargetHealth - OutcomeSmokeMinTargetHealth > 0.5f;
+	const bool bHeal = OutcomeSmokeMaxTargetHealth - OutcomeSmokeInitialTargetHealth > 0.5f;
+	const bool bSourceMoved = OutcomeSmokeMaxSourceDisplacement > 100.0f;
+	const bool bTargetMoved = OutcomeSmokeMaxTargetDisplacement > 40.0f;
+	const bool bOwnedActor = OutcomeSmokeOwnedActorPeak > OutcomeSmokeOwnedActorBaseline;
+	const bool bStunned = (OutcomeSmokeTargetStateMask & Outcome_Stunned) != 0;
+	const bool bSlowed = (OutcomeSmokeTargetStateMask & Outcome_Slowed) != 0;
+	const bool bGrounded = (OutcomeSmokeTargetStateMask & Outcome_Grounded) != 0;
+	const bool bAntiHeal = (OutcomeSmokeTargetStateMask & Outcome_AntiHeal) != 0;
+	const bool bHooked = (OutcomeSmokeTargetStateMask & (Outcome_Hooked | Outcome_HudsonHooked)) != 0;
+	const bool bMarked = (OutcomeSmokeTargetStateMask & Outcome_Reverberation) != 0;
+	const bool bCrystaEmpowered = (OutcomeSmokeSourceStateMask & Outcome_CrystaEmpowered) != 0;
+	const bool bCrystaPrimaryShiftCooldown = (OutcomeSmokeSourceStateMask & Outcome_CrystaPrimaryShiftCooldown) != 0;
+	const bool bCrystaSecondaryShiftCooldown = (OutcomeSmokeSourceStateMask & Outcome_CrystaSecondaryShiftCooldown) != 0;
+	const bool bHudsonSpinning = (OutcomeSmokeSourceStateMask & Outcome_HudsonSpinning) != 0;
+	const bool bHudsonSpunUp = (OutcomeSmokeSourceStateMask & Outcome_HudsonSpunUp) != 0;
+	const bool bVoidPulled = (OutcomeSmokeTargetStateMask & Outcome_VoidPulled) != 0;
+
+	switch (HunterID)
+	{
+	case 1:
+		return Stage == 1 ? bSourceMoved : bDamage;
+	case 2:
+		if (Stage == 0) return bHooked && bTargetMoved;
+		if (Stage == 1) return bSourceMoved && bDamage;
+		if (Stage == 2) return bDamage && bStunned;
+		return bDamage && bAntiHeal;
+	case 3:
+		if (Stage == 0) return bDamage && bStunned;
+		if (Stage == 1) return bSourceMoved;
+		return bHeal && bOwnedActor;
+	case 4:
+		if (Stage == 0) return bHudsonSpinning && bHudsonSpunUp;
+		if (Stage == 1) return bSourceMoved;
+		if (Stage == 2) return bDamage && bSlowed;
+		return bHooked && bTargetMoved;
+	case 5:
+		if (Stage == 0) return bDamage && (bGrounded || bTargetMoved);
+		if (Stage == 1) return bSourceMoved && bCrystaEmpowered
+			&& bCrystaPrimaryShiftCooldown && bCrystaSecondaryShiftCooldown;
+		return bDamage && bMarked;
+	case 6:
+		if (Stage == 0) return bDamage && bStunned;
+		if (Stage == 1) return OutcomeSmokeMaxSourceDisplacement > 500.0f
+			&& OutcomeSmokeMaxTargetDisplacement > 500.0f;
+		if (Stage == 2) return bDamage;
+		return bStunned && (bVoidPulled || bTargetMoved);
+	default:
+		return false;
+	}
+}
+
+void ABreachbornePlayerController::ServerReportOutcomeSmoke_Implementation(int32 Stage)
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBOutcomeSmoke"))
+		|| AbilitySmokeServerIndex != 1 || Stage != OutcomeSmokeServerStage)
+	{
+		return;
+	}
+
+	SampleOutcomeSmoke();
+	bOutcomeSmokeServerSampling = false;
+	GetWorldTimerManager().ClearTimer(OutcomeSmokeSampleTimerHandle);
+	const ABreachbornePlayerState* SourcePS = GetPlayerState<ABreachbornePlayerState>();
+	const int32 HunterID = SourcePS ? SourcePS->GetHunterID() : -1;
+	const float Damage = FMath::Max(0.0f, OutcomeSmokeInitialTargetHealth - OutcomeSmokeMinTargetHealth);
+	const float Healing = FMath::Max(0.0f, OutcomeSmokeMaxTargetHealth - OutcomeSmokeInitialTargetHealth);
+	const int32 OwnedActorDelta = FMath::Max(0, OutcomeSmokeOwnedActorPeak - OutcomeSmokeOwnedActorBaseline);
+	UBBAbilitySystemComponent* SourceASC = GetBBASC();
+	float PrimaryCooldownBefore = 0.0f;
+	float PrimaryCooldownAfter = 0.0f;
+	float SecondaryCooldownBefore = 0.0f;
+	float SecondaryCooldownAfter = 0.0f;
+	bool bPassiveReductionSucceeded = true;
+	if (HunterID == 5 && Stage == 1 && SourceASC)
+	{
+		PrimaryCooldownBefore = GetOutcomeCooldownRemaining(SourceASC, BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Primary);
+		SecondaryCooldownBefore = GetOutcomeCooldownRemaining(SourceASC, BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Secondary);
+		FGameplayEventData DetonationEvent;
+		DetonationEvent.Instigator = GetPawn();
+		SourceASC->HandleGameplayEvent(BBGameplayTags::Event_Crysta_ReverberationDetonated, &DetonationEvent);
+		PrimaryCooldownAfter = GetOutcomeCooldownRemaining(SourceASC, BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Primary);
+		SecondaryCooldownAfter = GetOutcomeCooldownRemaining(SourceASC, BBGameplayTags::Cooldown_Hunter_Crysta_Shift_Secondary);
+		bPassiveReductionSucceeded = PrimaryCooldownBefore > 1.5f && SecondaryCooldownBefore > 1.5f
+			&& PrimaryCooldownBefore - PrimaryCooldownAfter >= 1.35f
+			&& SecondaryCooldownBefore - SecondaryCooldownAfter >= 1.35f;
+	}
+	const bool bSuccess = EvaluateOutcomeSmoke(HunterID, Stage) && bPassiveReductionSucceeded;
+	const FVector SourceEnd = GetPawn() ? GetPawn()->GetActorLocation() : FVector::ZeroVector;
+	const ABreachbornePlayerController* TargetController = OutcomeSmokeTargetController.Get();
+	const FVector TargetEnd = TargetController && TargetController->GetPawn()
+		? TargetController->GetPawn()->GetActorLocation() : FVector::ZeroVector;
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_OUTCOME_SMOKE|SERVER_REPORT|hunter=%d stage=%s damage=%.2f healing=%.2f source_move=%.1f target_move=%.1f source_end=(%.1f,%.1f) target_end=(%.1f,%.1f) source_states=%d target_states=%d owned_peak=%d crysta_shift_cd=(%.2f,%.2f)->(%.2f,%.2f) passive_reduction=%d success=%d"),
+		HunterID, GetOutcomeSmokeStageName(Stage), Damage, Healing,
+		OutcomeSmokeMaxSourceDisplacement, OutcomeSmokeMaxTargetDisplacement,
+		SourceEnd.X, SourceEnd.Y, TargetEnd.X, TargetEnd.Y,
+		OutcomeSmokeSourceStateMask, OutcomeSmokeTargetStateMask, OwnedActorDelta,
+		PrimaryCooldownBefore, SecondaryCooldownBefore, PrimaryCooldownAfter, SecondaryCooldownAfter,
+		bPassiveReductionSucceeded ? 1 : 0, bSuccess ? 1 : 0);
+}
+
 void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()
 {
 	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
@@ -731,10 +1476,12 @@ void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()
 
 	UBBAbilitySystemComponent* KillerASC = GetBBASC();
 	UBBAbilitySystemComponent* VictimASC = VictimController ? VictimController->GetBBASC() : nullptr;
+	AHunterCharacter* VictimHunter = VictimController
+		? Cast<AHunterCharacter>(VictimController->GetPawn()) : nullptr;
 	ABreachbornePlayerState* VictimPS = VictimController
 		? VictimController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
 	UBBHealthSet* VictimHealth = VictimPS ? VictimPS->GetHealthSet() : nullptr;
-	if (!KillerASC || !VictimASC || !VictimPS || !VictimHealth || !VictimPS->GetIsAlive())
+	if (!KillerASC || !VictimASC || !VictimHunter || !VictimPS || !VictimHealth || !VictimPS->GetIsAlive())
 	{
 		UE_LOG(LogBreachborne, Error,
 			TEXT("BB_DEATH_SMOKE|SERVER_FAIL|killer=%s victim=%s asc=%s health=%s alive=%d"),
@@ -742,6 +1489,19 @@ void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()
 			*GetNameSafe(VictimHealth), VictimPS && VictimPS->GetIsAlive() ? 1 : 0);
 		return;
 	}
+
+	FActorSpawnParameters SentinelParams;
+	SentinelParams.Owner = VictimHunter;
+	SentinelParams.Instigator = VictimHunter;
+	SentinelParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AActor* CleanupSentinel = GetWorld()->SpawnActor<AActor>(
+		AActor::StaticClass(), VictimHunter->GetActorLocation(), FRotator::ZeroRotator, SentinelParams);
+	if (CleanupSentinel)
+	{
+		CleanupSentinel->SetLifeSpan(30.0f);
+	}
+	VictimASC->AddLooseGameplayTag(BBGameplayTags::State_Crysta_EmpoweredLMB);
+	VictimASC->AddLooseGameplayTag(BBGameplayTags::State_Void_Empowered);
 
 	const float HealthBefore = VictimHealth->GetHealth();
 	FGameplayEffectContextHandle Context = KillerASC->MakeEffectContext();
@@ -756,10 +1516,409 @@ void ABreachbornePlayerController::ServerTriggerDeathSmoke_Implementation()
 	Spec.Data->SetSetByCallerMagnitude(BBGameplayTags::SetByCaller_Damage, 100000.0f);
 	KillerASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), VictimASC);
 	ABBWispPawn* Wisp = Cast<ABBWispPawn>(VictimController->GetPawn());
+	const bool bOwnedActorCleaned = CleanupSentinel && CleanupSentinel->IsActorBeingDestroyed();
+	const bool bTransientStatesCleaned =
+		!VictimASC->HasMatchingGameplayTag(BBGameplayTags::State_Crysta_EmpoweredLMB)
+		&& !VictimASC->HasMatchingGameplayTag(BBGameplayTags::State_Void_Empowered);
 	UE_LOG(LogBreachborne, Warning,
-		TEXT("BB_DEATH_SMOKE|SERVER_RESULT|victim=%s health_before=%.1f health_after=%.1f alive=%d pawn=%s wisp=%d"),
+		TEXT("BB_DEATH_SMOKE|SERVER_RESULT|victim=%s health_before=%.1f health_after=%.1f alive=%d pawn=%s wisp=%d cleanup=%d states=%d"),
 		*GetNameSafe(VictimPS), HealthBefore, VictimHealth->GetHealth(), VictimPS->GetIsAlive() ? 1 : 0,
-		*GetNameSafe(VictimController->GetPawn()), Wisp ? 1 : 0);
+		*GetNameSafe(VictimController->GetPawn()), Wisp ? 1 : 0,
+		bOwnedActorCleaned ? 1 : 0, bTransientStatesCleaned ? 1 : 0);
+
+	if (Wisp && FParse::Param(FCommandLine::Get(), TEXT("BBWispRulesSmoke")))
+	{
+		StartWispRulesSmoke(VictimController, Wisp);
+	}
+}
+
+void ABreachbornePlayerController::StartWispRulesSmoke(
+	ABreachbornePlayerController* VictimController, ABBWispPawn* Wisp)
+{
+	if (!HasAuthority() || !VictimController || !Wisp || !GetWorld())
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("BB_WISP_RULES|SERVER_FAIL|reason=invalid_start_state"));
+		return;
+	}
+
+	const ABreachbornePlayerState* SourcePS = GetPlayerState<ABreachbornePlayerState>();
+	if (!SourcePS || SourcePS->GetHunterID() != 3)
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_WISP_RULES|SERVER_FAIL|reason=eluna_required hunter=%d"),
+			SourcePS ? SourcePS->GetHunterID() : -1);
+		return;
+	}
+
+	WispRulesVictimController = VictimController;
+	WispRulesWisp = Wisp;
+	WispRulesSmokeStage = WispRules_Natural;
+	WispRulesSmokePassed = 0;
+	WispRulesNaturalHPDrain = 0.0f;
+	ConfigureWispRulesSmokeStage();
+	if (WispRulesSmokeStage == INDEX_NONE)
+	{
+		return;
+	}
+	GetWorldTimerManager().SetTimer(
+		WispRulesSmokeTimerHandle, this, &ABreachbornePlayerController::UpdateWispRulesSmoke,
+		0.1f, true, 0.1f);
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_WISP_RULES|SERVER_START|wisp=%s victim=%s scenarios=%d"),
+		*GetNameSafe(Wisp), *GetNameSafe(VictimController), WispRules_Count);
+}
+
+void ABreachbornePlayerController::ConfigureWispRulesSmokeStage()
+{
+	ABBWispPawn* Wisp = WispRulesWisp.Get();
+	ABreachbornePlayerController* VictimController = WispRulesVictimController.Get();
+	AHunterCharacter* Eluna = Cast<AHunterCharacter>(GetPawn());
+	ABreachbornePlayerState* VictimPS = VictimController
+		? VictimController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
+	ABreachbornePlayerState* ElunaPS = GetPlayerState<ABreachbornePlayerState>();
+	if (!Wisp || !VictimController || !VictimPS || !Eluna || !ElunaPS)
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_WISP_RULES|SERVER_FAIL|reason=stage_setup_missing stage=%s"),
+			GetWispRulesSmokeStageName(WispRulesSmokeStage));
+		FinishWispRulesSmoke();
+		return;
+	}
+
+	auto MoveEluna = [Eluna](const FVector& Location)
+	{
+		Eluna->SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+		if (UCharacterMovementComponent* Movement = Eluna->GetCharacterMovement())
+		{
+			Movement->StopMovementImmediately();
+			Movement->SetMovementMode(MOVE_Walking);
+		}
+		Eluna->ForceNetUpdate();
+	};
+	auto DestroyAllyBot = [this]()
+	{
+		if (ABBAllyBot* AllyBot = WispRulesAllyBot.Get())
+		{
+			AllyBot->Destroy();
+		}
+		WispRulesAllyBot.Reset();
+	};
+
+	const FVector WispLocation = Wisp->GetActorLocation();
+	const FVector NearLocation = WispLocation + FVector(75.0f, 0.0f, 0.0f);
+	const FVector FarLocation = WispLocation + FVector(1200.0f, 0.0f, 0.0f);
+	UBBAbilitySystemComponent* ElunaASC = GetBBASC();
+
+	switch (WispRulesSmokeStage)
+	{
+	case WispRules_Natural:
+		Wisp->SetCarrier(nullptr);
+		DestroyAllyBot();
+		MoveEluna(FarLocation);
+		break;
+	case WispRules_Ally:
+	{
+		MoveEluna(FarLocation);
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		ABBAllyBot* AllyBot = GetWorld()->SpawnActor<ABBAllyBot>(
+			ABBAllyBot::StaticClass(), WispLocation + FVector(0.0f, 75.0f, 0.0f),
+			FRotator::ZeroRotator, Params);
+		if (AllyBot)
+		{
+			AllyBot->SetTeamID(VictimPS->GetTeamID());
+			AllyBot->ForceNetUpdate();
+			WispRulesAllyBot = AllyBot;
+		}
+		break;
+	}
+	case WispRules_Contest:
+		MoveEluna(NearLocation);
+		break;
+	case WispRules_Enemy:
+		DestroyAllyBot();
+		MoveEluna(NearLocation);
+		break;
+	case WispRules_Healing:
+		MoveEluna(FarLocation);
+		break;
+	case WispRules_HealingLatched:
+		MoveEluna(FarLocation);
+		Wisp->ApplyHeal(0.01f);
+		break;
+	case WispRules_HealingContested:
+		MoveEluna(NearLocation);
+		break;
+	case WispRules_CarriedContested:
+		MoveEluna(NearLocation);
+		Wisp->SetCarrier(Eluna);
+		break;
+	case WispRules_ElunaShiftPickup:
+	{
+		Wisp->SetCarrier(nullptr);
+		VictimPS->SetTeamID(ElunaPS->GetTeamID());
+		VictimPS->ForceNetUpdate();
+		const FVector DashStart = WispLocation - FVector(500.0f, 0.0f, 0.0f);
+		MoveEluna(DashStart);
+
+		bool bCollected = false;
+		if (ElunaASC)
+		{
+			for (FGameplayAbilitySpec& Spec : ElunaASC->GetActivatableAbilities())
+			{
+				UGA_Eluna_GroundDash* DashAbility = Cast<UGA_Eluna_GroundDash>(Spec.GetPrimaryInstance());
+				if (DashAbility)
+				{
+					bCollected = DashAbility->TryCollectWispAlongPath(
+						DashStart, DashStart + FVector(700.0f, 0.0f, 0.0f));
+					break;
+				}
+			}
+		}
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_WISP_RULES|SERVER_ACTION|scenario=eluna_shift_pickup collected=%d"),
+			bCollected ? 1 : 0);
+		break;
+	}
+	case WispRules_ElunaPickup:
+		Wisp->SetCarrier(nullptr);
+		VictimPS->SetTeamID(ElunaPS->GetTeamID());
+		VictimPS->ForceNetUpdate();
+		if (ElunaASC)
+		{
+			ElunaASC->SetLooseGameplayTagCount(BBGameplayTags::State_Stunned, 0);
+		}
+		MoveEluna(NearLocation);
+		break;
+	case WispRules_ElunaCCDrop:
+		if (ElunaASC)
+		{
+			ElunaASC->AddLooseGameplayTag(BBGameplayTags::State_Stunned);
+		}
+		break;
+	case WispRules_ElunaRRevive:
+		Wisp->SetCarrier(nullptr);
+		VictimPS->SetTeamID(ElunaPS->GetTeamID());
+		VictimPS->ForceNetUpdate();
+		if (ElunaASC)
+		{
+			ElunaASC->SetLooseGameplayTagCount(BBGameplayTags::State_Stunned, 0);
+			FGameplayTagContainer ElunaRCooldownTag;
+			ElunaRCooldownTag.AddTag(BBGameplayTags::Cooldown_Hunter_Eluna_R);
+			ElunaASC->RemoveActiveEffectsWithGrantedTags(ElunaRCooldownTag);
+		}
+		MoveEluna(WispLocation + FVector(600.0f, 0.0f, 0.0f));
+		break;
+	default:
+		FinishWispRulesSmoke();
+		return;
+	}
+
+	WispRulesSmokeStageElapsed = 0.0f;
+	bWispRulesElunaRActivationRequested = false;
+	WispRulesSmokeStartHP = Wisp->GetCurrentWispHP();
+	WispRulesSmokeStartRez = Wisp->GetRezBarProgress();
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_WISP_RULES|SERVER_STAGE|scenario=%s hp=%.2f rez=%.3f"),
+		GetWispRulesSmokeStageName(WispRulesSmokeStage),
+		WispRulesSmokeStartHP, WispRulesSmokeStartRez);
+}
+
+void ABreachbornePlayerController::UpdateWispRulesSmoke()
+{
+	ABBWispPawn* Wisp = WispRulesWisp.Get();
+	if (!HasAuthority() || WispRulesSmokeStage < 0 || WispRulesSmokeStage >= WispRules_Count)
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("BB_WISP_RULES|SERVER_FAIL|reason=invalid_tick_state"));
+		FinishWispRulesSmoke();
+		return;
+	}
+
+	WispRulesSmokeStageElapsed += 0.1f;
+	if (WispRulesSmokeStage == WispRules_ElunaRRevive)
+	{
+		if (!bWispRulesElunaRActivationRequested && WispRulesSmokeStageElapsed >= 0.3f)
+		{
+			bWispRulesElunaRActivationRequested = true;
+			ClientActivateWispRulesElunaR();
+		}
+
+		ABreachbornePlayerController* VictimController = WispRulesVictimController.Get();
+		const ABreachbornePlayerState* VictimPS = VictimController
+			? VictimController->GetPlayerState<ABreachbornePlayerState>() : nullptr;
+		const bool bRevived = VictimPS && VictimPS->GetIsAlive()
+			&& Cast<AHunterCharacter>(VictimController->GetPawn()) != nullptr;
+		if (bRevived)
+		{
+			++WispRulesSmokePassed;
+			UE_LOG(LogBreachborne, Warning,
+				TEXT("BB_WISP_RULES|SERVER_RESULT|scenario=eluna_r_revive revived=1 pawn=%s success=1"),
+				*GetNameSafe(VictimController->GetPawn()));
+			++WispRulesSmokeStage;
+			FinishWispRulesSmoke();
+			return;
+		}
+
+		if (WispRulesSmokeStageElapsed < GetWispRulesSmokeStageDuration(WispRulesSmokeStage))
+		{
+			return;
+		}
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_WISP_RULES|SERVER_RESULT|scenario=eluna_r_revive revived=0 pawn=%s success=0"),
+			*GetNameSafe(VictimController ? VictimController->GetPawn() : nullptr));
+
+		++WispRulesSmokeStage;
+		FinishWispRulesSmoke();
+		return;
+	}
+
+	if (!Wisp)
+	{
+		UE_LOG(LogBreachborne, Error, TEXT("BB_WISP_RULES|SERVER_FAIL|reason=wisp_lost stage=%s"),
+			GetWispRulesSmokeStageName(WispRulesSmokeStage));
+		FinishWispRulesSmoke();
+		return;
+	}
+	if (WispRulesSmokeStage == WispRules_Healing
+		|| (WispRulesSmokeStage == WispRules_HealingContested
+			&& WispRulesSmokeStageElapsed < GetWispRulesSmokeStageDuration(WispRulesSmokeStage) - 0.2f))
+	{
+		Wisp->ApplyHeal(20.0f);
+	}
+
+	if (WispRulesSmokeStageElapsed < GetWispRulesSmokeStageDuration(WispRulesSmokeStage))
+	{
+		return;
+	}
+
+	const float HPAfter = Wisp->GetCurrentWispHP();
+	const float RezAfter = Wisp->GetRezBarProgress();
+	const bool bSuccess = EvaluateWispRulesSmokeStage(HPAfter, RezAfter);
+	if (WispRulesSmokeStage == WispRules_Natural)
+	{
+		WispRulesNaturalHPDrain = FMath::Max(0.0f, WispRulesSmokeStartHP - HPAfter);
+	}
+	if (bSuccess)
+	{
+		++WispRulesSmokePassed;
+	}
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_WISP_RULES|SERVER_RESULT|scenario=%s hp_before=%.2f hp_after=%.2f rez_before=%.3f rez_after=%.3f carrier=%s success=%d"),
+		GetWispRulesSmokeStageName(WispRulesSmokeStage),
+		WispRulesSmokeStartHP, HPAfter, WispRulesSmokeStartRez, RezAfter,
+		*GetNameSafe(Wisp->GetCarrier()), bSuccess ? 1 : 0);
+
+	++WispRulesSmokeStage;
+	if (WispRulesSmokeStage >= WispRules_Count)
+	{
+		FinishWispRulesSmoke();
+		return;
+	}
+	ConfigureWispRulesSmokeStage();
+}
+
+void ABreachbornePlayerController::ClientActivateWispRulesElunaR_Implementation()
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("BBAbilitySmoke"))
+		|| !FParse::Param(FCommandLine::Get(), TEXT("BBWispRulesSmoke")))
+	{
+		return;
+	}
+
+	UBBAbilitySystemComponent* ASC = GetBBASC();
+	const bool bActivated = ASC && ASC->TryActivateAbilityByInputTag(BBGameplayTags::InputTag_R);
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_WISP_RULES|CLIENT_ACTIVATE|scenario=eluna_r_revive success=%d"),
+		bActivated ? 1 : 0);
+}
+
+bool ABreachbornePlayerController::EvaluateWispRulesSmokeStage(float HPAfter, float RezAfter) const
+{
+	const ABBWispPawn* Wisp = WispRulesWisp.Get();
+	const AHunterCharacter* Eluna = Cast<AHunterCharacter>(GetPawn());
+	const float HPDrain = WispRulesSmokeStartHP - HPAfter;
+	const float RezGain = RezAfter - WispRulesSmokeStartRez;
+
+	switch (WispRulesSmokeStage)
+	{
+	case WispRules_Natural:
+		return HPDrain > 0.5f && RezGain <= 0.02f;
+	case WispRules_Ally:
+		return FMath::Abs(HPDrain) < 0.7f && RezGain > 0.05f;
+	case WispRules_Contest:
+		return HPDrain > 1.0f && RezGain <= 0.02f;
+	case WispRules_Enemy:
+		return HPDrain > 1.0f && HPDrain > WispRulesNaturalHPDrain * 2.0f && RezGain <= 0.02f;
+	case WispRules_Healing:
+		return FMath::Abs(HPDrain) < 0.7f && RezGain > 0.10f;
+	case WispRules_HealingLatched:
+		return FMath::Abs(HPDrain) < 0.7f && RezGain > 0.15f;
+	case WispRules_HealingContested:
+		return HPDrain > 1.0f && RezGain <= 0.02f;
+	case WispRules_CarriedContested:
+		return Wisp && Wisp->GetCarrier() == Eluna && FMath::Abs(HPDrain) < 0.7f && RezGain > 0.10f;
+	case WispRules_ElunaShiftPickup:
+		return Wisp && Wisp->GetCarrier() == Eluna;
+	case WispRules_ElunaPickup:
+		return Wisp && Wisp->GetCarrier() == Eluna;
+	case WispRules_ElunaCCDrop:
+		return Wisp && Wisp->GetCarrier() == nullptr;
+	default:
+		return false;
+	}
+}
+
+void ABreachbornePlayerController::FinishWispRulesSmoke()
+{
+	GetWorldTimerManager().ClearTimer(WispRulesSmokeTimerHandle);
+	if (ABBAllyBot* AllyBot = WispRulesAllyBot.Get())
+	{
+		AllyBot->Destroy();
+	}
+	WispRulesAllyBot.Reset();
+
+	ABBWispPawn* Wisp = WispRulesWisp.Get();
+	ABreachbornePlayerController* VictimController = WispRulesVictimController.Get();
+	AHunterCharacter* Eluna = Cast<AHunterCharacter>(GetPawn());
+	if (Wisp)
+	{
+		Wisp->SetCarrier(nullptr);
+	}
+	if (UBBAbilitySystemComponent* ElunaASC = GetBBASC())
+	{
+		ElunaASC->SetLooseGameplayTagCount(BBGameplayTags::State_Stunned, 0);
+	}
+	if (Wisp && Eluna)
+	{
+		Eluna->SetActorLocation(
+			Wisp->GetActorLocation() + FVector(1200.0f, 0.0f, 0.0f),
+			false, nullptr, ETeleportType::TeleportPhysics);
+		if (UCharacterMovementComponent* Movement = Eluna->GetCharacterMovement())
+		{
+			Movement->StopMovementImmediately();
+		}
+		Eluna->ForceNetUpdate();
+	}
+
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_WISP_RULES|SERVER_COMPLETE|passed=%d total=%d"),
+		WispRulesSmokePassed, WispRules_Count);
+
+	if (Wisp && VictimController
+		&& !GetWorldTimerManager().IsTimerActive(VictimController->DeathSmokeHealTimerHandle))
+	{
+		Wisp->ApplyHeal(20.0f);
+		GetWorldTimerManager().SetTimer(
+			VictimController->DeathSmokeHealTimerHandle,
+			VictimController,
+			&ABreachbornePlayerController::ApplyWispHealSmokeTick,
+			0.2f, true, 0.0f);
+		UE_LOG(LogBreachborne, Warning,
+			TEXT("BB_DEATH_SMOKE|SERVER_HEAL_STARTED|controller=%s rules=1"),
+			*VictimController->GetName());
+	}
+
+	WispRulesSmokeStage = INDEX_NONE;
 }
 
 void ABreachbornePlayerController::ServerBeginWispHealSmoke_Implementation()
@@ -1121,6 +2280,18 @@ void ABreachbornePlayerController::RequestSetStormShiftPreset(FName PresetID)
 	}
 }
 
+void ABreachbornePlayerController::RequestSetStormEnabled(bool bEnabled)
+{
+	if (HasAuthority())
+	{
+		ServerRequestSetStormEnabled_Implementation(bEnabled);
+	}
+	else
+	{
+		ServerRequestSetStormEnabled(bEnabled);
+	}
+}
+
 void ABreachbornePlayerController::RequestStartLobbyMatch()
 {
 	if (HasAuthority())
@@ -1202,6 +2373,14 @@ void ABreachbornePlayerController::ServerRequestSetStormShiftPreset_Implementati
 	if (ABreachborneGameMode* BBGM = GetWorld() ? GetWorld()->GetAuthGameMode<ABreachborneGameMode>() : nullptr)
 	{
 		BBGM->RequestSetStormShiftPreset(this, PresetID);
+	}
+}
+
+void ABreachbornePlayerController::ServerRequestSetStormEnabled_Implementation(bool bEnabled)
+{
+	if (ABreachborneGameMode* BBGM = GetWorld() ? GetWorld()->GetAuthGameMode<ABreachborneGameMode>() : nullptr)
+	{
+		BBGM->RequestSetStormEnabled(this, bEnabled);
 	}
 }
 

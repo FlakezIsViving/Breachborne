@@ -22,6 +22,9 @@ public:
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo) const override;
+	static void CalculateLaneSegments(const FVector& CastLocation, const FVector& AimDirection,
+		const FVector& TargetLocation, float InMaxRange, float InLauncherSideOffset,
+		float InLauncherForwardOffset, TArray<FVector>& OutStarts, TArray<FVector>& OutEnds);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Crysta|R")

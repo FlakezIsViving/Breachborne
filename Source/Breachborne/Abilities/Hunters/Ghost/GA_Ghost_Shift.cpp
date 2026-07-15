@@ -4,8 +4,6 @@
 #include "Breachborne/Combat/BBPrimitiveBeamActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystemComponent.h"
-#include "GameplayEffect.h"
-#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "Breachborne/Breachborne.h"
 
 UGA_Ghost_Shift::UGA_Ghost_Shift()
@@ -74,13 +72,5 @@ const FGameplayTagContainer* UGA_Ghost_Shift::GetCooldownTags() const
 
 void UGA_Ghost_Shift::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	UGameplayEffect* CooldownGE = NewObject<UGameplayEffect>(GetTransientPackage());
-	CooldownGE->DurationPolicy = EGameplayEffectDurationType::HasDuration;
-	CooldownGE->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(CooldownDuration));
-	UTargetTagsGameplayEffectComponent& TagComp = CooldownGE->FindOrAddComponent<UTargetTagsGameplayEffectComponent>();
-	FInheritedTagContainer TagContainer;
-	TagContainer.Added.AddTag(BBGameplayTags::Cooldown_Hunter_Ghost_Shift);
-	TagComp.SetAndApplyTargetTagChanges(TagContainer);
-
-	ApplyGameplayEffectToOwner(Handle, ActorInfo, ActivationInfo, CooldownGE, GetAbilityLevel());
+	ApplyBBCooldown(Handle, ActorInfo, ActivationInfo, CooldownDuration);
 }

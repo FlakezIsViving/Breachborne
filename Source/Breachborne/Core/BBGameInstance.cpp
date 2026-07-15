@@ -11,11 +11,37 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/ConfigCacheIni.h"
+#include "Misc/Guid.h"
+#include "Misc/Parse.h"
+
+namespace
+{
+	const TCHAR* ReconnectConfigSection = TEXT("Breachborne.Reconnect");
+	const TCHAR* ReconnectConfigKey = TEXT("ClientToken");
+}
 
 void UBBGameInstance::Init()
 {
 	Super::Init();
 	FrontendState = EBBFrontendState::Boot;
+
+	const bool bCommandLineToken = FParse::Value(
+		FCommandLine::Get(), TEXT("BBReconnectToken="), ReconnectToken);
+	if (!bCommandLineToken && GConfig)
+	{
+		GConfig->GetString(ReconnectConfigSection, ReconnectConfigKey, ReconnectToken, GGameUserSettingsIni);
+	}
+	if (ReconnectToken.IsEmpty())
+	{
+		ReconnectToken = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
+		if (GConfig)
+		{
+			GConfig->SetString(ReconnectConfigSection, ReconnectConfigKey, *ReconnectToken, GGameUserSettingsIni);
+			GConfig->Flush(false, GGameUserSettingsIni);
+		}
+	}
 }
 
 void UBBGameInstance::SetFrontendState(EBBFrontendState NewState)
@@ -140,7 +166,12 @@ void UBBGameInstance::ConnectDirectIP(const FString& Address)
 
 	if (PC)
 	{
-		PC->ClientTravel(TrimmedAddress, TRAVEL_Absolute);
+		FString TravelAddress = TrimmedAddress;
+		if (!ReconnectToken.IsEmpty() && !TravelAddress.Contains(TEXT("BBReconnectToken="), ESearchCase::IgnoreCase))
+		{
+			TravelAddress += FString::Printf(TEXT("?BBReconnectToken=%s"), *ReconnectToken);
+		}
+		PC->ClientTravel(TravelAddress, TRAVEL_Absolute);
 	}
 }
 

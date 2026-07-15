@@ -10,10 +10,12 @@
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "Breachborne/Combat/BBPrimitiveVisuals.h"
 #include "Breachborne/Breachborne.h"
+#include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 
 ABBElunaStickyProjectile::ABBElunaStickyProjectile()
 {
+	PrimaryActorTick.bCanEverTick = true;
 	ProjectileMesh->SetRelativeScale3D(FVector(0.5f));
 
 	BBPrimitiveVisuals::ApplyColor(ProjectileMesh, FLinearColor(0.18f, 0.26f, 0.48f, 1.0f));
@@ -25,11 +27,87 @@ ABBElunaStickyProjectile::ABBElunaStickyProjectile()
 	// Re-bind delegates to derived class methods (base constructor bound to base class methods)
 	if (CollisionSphere)
 	{
+		CollisionSphere->SetSphereRadius(32.0f);
 		CollisionSphere->OnComponentBeginOverlap.Clear();
 		CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &ABBElunaStickyProjectile::OnProjectileOverlap);
 		CollisionSphere->OnComponentHit.Clear();
 		CollisionSphere->OnComponentHit.AddDynamic(this, &ABBElunaStickyProjectile::OnProjectileHit);
 	}
+}
+
+void ABBElunaStickyProjectile::BeginPlay()
+{
+	Super::BeginPlay();
+	PreviousSweepLocation = GetActorLocation();
+	SetActorTickEnabled(HasAuthority());
+
+	// The server simulates this projectile. Simulating ProjectileMovement again on
+	// proxies makes replicated position corrections look like repeated reversals.
+	if (!HasAuthority() && ProjectileMovement)
+	{
+		ProjectileMovement->StopMovementImmediately();
+		ProjectileMovement->Deactivate();
+		ProjectileMovement->SetUpdatedComponent(nullptr);
+	}
+}
+
+void ABBElunaStickyProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABBElunaStickyProjectile, StuckTarget);
+	DOREPLIFETIME(ABBElunaStickyProjectile, bHasStuck);
+	DOREPLIFETIME(ABBElunaStickyProjectile, StuckOffset);
+}
+
+void ABBElunaStickyProjectile::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	(void)DeltaSeconds;
+
+	if (!HasAuthority() || bHasStuck || bHasExploded)
+	{
+		return;
+	}
+
+	const FVector CurrentLocation = GetActorLocation();
+	if (!PreviousSweepLocation.Equals(CurrentLocation, 1.0f))
+	{
+		TArray<FHitResult> Hits;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(ElunaStickyProjectileSweep), false, this);
+		Params.AddIgnoredActor(GetOwner());
+		Params.AddIgnoredActor(GetInstigator());
+		FCollisionObjectQueryParams Objects;
+		Objects.AddObjectTypesToQuery(ECC_Pawn);
+
+		const float SweepRadius = CollisionSphere ? CollisionSphere->GetScaledSphereRadius() : 32.0f;
+		if (GetWorld()->SweepMultiByObjectType(Hits, PreviousSweepLocation, CurrentLocation,
+			FQuat::Identity, Objects, FCollisionShape::MakeSphere(SweepRadius), Params))
+		{
+			Hits.Sort([](const FHitResult& A, const FHitResult& B)
+			{
+				return A.Time < B.Time;
+			});
+
+			for (const FHitResult& Hit : Hits)
+			{
+				AHunterCharacter* HitHunter = Cast<AHunterCharacter>(Hit.GetActor());
+				const ABreachbornePlayerState* TargetPS = HitHunter
+					? HitHunter->GetPlayerState<ABreachbornePlayerState>()
+					: nullptr;
+				if (TargetPS && TargetPS->GetIsAlive() && TargetPS->GetTeamID() != SourceTeamID)
+				{
+					const FVector ContactLocation = Hit.Location.IsNearlyZero()
+						? HitHunter->GetActorLocation()
+						: FVector(Hit.Location);
+					SetActorLocation(ContactLocation);
+					StickToActor(HitHunter);
+					return;
+				}
+			}
+		}
+	}
+
+	PreviousSweepLocation = CurrentLocation;
 }
 
 void ABBElunaStickyProjectile::InitProjectile(UAbilitySystemComponent* InSourceASC, TSubclassOf<UGameplayEffect> InDamageGE, float InDamage, int32 InTeamID)
@@ -104,11 +182,19 @@ void ABBElunaStickyProjectile::StickToActor(AActor* TargetActor)
 	if (TargetActor)
 	{
 		StuckOffset = GetActorLocation() - TargetActor->GetActorLocation();
+		AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+		SetReplicateMovement(false);
+		ForceNetUpdate();
+	}
+	else
+	{
+		StuckOffset = GetActorLocation();
 	}
 
 	if (ProjectileMovement)
 	{
 		ProjectileMovement->StopMovementImmediately();
+		ProjectileMovement->Deactivate();
 		ProjectileMovement->SetUpdatedComponent(nullptr);
 	}
 
@@ -124,7 +210,34 @@ void ABBElunaStickyProjectile::StickToActor(AActor* TargetActor)
 		ExplosionDelay,
 		false
 	);
+}
 
+void ABBElunaStickyProjectile::OnRep_StuckState()
+{
+	if (!bHasStuck)
+	{
+		return;
+	}
+
+	if (ProjectileMovement)
+	{
+		ProjectileMovement->StopMovementImmediately();
+		ProjectileMovement->Deactivate();
+		ProjectileMovement->SetUpdatedComponent(nullptr);
+	}
+	if (CollisionSphere)
+	{
+		CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	if (StuckTarget)
+	{
+		SetActorLocation(StuckTarget->GetActorLocation() + StuckOffset);
+		AttachToActor(StuckTarget, FAttachmentTransformRules::KeepWorldTransform);
+	}
+	else
+	{
+		SetActorLocation(StuckOffset);
+	}
 }
 
 void ABBElunaStickyProjectile::Explode()
@@ -135,7 +248,7 @@ void ABBElunaStickyProjectile::Explode()
 	}
 	bHasExploded = true;
 
-	if (StuckTarget.IsValid())
+	if (IsValid(StuckTarget))
 	{
 		SetActorLocation(StuckTarget->GetActorLocation() + StuckOffset);
 	}

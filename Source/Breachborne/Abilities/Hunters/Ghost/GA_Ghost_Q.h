@@ -21,6 +21,8 @@ public:
 	UGA_Ghost_Q();
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
@@ -35,6 +37,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Ghost|Q")
 	float CooldownDuration = 8.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Ghost|Q")
+	float FireDelay = 0.3f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Breachborne|Ghost|Q|Visual")
 	TSubclassOf<ABBPrimitiveBeamActor> BeamVisualClass;
 
@@ -42,10 +47,17 @@ protected:
 	TSubclassOf<ABBPrimitiveBurstActor> BurstVisualClass;
 
 private:
+	void FireLaser();
+
 	/** Cooldown tags container — built once, returned by GetCooldownTags */
 	UPROPERTY()
 	FGameplayTagContainer CooldownTagContainer;
 
 	UPROPERTY()
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	FVector PendingStartLocation = FVector::ZeroVector;
+	FVector PendingEndLocation = FVector::ZeroVector;
+	FVector PendingAimDirection = FVector::ForwardVector;
+	FTimerHandle FireDelayHandle;
 };

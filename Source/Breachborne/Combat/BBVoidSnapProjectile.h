@@ -23,6 +23,10 @@ public:
 	void InitSnap(AHunterCharacter* InSourceHunter, UAbilitySystemComponent* InSourceASC,
 		TSubclassOf<UGameplayEffect> InDamageGE, TSubclassOf<UGameplayEffect> InStunGE,
 		int32 InTeamID, const FVector& InDirection, bool bInEmpowered);
+	bool IsLocationInsideCone(const FVector& Location) const;
+	float GetTravelSpeed() const { return Speed; }
+	float GetConeLength() const { return ConeLength; }
+	float GetConeRadius() const { return ConeRadius; }
 
 protected:
 	virtual void BeginPlay() override;

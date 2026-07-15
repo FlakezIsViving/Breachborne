@@ -41,6 +41,20 @@ void UGA_Kingpin_Passive::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	// Do NOT call EndAbility — passive stays active for the match duration
 }
 
+void UGA_Kingpin_Passive::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo(); ASC && CCEventHandle.IsValid())
+	{
+		ASC->RemoveGameplayEventTagContainerDelegate(
+			FGameplayTagContainer(BBGameplayTags::Event_CCApplied), CCEventHandle);
+		CCEventHandle.Reset();
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
 void UGA_Kingpin_Passive::OnCCApplied(FGameplayTag Tag, const FGameplayEventData* Payload)
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
@@ -102,7 +116,6 @@ void UGA_Kingpin_Passive::OnCCApplied(FGameplayTag Tag, const FGameplayEventData
 	if (AHunterCharacter* Hunter = GetHunterCharacter())
 	{
 		PlayVisualMontage(BBGameplayTags::Ability_Hunter_Kingpin_Passive, EBBAbilityAnimationPhase::PassivePulse);
-		ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Kingpin_Passive_Pulse, Hunter->GetActorLocation(), FVector::UpVector);
 		FActorSpawnParameters Params;
 		Params.Owner = Hunter;
 		Params.Instigator = Hunter;

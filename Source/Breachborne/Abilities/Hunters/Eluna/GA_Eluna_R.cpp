@@ -216,7 +216,20 @@ void UGA_Eluna_R::OnChannelTick()
 		return;
 	}
 
+	AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		return;
+	}
+
 	ChannelElapsed += ChannelTickInterval;
+
+	if (IsInterruptedByCrowdControl())
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: Channel broken - Eluna crowd controlled"));
+		BreakChannel();
+		return;
+	}
 
 	// Check target validity
 	if (!ChannelTarget.IsValid())
@@ -291,12 +304,41 @@ void UGA_Eluna_R::OnChannelComplete()
 		return;
 	}
 
+	AHunterCharacter* Hunter = GetHunterCharacter();
+	if (!Hunter || !Hunter->HasAuthority())
+	{
+		// The server owns completion. Ending the predicted client instance here can
+		// reach the server before its timer and cancel the revive.
+		return;
+	}
+
+	if (!ChannelTarget.IsValid())
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: Channel broken at completion - target destroyed"));
+		BreakChannel();
+		return;
+	}
+
+	if (IsInterruptedByCrowdControl())
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: Channel broken at completion - Eluna crowd controlled"));
+		BreakChannel();
+		return;
+	}
+
+	if (GetDistanceToTarget() > MaxChannelRange)
+	{
+		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: Channel broken at completion - target out of range (%.0f > %.0f)"),
+			GetDistanceToTarget(), MaxChannelRange);
+		BreakChannel();
+		return;
+	}
+
 	UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: CHANNEL COMPLETE | Target=%s | Elapsed=%.1fs"),
 		ChannelTarget.IsValid() ? *ChannelTarget->GetName() : TEXT("NULL"), ChannelElapsed);
 
 	// Revive if target is a wisp
-	AHunterCharacter* Hunter = GetHunterCharacter();
-	if (Hunter && Hunter->HasAuthority() && TargetWisp.IsValid())
+	if (TargetWisp.IsValid())
 	{
 		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: REVIVING wisp of %s"),
 			TargetWisp->GetOwningPlayerState() ? *TargetWisp->GetOwningPlayerState()->GetPlayerName() : TEXT("Unknown"));
@@ -307,7 +349,7 @@ void UGA_Eluna_R::OnChannelComplete()
 		UE_LOG(LogBreachborne, Log, TEXT("Eluna R: Heal channel complete on %s"), *ChannelTarget->GetName());
 	}
 
-	if (Hunter && Hunter->HasAuthority() && ChannelTarget.IsValid())
+	if (ChannelTarget.IsValid())
 	{
 		const FVector TargetLocation = ChannelTarget->GetActorLocation();
 		FActorSpawnParameters Params;
@@ -328,6 +370,18 @@ void UGA_Eluna_R::BreakChannel()
 {
 	UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: Channel BROKEN after %.1fs"), ChannelElapsed);
 	EndChannel(true);
+}
+
+bool UGA_Eluna_R::IsInterruptedByCrowdControl() const
+{
+	const UBBAbilitySystemComponent* ASC = GetBBAbilitySystemComponent();
+	return ASC
+		&& (ASC->HasMatchingGameplayTag(BBGameplayTags::State_Stunned)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Spiked)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Dazed)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Hooked)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Hudson_Hooked)
+			|| ASC->HasMatchingGameplayTag(BBGameplayTags::State_Void_SingularityPulled));
 }
 
 void UGA_Eluna_R::EndChannel(bool bWasCancelled)
@@ -421,6 +475,8 @@ void UGA_Eluna_R::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGam
 {
 	if (bIsChanneling)
 	{
+		UE_LOG(LogBreachborne, Warning, TEXT("Eluna R: Channel ended externally after %.1fs (cancelled=%d)"),
+			ChannelElapsed, bWasCancelled ? 1 : 0);
 		EndChannel(bWasCancelled);
 		return;
 	}

@@ -168,6 +168,7 @@ public:
 	void AddXP(int32 Amount);
 	void AddKill();
 	void SetIsAlive(bool bAlive);
+	void RestoreMatchProgress(int32 NewLevel, int32 NewXP, int32 NewKills, const FRepInventoryData& NewInventory);
 
 	/**
 	 * Server only: called from HealthSet::PostGameplayEffectExecute to explicitly

@@ -100,6 +100,24 @@ void ABBVoidSingularityActor::BeginPlay()
 	SetActorTickEnabled(HasAuthority());
 }
 
+#if WITH_AUTOMATION_TESTS
+bool ABBVoidSingularityActor::AreLifecycleTimersScheduledForAutomation() const
+{
+	return GetWorldTimerManager().IsTimerActive(ActivateHandle)
+		&& GetWorldTimerManager().IsTimerActive(FinishHandle);
+}
+
+void ABBVoidSingularityActor::ActivateForAutomation()
+{
+	ActivateVortex();
+}
+
+void ABBVoidSingularityActor::FinishForAutomation()
+{
+	FinishVortex();
+}
+#endif
+
 void ABBVoidSingularityActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);

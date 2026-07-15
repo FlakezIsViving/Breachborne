@@ -51,6 +51,18 @@ the exact process IDs, and writes isolated logs under
 `Saved\Logs\InteractivePlaytest\<timestamp>`. Stop only that recorded session and run the
 automatic log review with:
 
+It refuses to open a second recorded session while any process from the previous one is alive.
+Hunter-pair acceptance wrappers also run `VerifyPlaytestCandidate.ps1` before opening windows, so
+a stale or incomplete package fails before consuming manual test time.
+
+Validate candidate freshness, executable discovery, stale-session state, and port availability
+without opening anything:
+
+```powershell
+.\Scripts\Playtest\StartPackagedLocalSmoke.ps1 -ClientCount 3 -Port 7911 `
+  -Address '127.0.0.1:7911' -VerifyCandidate -ValidateOnly
+```
+
 ```powershell
 .\Scripts\Playtest\StopPackagedLocalSmoke.ps1
 ```
@@ -64,6 +76,60 @@ To review a still-running session without stopping it:
 Use `docs\plans\july-31-manual-vfx-acceptance.md` during the session. A clean automated log
 review does not replace the owner/observer visual checks.
 
+Use `-SessionLabel` to identify a recorded batch. For manual impairment checks, pass the same
+network simulation command to server and clients so `Session.json` preserves the exact setup:
+
+```powershell
+.\Scripts\Playtest\StartPackagedLocalSmoke.ps1 `
+  -ClientCount 2 `
+  -SessionLabel "Manual impairment retest" `
+  -ServerExtraArgs '-ExecCmds="Net PktLag=100,Net PktLoss=2"' `
+  -ClientExtraArgs '-ExecCmds="Net PktLag=100,Net PktLoss=2"'
+```
+
+Ghost/Eluna needs a third allied hunter for Eluna's pass-through, healing, living-target R, and
+wisp flow. Launch its exact recorded topology with:
+
+```powershell
+.\Scripts\Playtest\StartGhostElunaAcceptance.ps1
+```
+
+The wrapper opens Eluna, an allied Hudson helper, and an opposing Ghost client, then writes the
+required team/slot/hunter roles to `GhostElunaInstructions.txt` inside the session evidence
+directory. Each pair launcher also creates a session-local `*-ManualAcceptance.md` record with
+separate owner, observer, gameplay, cleanup, result, and notes fields. Stop it with the normal
+`StopPackagedLocalSmoke.ps1` command.
+
+The structured definition covers all 55 presentation rows, including cleanup/stress, range, and
+wisp UI. Verify that it still matches both checklist documents with:
+
+```powershell
+.\Scripts\Playtest\TestManualAcceptanceDefinition.ps1
+```
+
+Create a global-row record inside any relevant session without launching another process:
+
+```powershell
+.\Scripts\Playtest\NewManualAcceptanceRecord.ps1 `
+  -SessionDirectory 'Saved\Logs\InteractivePlaytest\SESSION' `
+  -Batch WispUI
+```
+
+The remaining hunter-pair launchers are:
+
+```powershell
+.\Scripts\Playtest\StartKingpinHudsonAcceptance.ps1
+.\Scripts\Playtest\StartCrystaVoidAcceptance.ps1
+```
+
+Append `-ValidateOnly` to any pair launcher to check the candidate, executable discovery,
+55-row definition, stale-session guard, and assigned UDP port without opening clients or creating
+a session record.
+
+Kingpin/Hudson opens a third enemy target so the chain visual is testable. Crysta/Void records the
+current marked-prop fixture limitation explicitly; the frozen package must not be credited with a
+visual prop-swap PASS based only on deterministic tests.
+
 Useful log filters:
 
 - `BB_BUILD`
@@ -73,6 +139,47 @@ Useful log filters:
 - `BB_MATCH`
 
 ## 3. LAN Test
+
+Use `docs\plans\july-31-direct-ip-acceptance.md` for the authoritative second-machine gate and
+result fields. The launchers below now write timestamped logs and executable hashes instead of
+relying on the package's default log folder.
+
+## VFX Foundation Audit
+
+Distinguish a primitive-fallback-ready candidate from completed Niagara authoring with:
+
+```powershell
+.\Scripts\Playtest\AuditVfxFoundation.ps1
+```
+
+The report is written to `Builds/VfxFoundationAudit.txt`. Missing master `.uasset` files are
+reported explicitly without failing the primitive fallback baseline; missing cue roots, template
+contract, scalability, or primitive fallback files do fail the audit.
+
+## Distribution Preparation
+
+Validate release inputs without copying or recompressing the frozen candidate:
+
+```powershell
+.\Scripts\Packaging\PreparePlaytestDistribution.ps1 -IncludeServer -ValidateOnly
+```
+
+This also runs the 55-row definition check, distribution verifier 8/8 self-test, and direct-IP
+reviewer 4/4 self-test before reporting readiness.
+
+After the final candidate passes manual gates, omit `-ValidateOnly` to stage a client bundle and
+optional server bundle under `Builds/Distribution`. The bundles preserve `Builds`, `Scripts`, and
+`docs` relative paths, include candidate/direct-IP evidence, and contain per-file
+`SHA256SUMS.txt`. On each destination machine, run
+`.\Scripts\Playtest\VerifyPlaytestDistribution.ps1` from the bundle root before the client/server
+launcher. Verification rejects missing, changed, duplicated, out-of-root, and unexpected files.
+Add `-CreateArchives` only when final transfer archives are needed.
+
+Validate those rejection paths using an isolated temporary fixture under `Saved/Logs`:
+
+```powershell
+.\Scripts\Playtest\TestDistributionVerifier.ps1
+```
 
 On the host machine:
 
@@ -84,6 +191,17 @@ On another machine on the same network:
 
 ```powershell
 .\Scripts\Playtest\StartPackagedClient.ps1 -Address HOST_LAN_IP:7777
+```
+
+Run one host client as well, because the manual gate requires host/remote observation. Use
+`StopPackagedClient.ps1` on the remote machine for the reconnect step, then collect both remote
+session directories and run `ReviewDirectIPPlaytest.ps1` on the host. The authoritative topology
+and commands are in `docs\plans\july-31-direct-ip-acceptance.md`.
+
+The reviewer and six stable `DI` rows have an isolated no-network self-test:
+
+```powershell
+.\Scripts\Playtest\TestDirectIPReviewer.ps1
 ```
 
 ## 4. Remote Direct-IP Test
@@ -132,15 +250,28 @@ server welcomes and joins, and terminates only the processes it started. Evidenc
 
 After the handshake and smoke runs, verify source freshness plus required executables, `TestMap`,
 all current Hudson cue packages, a 2/2 handshake, normal/impaired post-build evidence for all six
-hunters, reconnect-attempt evidence, death/wisp/revive evidence, and clean runtime log reviews:
+hunters, reconnect-attempt evidence, death/wisp/revive evidence, the wisp-priority matrix, four-client
+transport plus 2v2 lobby/selection/ability evidence, and clean runtime log reviews:
 
 ```powershell
 .\Scripts\Playtest\VerifyPlaytestCandidate.ps1
 ```
 
+After any gameplay/content/config/plugin rebuild, refresh every required evidence gate and then run
+the verifier with one sequential command:
+
+```powershell
+.\Scripts\Playtest\RefreshPackagedCandidateEvidence.ps1
+```
+
+The refresh deliberately runs sequentially. Parallel headless launches can starve client startup,
+and the two death directions must not create evidence directories within the same second. Use
+`-BasePort` when the default isolated range `8500-8610` is unavailable. Use `-VerifyOnly` to check
+existing evidence without launching tests.
+
 ## Automated Packaged Ability Smoke
 
-After the normal candidate verifier passes, drive all six hunters through LMB press/release, RMB
+After packaging, drive all six hunters through LMB press/release, RMB
 press/release, Shift, Q/recast, and R in three two-client packaged matches:
 
 ```powershell
@@ -150,8 +281,9 @@ press/release, Shift, Q/recast, and R in three two-client packaged matches:
 This opt-in Development-build harness moves clients through lobby and hunter selection, places
 opponents near each other, grants a large test health pool, records every activation, and rejects
 crashes, failed grants, failed initial activations, missing releases, or incomplete cleanup.
-Evidence is written under `Saved\Logs\PackagedAbilitySmoke`. It does not judge visual readability,
-hitbox alignment, or effect quality; those remain in the manual acceptance matrix.
+Evidence and automatic critical/cue-overflow reviews are written under
+`Saved\Logs\PackagedAbilitySmoke`. It does not judge visual readability, hitbox alignment, or
+effect quality; those remain in the manual acceptance matrix.
 
 Run the same six-hunter activation lifecycle under the playtest packet impairment settings:
 
@@ -170,20 +302,41 @@ Exercise one disconnect/reconnect attempt after a packaged two-player match reac
 .\Scripts\Playtest\TestPackagedReconnectAttempt.ps1
 ```
 
-The current contract distinguishes a successful transport reconnect from restoration to the
-disconnected hunter. A replacement connection currently enters as a spectator; the script records
-that limitation explicitly under `Saved\Logs\PackagedReconnect` instead of reporting a full pass.
+The runtime persists a random reconnect token in the client's user config; command-line overrides
+keep same-machine test clients distinct. The script gives the second client an override token, terminates it after gameplay starts,
+and requires the replacement process to reclaim the same team, lobby slot, hunter, transform,
+health, shield, and inventory within the server's 60-second grace period. Unidentified late joins
+still enter as spectators. Evidence is written under `Saved\Logs\PackagedReconnect`, and the run
+also emits the critical/cue-overflow review required by the candidate verifier. Active casts,
+temporary effects, and cooldown timers are deliberately reset rather than serialized.
 
 Verify the authoritative lethal-damage to wisp-possession path in a packaged two-client match:
 
 ```powershell
 .\Scripts\Playtest\TestPackagedDeathWispSmoke.ps1
+.\Scripts\Playtest\TestPackagedDeathWispSmoke.ps1 -HunterA 2 -HunterB 1 -Port 7842
 ```
 
-The opt-in test completes a normal Ghost/Kingpin ability lifecycle, applies lethal damage through
-the shared GAS damage effect, and requires HealthSet depletion, server wisp spawn/possession,
-replicated victim-client wisp possession, repeated healing through the capped revive path, server
-revive, and victim-client hunter repossession. Evidence is under `Saved\Logs\PackagedDeathWisp`.
+The opt-in test completes the selected hunters' normal ability lifecycle, injects a long-lived
+hunter-owned sentinel plus Crysta/Void charge states, and applies lethal damage through the shared
+GAS damage effect. It requires HealthSet depletion, owner-actor and transient-state cleanup, server
+wisp spawn/possession, replicated victim-client wisp possession, repeated healing through the
+capped revive path, one restarted server passive, and victim-client hunter repossession. The first
+command tests the default Ghost-kills-Kingpin path; the second swaps the victim to cover Ghost's
+passive teardown. Evidence is under `Saved\Logs\PackagedDeathWisp`.
+
+Verify the complete wisp decay/revive priority matrix in a packaged dedicated match:
+
+```powershell
+.\Scripts\Playtest\TestPackagedWispRulesSmoke.ps1
+```
+
+Eluna downs Ghost, then the server measures natural decay, ally-only revive, ally/enemy contest,
+enemy-only accelerated drain, healing-only accelerated revive, healing under enemy contest, the
+carried-wisp contest exception, actual Eluna passive pickup, and CC-triggered drop. The test then
+finishes a normal healing revive and requires victim-client hunter re-possession. Evidence and a
+clean three-log review are written under `Saved\Logs\PackagedWispRules`. This proves gameplay
+priority and replication lifecycle, not that the two bars are visible or readable on screen.
 
 Require a real authoritative LMB hit and health decrease from every hunter:
 
@@ -196,6 +349,27 @@ lifecycle, fires each hunter at close range, and requires server-observed health
 written under `Saved\Logs\PackagedHitSmoke`. Other abilities and visual hitbox agreement remain in
 the manual matrix.
 
+Verify authoritative RMB, Shift, Q, and R outcomes for every hunter:
+
+```powershell
+.\Scripts\Playtest\TestPackagedFullRosterOutcomeSmoke.ps1
+```
+
+This runs six isolated two-client matches and requires 24/24 hunter-specific contracts covering
+damage, healing, movement, crowd control, marks, empowered state, spawned actors, pulls, swaps,
+and recast detonation. Every run also requires a clean critical-error and GameplayCue-overflow
+review. It validates gameplay outcomes, not visual readability or owner/observer presentation.
+
+Repeat the same 24 contracts with the playtest impairment profile:
+
+```powershell
+.\Scripts\Playtest\TestPackagedOutcomeNetworkImpairment.ps1
+```
+
+The wrapper applies `Net PktLag=100` and `Net PktLoss=2` to every server and client, requires all
+18 process logs to confirm both settings, and writes separate evidence under
+`Saved\Logs\PackagedOutcomeNetworkImpairment`.
+
 Verify that the packaged dedicated server accepts four simultaneous client transports:
 
 ```powershell
@@ -204,3 +378,20 @@ Verify that the packaged dedicated server accepts four simultaneous client trans
 
 This requires four welcomes/joins and a clean five-log review under
 `Saved\Logs\PackagedFourClientHandshake`. It does not prove 2v2 lobby assignment or combat.
+
+Verify that four clients occupy the intended 2v2 slots, select unique hunters, enter gameplay, and
+complete their standard ability lifecycles:
+
+```powershell
+.\Scripts\Playtest\TestPackagedFourClientAbilitySmoke.ps1
+```
+
+This assigns hunters 1-2 to team 0 slots 0-1 and hunters 3-4 to team 1 slots 0-1. The gate requires
+4/4 exact server mappings, 20/20 primary activations, 8/8 LMB/RMB releases, four completed client
+lifecycles, and a clean five-log review under `Saved\Logs\PackagedFourClientAbilitySmoke`. It proves
+packaged 2v2 lobby, selection, spawn, and ability flow; deliberate movement, combat, and visual
+readability remain in the manual acceptance matrix.
+
+The wrapper waits for each indexed client to join before launching the next one. This preserves
+deterministic auto-fill order and prevents simultaneous clients from occupying each other's
+intended Team 0 slots before their explicit 2v2 slot requests arrive.

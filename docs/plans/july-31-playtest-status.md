@@ -22,6 +22,9 @@ Last updated: July 15, 2026.
 - Ability range indicators: shared owner-only hover and active previews cover all six hunters and F/G powers; visual/network retest pending.
 - GameplayCue networking: targeted cue scan paths configured; Hudson minigun cues use one cosmetic multicast per shot with local primitive rendering and no per-shot debug RPCs. Final normal, impaired, hit, death/revive, reconnect, four-client, and 24-contract packaged reviews report zero cue-overflow findings; manual ten-second Hudson firing/readability remains pending.
 - VFX foundation: template enum, palette/parameter schema, numeric palettes, budgets, content roots, and primitive fallback contract locked; Niagara master assets remain unbuilt.
+- VFX authoring handoff: `docs/plans/ludus-vfx-prompt-pack.md` contains directly forwardable project
+  context, eight budgeted master-system prompts, six hunter variant prompts, and an audit prompt.
+  It is prepared but unexecuted and does not advance the authored count from `0/8`.
 - VFX asset audit: `Scripts/Playtest/AuditVfxFoundation.ps1` distinguishes fallback readiness
   from authored completion and writes `Builds/VfxFoundationAudit.txt`; the current expected result
   is fallback-ready with `0/8` Niagara masters, not a green authored-assets claim.
@@ -227,6 +230,9 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
   `Builds/Distribution/Breachborne-Playtest-20260715-041036` without archives. Manifest verification
   passes all 1331 client files and 610 server files with zero failures. This proves the transfer
   layout and hashes; it is not the final release candidate while manual acceptance remains open.
+- VFX prompt handoff: locked LUDUS/manual Niagara prompts for all eight masters and six hunters in
+  `docs/plans/ludus-vfx-prompt-pack.md`, including exact paths, `User.*` parameters, budgets,
+  cleanup, and review evidence. No generated asset is claimed; the authored audit remains `0/8`.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

@@ -83,6 +83,8 @@ Success means:
   Validate every accepted result at 1080p Low and Medium and against the applicable manual row.
 - Keep source prompts and relevant generation settings with the asset handoff so another session
   can reproduce or revise the output. Generated assets are not accepted merely because they import.
+- Directly forwardable project-context, eight-master, six-hunter, and asset-review prompts are saved
+  in `docs/plans/ludus-vfx-prompt-pack.md`. Their presence is preparation only, not authored evidence.
 - If LUDUS output is unusable, unstable, too expensive, or cannot meet the network/readability
   contract quickly, fall back immediately to the reusable Niagara masters and existing primitive
   effects. Licensed Marketplace/library assets or other generation tools may be evaluated next;

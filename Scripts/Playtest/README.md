@@ -188,7 +188,12 @@ The report is written to `Builds/VfxFoundationAudit.txt`. Missing master `.uasse
 reported explicitly without failing the primitive fallback baseline; missing cue roots, template
 contract, scalability, or primitive fallback files do fail the audit. Any project `NS_*.uasset`
 outside the eight canonical paths is listed separately as an inventory-only candidate and never
-increments the authored-master count.
+increments the authored-master count. Once a canonical file exists and Unreal Editor is closed, the
+audit runs `BBNiagaraMasterAudit` to load the asset and verify its class, required typed `User.*`
+parameters, enabled CPU emitters, system fixed bounds, and absence of enabled light renderers. A
+present asset that fails those checks makes the audit fail while primitive fallbacks remain usable.
+Particle budgets, culling, cleanup, geometry binding, and top-down readability still require the
+editor/manual review described in `docs/plans/ludus-vfx-prompt-pack.md`.
 
 ## Distribution Preparation
 

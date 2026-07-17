@@ -1,6 +1,8 @@
 param(
 	[string]$ProjectRoot = (Resolve-Path "$PSScriptRoot\..\.."),
-	[string]$OutputPath = "$PSScriptRoot\..\..\Builds\VfxFoundationAudit.txt"
+	[string]$OutputPath = "$PSScriptRoot\..\..\Builds\VfxFoundationAudit.txt",
+	[string]$EngineRoot = "C:\UnrealEngine-5.7.4-release",
+	[switch]$SkipDeepAssetAudit
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,8 +73,64 @@ $MediumQualityConfigured = $Scalability.Contains("fx.Niagara.QualityLevel=1")
 $CueRootsPassed = @($CueRootResults | Where-Object { -not $_.Present }).Count -eq 0
 $FallbacksPassed = @($FallbackResults | Where-Object { -not $_.Present }).Count -eq 0
 $AuthoredCount = @($TemplateResults | Where-Object Present).Count
+$StructuralResults = @()
+$StructuralAuditState = if ($AuthoredCount -eq 0) { "NOT_REQUIRED_NO_MASTERS" } else { "NOT_RUN" }
+
+if ($AuthoredCount -gt 0 -and -not $SkipDeepAssetAudit) {
+	$RunningEditor = Get-Process -Name "UnrealEditor*" -ErrorAction SilentlyContinue
+	if ($RunningEditor) {
+		$StructuralAuditState = "BLOCKED_EDITOR_RUNNING"
+	} else {
+		$ResolvedEngine = (Resolve-Path -LiteralPath $EngineRoot).ProviderPath
+		$EditorCmd = Join-Path $ResolvedEngine "Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
+		$ProjectFile = Join-Path $Root "Breachborne.uproject"
+		if (-not (Test-Path -LiteralPath $EditorCmd -PathType Leaf)) {
+			throw "UnrealEditor-Cmd.exe not found: $EditorCmd"
+		}
+
+		$AuditRoot = Join-Path $Root "Saved\Logs\NiagaraMasterAudit"
+		New-Item -ItemType Directory -Force -Path $AuditRoot | Out-Null
+		$Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+		$DeepReportPath = Join-Path $AuditRoot "NiagaraMasterAudit-$Stamp.tsv"
+		$DeepLogPath = Join-Path $AuditRoot "NiagaraMasterAudit-$Stamp.log"
+		$Arguments = @(
+			$ProjectFile,
+			"-run=BBNiagaraMasterAudit",
+			"-Report=$DeepReportPath",
+			"-DisablePlugins=LudusAI",
+			"-unattended",
+			"-nop4",
+			"-nosplash",
+			"-nullrhi",
+			"-nosound",
+			"-abslog=$DeepLogPath"
+		)
+		& $EditorCmd @Arguments 2>&1 | Out-Null
+		$CommandletExitCode = $LASTEXITCODE
+		if (-not (Test-Path -LiteralPath $DeepReportPath -PathType Leaf)) {
+			throw "Niagara master commandlet failed with exit code $CommandletExitCode. Log: $DeepLogPath"
+		}
+
+		$StructuralResults = @(Import-Csv -LiteralPath $DeepReportPath -Delimiter "`t")
+		$StructuralAuditState = if ($CommandletExitCode -eq 0) { "COMPLETE" } else { "COMPLETE_ENGINE_EXIT_$CommandletExitCode" }
+	}
+} elseif ($AuthoredCount -gt 0 -and $SkipDeepAssetAudit) {
+	$StructuralAuditState = "SKIPPED_BY_CALLER"
+}
+
+$StructurallyValidCount = @($StructuralResults | Where-Object Status -eq "PASS").Count
+$AllPresentMastersStructurallyValid = $AuthoredCount -eq 0 -or (
+	$StructuralAuditState.StartsWith("COMPLETE") -and $StructurallyValidCount -eq $AuthoredCount)
 $FoundationReady = $CueRootsPassed -and $FallbacksPassed -and $EnumContractPassed -and $LowQualityConfigured -and $MediumQualityConfigured
-$Status = if (-not $FoundationReady) { "RED" } elseif ($AuthoredCount -eq $Templates.Count) { "GREEN" } else { "FALLBACK_READY_AUTHORING_INCOMPLETE" }
+$Status = if (-not $FoundationReady) {
+	"RED"
+} elseif (-not $AllPresentMastersStructurallyValid) {
+	"FALLBACK_READY_MASTER_ASSET_AUDIT_FAILED"
+} elseif ($StructurallyValidCount -eq $Templates.Count) {
+	"STRUCTURAL_PASS_MANUAL_REVIEW_PENDING"
+} else {
+	"FALLBACK_READY_AUTHORING_INCOMPLETE"
+}
 
 $Lines = @(
 	"Breachborne VFX foundation audit: $Status",
@@ -82,12 +140,23 @@ $Lines = @(
 	"Template enum contract: $(if ($EnumContractPassed) { 'PASS' } else { 'FAIL' })",
 	"Primitive fallback files: $(if ($FallbacksPassed) { 'PASS' } else { 'FAIL' })",
 	"Low/Medium Niagara scalability: $(if ($LowQualityConfigured -and $MediumQualityConfigured) { 'PASS' } else { 'FAIL' })",
-	"Authored Niagara masters: $AuthoredCount/$($Templates.Count)",
+	"Present Niagara masters: $AuthoredCount/$($Templates.Count)",
+	"Structurally valid Niagara masters: $StructurallyValidCount/$($Templates.Count)",
+	"Deep structural audit: $StructuralAuditState",
 	"Non-master Niagara candidates: $($NiagaraCandidates.Count)",
 	"",
 	"Master assets:"
 )
 $Lines += $TemplateResults | ForEach-Object { "- $($_.Name): $(if ($_.Present) { 'PRESENT' } else { 'MISSING' }) [$($_.Path)]" }
+$Lines += ""
+$Lines += "Deep structural results (required for every present master):"
+$Lines += if ($StructuralResults.Count -gt 0) {
+	$StructuralResults | ForEach-Object {
+		"- $($_.AssetPath): $($_.Status) emitters=$($_.EmitterCount) cpu=$($_.CpuOnly) fixedBounds=$($_.FixedBounds) noLights=$($_.NoEnabledLights) params=$($_.UserParameterCount) failures=$($_.Failures)"
+	}
+} else {
+	"- NONE ($StructuralAuditState)"
+}
 $Lines += ""
 $Lines += "Non-master Niagara candidates (inventory only; not counted as masters):"
 $Lines += if ($NiagaraCandidates.Count -gt 0) {
@@ -102,14 +171,14 @@ $Lines += ""
 $Lines += "Primitive fallbacks:"
 $Lines += $FallbackResults | ForEach-Object { "- $($_.Name): $(if ($_.Present) { 'PASS' } else { 'MISSING' })" }
 $Lines += ""
-$Lines += "A fallback-ready result supports the primitive July 31 candidate. It does not complete the authored-Niagara gate or manual readability acceptance."
+$Lines += "A master counts as structurally valid only after UE loads it as a Niagara system with enabled CPU emitters, valid system fixed bounds, no enabled light renderers, and the required typed User.* parameters. Particle budgets, culling, lifecycle cleanup, gameplay geometry binding, and top-down readability still require editor/manual review."
 
 $ResolvedOutput = [IO.Path]::GetFullPath($OutputPath)
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ResolvedOutput) | Out-Null
 $Lines | Set-Content -LiteralPath $ResolvedOutput -Encoding UTF8
 $Lines | ForEach-Object { Write-Host $_ }
 
-if (-not $FoundationReady) {
+if (-not $FoundationReady -or -not $AllPresentMastersStructurallyValid) {
 	exit 1
 }
 

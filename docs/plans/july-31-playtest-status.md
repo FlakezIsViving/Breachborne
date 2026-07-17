@@ -38,8 +38,11 @@ Last updated: July 17, 2026.
   LUDUS authoring is now active, but staged output does not advance the authored count from `0/8`
   until it matches a canonical master path and passes parameter, budget, cook, and live readability gates.
 - VFX asset audit: `Scripts/Playtest/AuditVfxFoundation.ps1` distinguishes fallback readiness
-  from authored completion and writes `Builds/VfxFoundationAudit.txt`; the current expected result
-  is fallback-ready with `0/8` Niagara masters, not a green authored-assets claim.
+  from authored completion and writes `Builds/VfxFoundationAudit.txt`. Its UE-backed structural
+  commandlet now rejects wrong-class/corrupt packages, missing or mistyped required `User.*`
+  parameters, empty/non-CPU emitter sets, invalid system fixed bounds, and enabled light renderers.
+  The current expected result is fallback-ready with `0/8` Niagara masters, not a green
+  authored-assets claim; budget, culling, lifecycle, geometry, and readability checks remain manual.
 - VFX source inventory: LUDUS has staged `/Game/FX/NS_GhostManifestation`, but it is unaudited,
   unintegrated, and not one of the eight canonical Niagara masters. Six Starter Content and four
   village Cascade systems remain available as seeds; source UE 5.7.4 includes Epic's disabled beta
@@ -304,8 +307,9 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
   contracts, isolated automation, automatic `A_Ghost_*` discovery/audits, repository policy, and one
   final summary.
 - VFX candidate accounting: `AuditVfxFoundation.ps1` remains fallback-ready with `0/8` canonical
-  masters and now inventories `/Game/FX/NS_GhostManifestation` separately. Non-master `NS_*` files
-  cannot advance authored-master completion by filename coincidence.
+  masters and inventories `/Game/FX/NS_GhostManifestation` separately. Non-master `NS_*` files
+  cannot advance authored-master completion by filename coincidence, and canonical files no longer
+  count as structurally valid until the UE commandlet loads and inspects them.
 - Pending commit safety: BB-PT-058 adds a read-only scope review. The live tree currently has eight
   staged-then-modified Ghost weapon/texture assets that must be refreshed after authoring, while all
   pending binary paths resolve to LFS. Plugin-update files and authoring references are reported in

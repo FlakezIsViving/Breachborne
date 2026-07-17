@@ -46,4 +46,11 @@ public:
 
 	/** Re-publish the authoritative ability list after a pawn/hunter grant transition. */
 	void RefreshAbilitySpecReplication();
+
+	/** Remove matching cooldown effects authoritatively and clear any predicted copy on the owner. */
+	int32 RefundCooldownsByTags(const FGameplayTagContainer& CooldownTags);
+
+private:
+	UFUNCTION(Client, Reliable)
+	void ClientRefundCooldownsByTags(FGameplayTagContainer CooldownTags);
 };

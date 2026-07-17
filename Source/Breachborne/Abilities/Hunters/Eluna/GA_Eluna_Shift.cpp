@@ -165,14 +165,16 @@ bool UGA_Eluna_GroundDash::TryCollectWispAlongPath(const FVector& DashStart, con
 	CollectedWisp->SetCarrier(Hunter);
 
 	// CommitAbility has already applied the cooldown. Remove this dash's
-	// specific cooldown effect so collecting the wisp refunds one use.
+	// specific cooldown effect on the server and its predicted owner copy.
+	int32 RemovedCooldownCount = 0;
 	UBBAbilitySystemComponent* ASC = GetBBAbilitySystemComponent();
 	if (ASC)
 	{
-		ASC->RemoveActiveEffectsWithGrantedTags(*GetCooldownTags());
+		RemovedCooldownCount = ASC->RefundCooldownsByTags(*GetCooldownTags());
 	}
-	UE_LOG(LogBreachborne, Warning, TEXT("BB_ELUNA_SHIFT|WISP_COLLECTED|wisp=%s|cooldown_refund=full"),
-		*CollectedWisp->GetName());
+	UE_LOG(LogBreachborne, Warning,
+		TEXT("BB_ELUNA_SHIFT|WISP_COLLECTED|ability=%s|wisp=%s|cooldown_effects_removed=%d|cooldown_refund=full"),
+		*GetClass()->GetName(), *CollectedWisp->GetName(), RemovedCooldownCount);
 
 	return true;
 }

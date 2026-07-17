@@ -80,7 +80,7 @@ and whether visual geometry remains synchronized with gameplay.
    Kingpin's chain, then complete both six-item hunter sections, including Hudson's ten-second
    sustained-fire check.
 3. Crysta versus Void: run `StartCrystaVoidAcceptance.ps1`, then complete both six-item hunter
-   sections. Record the marked-prop visual subcase as setup-blocked until a fixture is cooked.
+   sections. Use a placed target dummy for the cooked marked-prop visual subcase.
 4. Cleanup and stress: complete the five global checks, then repeat only failed hunter checks on
    dedicated server with lag/loss where required.
 
@@ -120,9 +120,9 @@ checks. The helper is an observation/target fixture, not an additional acceptanc
 ### Crysta/Void exact setup
 
 Run `StartCrystaVoidAcceptance.ps1`. Assign Crysta to Team 0 and Void to Team 1. Use the map wall,
-chest, and ordinary props for wall-pierce and swap readability. The current frozen package contains
-no placed prop with `UBBVoidSwappableComponent`; deterministic tests cover category execution, but
-the marked-prop visual subcase must remain setup-blocked until a fixture is added and repackaged.
+chest, ordinary props, and a placed target dummy for wall-pierce and swap readability. The Jul 17
+package includes the native target-dummy marker fixture; GameSystems proves marker eligibility,
+mobility, and actor/movement replication, so the marked-prop visual subcase must now be executed.
 
 ## Ghost
 
@@ -136,7 +136,7 @@ the marked-prop visual subcase must remain setup-blocked until a fixture is adde
 ## Eluna
 
 - [x] `GE-07` Held LMB remains legible at repeated-fire speed; damage stacking still works.
-- [ ] `GE-08` RMB sticky projectile, delayed growing root area, pop, damage, and root agree.
+- [x] `GE-08` RMB sticky projectile, delayed growing root area, pop, damage, and root agree.
 - [ ] `GE-09` Shift path is visible; dashing through an allied wisp collects it and produces the refund pulse and full cooldown reset.
 - [ ] `GE-10` Q disc uses the exact heal radius, visibly travels when tossed, attaches correctly, pulses,
   and produces one final heal burst.
@@ -194,6 +194,11 @@ the marked-prop visual subcase must remain setup-blocked until a fixture is adde
   one implosion without leaving movement or tags stuck.
 
 ## Cleanup and stress
+
+Run the normal cleanup/quality/Grappling Hook pass with
+`.\Scripts\Playtest\StartCleanupStressAcceptance.ps1`, then run the impaired network pass separately
+with `-PktLag 100 -PktLoss 2`. Both modes create the five-row record; real launches require a fresh
+verified package, and `-ValidateOnly` starts no processes.
 
 - [ ] `CS-01` Kill each caster during one persistent ability: Ghost R, Eluna Q/R, Hudson Shift/R,
   Crysta RMB/Q/R, and Void Shift/Q/R.

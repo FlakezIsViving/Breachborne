@@ -4,46 +4,61 @@ Companion tracker for `docs/plans/july-31-playtest-vfx-network-plan.md`.
 Update this file at the end of every workday and whenever a hard gate changes state.
 Manual runtime matrix: `docs/plans/july-31-manual-vfx-acceptance.md`.
 
-Last updated: July 15, 2026.
+Last updated: July 17, 2026.
 
 ## Current headline
 
-- Current gate: manually retest the three repaired Eluna behaviors on the July 15 03:36 package
+- Current gate: manually retest Eluna Shift owner cooldown/refund feedback on the verified July 17 candidate, then continue the remaining presentation matrix
 - Overall status: YELLOW
-- Primary blocker: focused automation is green. Human owner/observer confirmation remains for Eluna
-  RMB latch stability, Shift wisp refund, and healing-started resurrection persistence.
-- PureLogic baseline: 44 passed, 0 failed on July 15.
-- GameSystems baseline: 53 passed, 0 failed on July 15, including persistent-ASC match reset,
+- Primary blocker: Eluna RMB latch stability and Q-started resurrection continuity are manually accepted.
+  Fresh package automation proves the exact Shift cooldown is removed, but its owner HUD/refund pulse
+  still needs human confirmation. Remaining presentation rows, Low/Medium, deliberate combat, and
+  second-machine direct IP are also manual/external gates.
+- PureLogic baseline: 47 passed, 0 failed on July 17.
+- GameSystems baseline: 55 passed, 0 failed on July 17, including persistent-ASC match reset,
   stable cooldown specs, Crysta mark removal and Shift charges, and Void geometry, collision, swap,
-  Singularity lifecycle contracts, Eluna Q carrier rules, and Eluna R completion ownership.
-- Build baseline: Editor target and packaged Game/Server targets succeeded on July 15.
-- Latest network evidence: the July 15 03:36 package and 04:07 verifier pass normal and 100 ms/2% loss activation for hunters 1-6, authoritative LMB health loss for all six, and 24/24 hunter-specific RMB/Shift/Q/R outcome contracts both normally and at 100 ms/2% loss. Core death/wisp/healing/revive and cleanup pass in both victim directions; wisp lifecycle passes 12/12. Reconnect restores the same hunter/team/slot and exact recorded state. Four-client evidence proves 4/4 transport, exact 2v2 mapping/lifecycle, 20/20 primary activations, and 8/8 releases. Every fresh packaged review reports zero critical or GameplayCue-overflow findings. Visual acceptance remains pending.
-- Wisp lifecycle: the final full candidate passes 12/12 at `Saved/Logs/PackagedWispRules/20260715-034800`, including one-heal persistence after the source expires, enemy cancellation, Shift-path pickup, passive pickup, CC drop, carried protection, and Eluna R revive/re-possession. Manual healing continuity still requires confirmation.
+  Singularity lifecycle contracts, Eluna Q carrier rules, Eluna R completion ownership, and isolated
+  Eluna dash cooldown refund.
+- Build baseline: the post-authoring Editor build, fresh packaged Game/Server targets, and complete
+  freshness-aware package matrix succeeded on July 17.
+- Latest network evidence: the full July 17 matrix completed at `20260717-042049` and the verifier
+  passed at 04:21. It proves normal/impaired roster activation 6/6, LMB hits 6/6, non-LMB outcomes
+  24/24 normally and under 100 ms/2% loss, match reset, reconnect, both death/wisp directions, wisp
+  rules 12/12, four-client transport/mapping 4/4, and zero critical/cue-overflow findings. Visual
+  acceptance remains pending.
+- Wisp lifecycle: the fresh package passes 12/12 at `Saved/Logs/PackagedWispRules/20260717-040413`,
+  including one-heal persistence after the source expires, enemy cancellation, exact Shift cooldown
+  refund, passive pickup, CC drop, carried protection, and Eluna R revive/re-possession. The tester
+  manually confirmed Q-started resurrection now completes; combined owner/observer bar rows remain.
 - Ability range indicators: shared owner-only hover and active previews cover all six hunters and F/G powers; visual/network retest pending.
 - GameplayCue networking: targeted cue scan paths configured; Hudson minigun cues use one cosmetic multicast per shot with local primitive rendering and no per-shot debug RPCs. Final normal, impaired, hit, death/revive, reconnect, four-client, and 24-contract packaged reviews report zero cue-overflow findings; manual ten-second Hudson firing/readability remains pending.
 - VFX foundation: template enum, palette/parameter schema, numeric palettes, budgets, content roots, and primitive fallback contract locked; Niagara master assets remain unbuilt.
 - VFX authoring handoff: `docs/plans/ludus-vfx-prompt-pack.md` contains directly forwardable project
   context, eight budgeted master-system prompts, six hunter variant prompts, and an audit prompt.
-  It is prepared but unexecuted and does not advance the authored count from `0/8`.
+  LUDUS authoring is now active, but staged output does not advance the authored count from `0/8`
+  until it matches a canonical master path and passes parameter, budget, cook, and live readability gates.
 - VFX asset audit: `Scripts/Playtest/AuditVfxFoundation.ps1` distinguishes fallback readiness
   from authored completion and writes `Builds/VfxFoundationAudit.txt`; the current expected result
   is fallback-ready with `0/8` Niagara masters, not a green authored-assets claim.
-- VFX source inventory: no reusable Niagara system exists in project content. Six Starter Content
-  and four village Cascade systems are available as seeds; source UE 5.7.4 includes Epic's disabled
-  beta Cascade-to-Niagara converter. The conversion route is documented as a restart-required
-  fallback and still requires the exact parameters, budgets, paths, audit, cooking, and live tests.
+- VFX source inventory: LUDUS has staged `/Game/FX/NS_GhostManifestation`, but it is unaudited,
+  unintegrated, and not one of the eight canonical Niagara masters. Six Starter Content and four
+  village Cascade systems remain available as seeds; source UE 5.7.4 includes Epic's disabled beta
+  Cascade-to-Niagara converter. Every route still requires exact parameters, budgets, canonical paths,
+  audit, cooking, and live tests. The Jul 17 foundation audit reports fallback readiness, `0/8`
+  canonical masters, and one separately identified non-master candidate.
 - Ghost VFX: LMB, RMB, Q, R, and passive cooldown reset are manually accepted. Shift remains readable
   but fails the strict synchronized-movement row because unfocused local windows jitter.
-- Eluna VFX: LMB is accepted. R full-channel revive and range cancellation work, while remaining
-  cancellation cases are pending. Q following and carried-wisp smoothness passed the focused retest;
-  RMB latch, Shift refund, and Q-driven resurrection continuity are repaired and await manual retest.
+- Eluna VFX: LMB and RMB are accepted. R full-channel revive and range cancellation work, while
+  remaining cancellation cases are pending. Q following, carried-wisp smoothness, and Q-started
+  resurrection continuity are accepted. Shift refund passes the exact packaged rule but needs one
+  owner-HUD/manual presentation retest.
 - Kingpin VFX: replicated primitive wedge, tether, trail, impact, chain, shell, and passive fallbacks compile; live owner/observer readability remains unverified.
-- Latest main package summary: the July 15 03:36 source-toolchain client/server package passes the
-  July 15 04:07 freshness-aware verifier: executables, TestMap, 17/17 Hudson cues, handshake 2/2,
-  transport 4/4, exact 2v2 mappings/lifecycles 4/4, normal/impaired roster smoke 6/6, LMB hits
-  6/6, non-LMB outcomes 24/24 normally and impaired, persistent match reset, same-hunter reconnect,
-  both death/wisp directions, wisp rules 12/12, and zero critical/cue-overflow findings.
-  The package includes the three Eluna repairs and owner ability-spec replication hardening.
+- Latest main package summary: the July 17 source-toolchain client/server package completed at 03:55;
+  `Builds/PlaytestCandidateVerification.txt` passed at 04:21 against the same package. It verifies
+  executables, TestMap, 17/17 Hudson cues, handshake 2/2, transport 4/4, exact 2v2 mappings/lifecycles
+  4/4, normal/impaired roster smoke 6/6, LMB hits 6/6, non-LMB outcomes 24/24 normally and impaired,
+  persistent match reset, same-hunter reconnect, both death/wisp directions, wisp rules 12/12, and
+  zero critical/cue-overflow findings.
 - Networking/performance cleanup: removed the final legacy DrawDebug multicast API and callers; disabled no-op observer ticks on server-only gameplay actors; made Grappling Hook collision/attachment/destruction server authoritative while replicating latch state for observer visuals; guarded replicated burst fallbacks against pre-initialization world-origin flashes.
 - Manual-test tooling: packaged server plus 1-4 visible clients now launch as one recorded session with isolated logs, exact PIDs, safe cleanup, and automatic critical/cue-overflow review under `Saved/Logs/InteractivePlaytest`.
 - Focused Eluna retest tooling: `StartElunaRepairRetest.ps1` launches only the required three-client
@@ -76,9 +91,23 @@ Last updated: July 15, 2026.
   packaging fallback, and plan commands now use the validated source-built UE 5.7.4 toolchain.
   Opening the generic `5.7` project association in Epic UE reproduces a Build-ID rejection for all
   LUDUS modules; launching the source editor mounts the project plugin without module-load errors.
+- LUDUS compatibility: both project and source-engine plugin copies are now `1.0.0` (`Version 28`).
+  Its first full project index exposed a null socket in Hudson's imported idle skeleton and rejected
+  a valid Fab package path containing an en dash. The Fab folder was renamed through Unreal Asset
+  Tools to an ASCII package path; the editor remained responsive beyond both former crash points
+  while the 1.0 workspace index ran. The closed-editor repair removed three null sockets, moved the
+  Hudson T-pose to its expected package, passed twice, and allowed the temporary source-engine guard
+  to be removed. A stock-behavior LUDUS-enabled startup then remained responsive for two minutes with
+  no null-socket, StateSync, assertion, or access-violation markers.
+- Editor content warnings: LUDUS's full-project scan exposes optional PCG Biome Sample and old
+  marketplace demo-map dependencies that are not mounted/present. They do not affect TestMap or the
+  packaged candidate. The legacy Hudson T-pose is now stored below `Meshes` as expected by the visual
+  set; its old unreferenced redirector package was removed.
 - Repository asset policy: `Scripts/SourceControl/TestRepositoryAssetPolicy.ps1` checks that large
-  tracked files use Git LFS and that rebuildable Unreal/IDE outputs remain ignored. Third-party
-  LUDUS editor binaries remain local ignored tooling; they are not silently added to the repository.
+  tracked files use Git LFS and that rebuildable Unreal/IDE outputs remain ignored. Generated
+  plugin `Binaries` remain ignored; LUDUS 1.0's required 32 MiB document-converter DLL is tracked
+  explicitly through Git LFS. The same gate rejects non-ASCII project/plugin package paths so the
+  LUDUS 1.0 StateSync assertion cannot be reintroduced by a later content import.
 
 ## Gate board
 
@@ -91,7 +120,7 @@ Use `RED`, `YELLOW`, or `GREEN`. A date passing does not make a gate green.
 | Jul 14 | Dedicated server | YELLOW | Fresh package: roster activation, exact 2v2 mapping/lifecycle 4/4, LMB 6/6, non-LMB 24/24 normal and impaired, reconnect, both death/revive directions, and wisp rules 10/10 | Deliberate 2v2 movement/combat and ability-specific visual cleanup pending |
 | Jul 15 | Packaged networking | YELLOW | 04:07 freshness-aware verifier PASS: executable/map/cue, 2/2 and 4/4 transport, exact 2v2 mapping/lifecycle, normal/impaired roster/outcomes 24/24, reconnect, death/revive, and wisp rules 12/12 | Focused Ghost/Eluna visual retest, deliberate 2v2 combat, and second-machine direct-IP pending |
 | Jul 16 | VFX foundation lock | YELLOW | Cue roots, template enum, palettes, parameter schema, budgets, fallbacks, and narrow cue always-cook root locked; all 17 Hudson cue packages present in client IoStore | Eight Niagara master assets and live ability-level cue invocation pending |
-| Jul 17 | Ghost VFX | YELLOW | Replicated primitive fallbacks cover LMB/RMB/Shift/Q/R/passive; Editor build and automation green | Recorded Ghost/Eluna three-client readability, timing, cleanup, and Low/Medium pass required |
+| Jul 17 | Ghost VFX | YELLOW | Primitive Ghost Q manually accepted; fresh Ghost outcomes 4/4 with zero cue overflow; Eluna RMB and resurrection continuity accepted; wisp rules 12/12 | Eluna Shift owner-HUD retest, remaining Ghost/Eluna rows, staged animation build/audit, and Low/Medium pass required |
 | Jul 18 | Eluna VFX | YELLOW | Replicated primitive fallbacks cover LMB/RMB/Shift/Q/R/passive; exact zone geometry and server-only Q/R resolution compiled | Three-client owner/observer/helper readability, timing, cleanup, and Low/Medium pass required |
 | Jul 19 | Kingpin VFX | YELLOW | Replicated primitive wedge/beam/burst fallbacks cover LMB/RMB/Shift/Q/R/passive; Editor build and automation green | Three-client chain/readability, moving-hook presentation, cleanup, and Low/Medium pass required |
 | Jul 20 | Hudson VFX/internal test | YELLOW | Placeholder cue assets audited; code fallbacks cover LMB/RMB/Shift/Q/R/passive; Editor/Game/Server, automation, and 2/2 handshake pass | Recorded three-client firing/readability, release, cleanup, and overflow retest required |
@@ -114,7 +143,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | Hunter | LMB | RMB | Shift | Q | R | Passive | Network | Cleanup |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Ghost | PASS | PASS | FAIL | PASS | PASS | PASS | FAIL | - |
-| Eluna | PASS | FAIL | FAIL | FAIL | - | FAIL | FAIL | - |
+| Eluna | PASS | PASS | FAIL | FAIL | - | FAIL | FAIL | - |
 | Kingpin | - | - | - | - | - | - | - | - |
 | Hudson | - | - | - | - | - | - | - | - |
 | Crysta | - | - | - | - | - | - | - | - |
@@ -124,11 +153,34 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 
 | Track | Accepted | Total | Status | Latest evidence/blocker |
 | --- | ---: | ---: | --- | --- |
-| Hunter abilities + cleanup/stress | 6 | 41 | PENDING | GE-01/02/04/05/06/07 accepted; three repaired Eluna behaviors await focused retest |
+| Hunter abilities + cleanup/stress | 7 | 41 | PENDING | GE-01/02/04/05/06/07/08 accepted; Shift package repair needs owner-HUD confirmation and broader Q/R/passive rows remain incomplete |
 | Range indicators | 0 | 9 | PENDING | `docs/ABILITY_RANGE_INDICATORS.md`; hover and active-preview checks remain manual |
 | Wisp UI | 2 | 5 | PENDING | Two-bar layout and natural decay accepted; healing continuity, healing contest, and carried smoothness need repaired-package retest |
-| **Presentation total** | **8** | **55** | **PENDING** | Ghost/Eluna 6/12 and Wisp UI 2/5 accepted; range indicators remain 0/9 |
+| **Presentation total** | **9** | **55** | **PENDING** | Ghost/Eluna 7/12 and Wisp UI 2/5 accepted; range indicators remain 0/9 |
 | Second-machine direct IP | 0 | 6 | PENDING | External machine/user required; separate from presentation total |
+
+## Remaining execution lanes
+
+- **Automated Codex lane:** complete. `CompletePostAuthoringValidation.ps1` passes Editor build,
+  PureLogic 47/47, GameSystems 55/55, all six discovered `A_Ghost_*` sequence audits, launcher
+  contracts, and repository policy. BB-PT-048/049 repair and stock-engine reopen verification pass,
+  and the fresh client/server package plus complete evidence refresh pass.
+- **Manual local lane:** 46/55 presentation rows remain. The immediate regression is `GE-09` owner
+  cooldown/refund-pulse confirmation, followed by the remaining Ghost/Eluna rows, Kingpin/Hudson,
+  Crysta/Void, cleanup/stress, range indicators, and wisp UI. Automation can prepare and review these
+  sessions but cannot honestly mark subjective owner/observer readability without tester evidence.
+- **External lane:** `DI-01` through `DI-06` require a second machine and remote operator. Launch,
+  reconnect, evidence capture, and combined review tooling are ready.
+- **Optional authored-content lane:** canonical Niagara master completion remains `0/8`; staged LUDUS
+  output is reviewed and counted only after path/parameter/budget/cook/live acceptance. Six generated
+  Ghost animation sequences pass class/skeleton audits and remain deliberately unbound until the user
+  finishes the set and chooses phase mappings.
+- **Source-control lane:** after authoring and closed-editor validation, run
+  `Scripts/SourceControl/ReviewPendingCommitScope.ps1 -Strict`, refresh every stale staged LFS entry,
+  exclude rebuildable/generated noise, review the Ludus plugin update separately, and only then commit
+  and push the intentional scope to `github/main`.
+- The goal remains active across all lanes. There is no turn-count cap; progress continues wherever
+  the required editor state, tester input, or external machine is available.
 
 ## Active issue log
 
@@ -138,11 +190,11 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | BB-PT-002 | P1 | Packaging | Packaged candidate must match current source | Codex | Resolved | `Scripts/Playtest/VerifyPlaytestCandidate.ps1` PASS; evidence in `Builds/PlaytestCandidateVerification.txt` |
 | BB-PT-003 | P1 | Networking | Full ability/death/dedicated/package matrix untested | User + Codex | Automated gameplay/package portion resolved; deliberate combat and presentation cleanup remain open | July 15 candidate: 2/2 and 4/4 transport, exact 2v2 mapping/lifecycle 4/4, normal/impaired roster, LMB 6/6, non-LMB 24/24, reconnect, both death/revive directions, and wisp rules 12/12 PASS; total manual presentation is 8/55 |
 | BB-PT-004 | P2 | GameplayCues | No targeted GameplayCueNotifyPaths configured | Codex | Resolved | `/Game/GameplayCues` configured; clean Jul 12 editor startup initialization |
-| BB-PT-005 | P2 | Environment | UDP Messaging cannot bind 25.18.80.222 | Unassigned | Open | Jul 12 log; GameNetDriver still worked |
+| BB-PT-005 | P2 | Environment | UDP Messaging cannot bind stale adapter 25.18.80.222 | Codex | Resolved | Current machine owns no 25.x adapter. `UnicastEndpoint=0.0.0.0:0` follows UE 5.7.4's documented default-adapter behavior, stale static endpoints are cleared, and the Jul 15 source-editor restart bound successfully on an ephemeral port; GameNetDriver remains separate. |
 | BB-PT-006 | P0 | Wisp | PvP death did not spawn or possess a wisp because GameMode lifecycle wiring was absent | Codex | Resolved | User retest plus `Saved/Logs/Breachborne-backup-2026.07.12-00.26.01.log`: three successful spawn/possession/revive cycles |
 | BB-PT-007 | P1 | VFX/Networking | Rapid ability cues exceeded the per-net-update GameplayCue multicast limit | Codex | Automated regression resolved; manual Hudson sustained-fire/readability retest pending | Fire/Impact/Heal use one batched Hudson multicast; redundant Kingpin passive and Crysta R impact cue RPCs removed; every final packaged review reports zero cue-overflow findings |
 | BB-PT-008 | P1 | Wisp UI | Wisp widgets constructed and bound on every client but rendered no bars because the tree was created after `RebuildWidget` | Codex | Fix compiled; visual retest pending | Jul 12 repeated-session log; no paint path existed |
-| BB-PT-009 | P1 | Ability UI | Primitive range previews need a six-hunter owner/observer readability pass | Codex | Fix compiled; visual retest pending | `docs/ABILITY_RANGE_INDICATORS.md` manual matrix |
+| BB-PT-009 | P1 | Ability UI | Primitive range previews need a six-hunter owner/observer readability pass | Codex | Fix compiled; visual retest pending with launcher ready | `StartRangeIndicatorAcceptance.ps1` validates a four-client, two-game six-hunter topology, creates the exact nine-row record, and documents all five built-in F/G power commands; `-ValidateOnly` passes without launching processes. A real run remains package-freshness gated and no RI row is promoted from tooling alone. |
 | BB-PT-010 | P1 | Networking | Launcher Game client and source-built Server had incompatible network version hashes | Codex | Resolved | Same-toolchain Game/Server plus `TestHeadlessDedicatedHandshake.ps1`: 2/2 joins PASS |
 | BB-PT-011 | P1 | Ghost VFX | Primitive fallbacks require complete owner and remote-client acceptance | Codex | Ghost RMB accepted; remaining visual retest pending | Ghost RMB passed in `InteractivePlaytest/20260714-123853`; Editor/PureLogic/GameSystems and current packaged Ghost outcomes pass, while the other Ghost presentation rows remain unchecked |
 | BB-PT-012 | P1 | Eluna VFX | Root/heal zone observer state and Q/R authority leaks required repair; complete visual acceptance remains open | Codex | Gameplay/network fix verified; visual retest pending | Eluna R has positive presentation/full-channel revive evidence; replicated radii/toss movement, authoritative Q routing and R resolution, root-on-pop, and packaged RMB/Shift/Q/R outcomes pass; cancellation and Q presentation remain manual |
@@ -158,8 +210,8 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | BB-PT-022 | P1 | Networking/Abilities | RMB/Shift/Q/R had activation-only coverage and predicted-client lifetimes could cancel authoritative resolution | Codex | Resolved by deterministic source/package outcome gates | Current package proves 24/24 normally at `PackagedOutcomeSmoke/20260715-013021` through `013518` and impaired at `PackagedOutcomeNetworkImpairment/20260715-013713`, `013126` through `013543`; fixes include active-Q authority, Eluna root/R ownership, Kingpin R/Shift, Hudson reel/Q aim placement, stable cooldown specs, Crysta mark removal, and Crysta R ownership |
 | BB-PT-023 | P1 | Void Gameplay/VFX | Void Snap's cone tip faced opposite travel and marked swap props were not made movable/replicated | Codex | Resolved in source and deterministic tests; live readability remains manual | Cone local pitch corrected; `UBBVoidSwappableComponent` prepares owner mobility/replication; GameSystems 49/49 covers orientation, hit volume, empowered scaling, prop mobility, eligibility, category swap, and Singularity lifecycle; packaged Void outcomes PASS 4/4 normally and impaired |
 | BB-PT-024 | P1 | QA Tracking | The original 0/41 headline omitted the existing nine range checks and had no explicit wisp-bar visual matrix | Codex | Resolved in tracking; execution pending | Manual presentation is explicitly 8/55: hunter/cleanup 6/41, range 0/9, wisp UI 2/5; direct-IP remains separate |
-| BB-PT-025 | P1 | Void VFX Fixture | The frozen TestMap package has no placed prop with `UBBVoidSwappableComponent`, so marked-prop visual swapping cannot be observed | Codex | Setup blocked; do not infer PASS from deterministic tests | Source/map audit finds no cooked fixture; Crysta/Void launcher records the limitation; adding one requires a later content/package change |
-| BB-PT-026 | P1 | Manual Tooling | The documented two-client pair sessions could not exercise Eluna's ally mechanics or Kingpin's two-target chain | Codex | Resolved in tooling; execution pending | Three-client Ghost/Eluna and Kingpin/Hudson wrappers define exact teams, slots, hunters, evidence, candidate preflight, and safe stop/review |
+| BB-PT-025 | P1 | Void VFX Fixture | The frozen TestMap package had no placed prop with `UBBVoidSwappableComponent`, so marked-prop visual swapping could not be observed | Codex | Resolved; manual visual execution pending | `ABBTargetDummy` owns a default marker and replicates actor movement from its class defaults. The focused fixture test and full GameSystems 54/54 pass, and the Jul 17 client/server package cooked the updated `TestMap`; the marked-prop subcase is no longer setup-blocked. |
+| BB-PT-026 | P1 | Manual Tooling | The documented two-client pair sessions could not exercise Eluna's ally mechanics or Kingpin's two-target chain | Codex | Resolved in tooling; execution pending | Three-client Ghost/Eluna and Kingpin/Hudson wrappers define exact teams, slots, hunters, evidence, candidate preflight, and safe stop/review. Ghost/Eluna now creates separate 12-row hunter and five-row wisp ledgers in the shared topology. |
 | BB-PT-027 | P1 | Distribution Tooling | Manifest tooling used `.NET Path.GetRelativePath`, which is unavailable in Windows PowerShell 5.1 | Codex | Resolved | Shared relative-path implementation plus `TestDistributionVerifier.ps1` PASS 8/8 for generated-valid, tampered, missing, unexpected, duplicate, traversal, malformed, and restored-valid scenarios |
 | BB-PT-028 | P1 | Direct-IP Tooling | The external-machine runbook launched only the remote client even though acceptance required host/remote observation | Codex | Resolved in tooling; external execution pending | Runbook now launches server, host client, initial remote, and remote reconnect; safe client stop plus combined reviewer PASS 4/4 synthetic scenarios and validates DI-01 through DI-06 |
 | BB-PT-029 | P0 | Match Reset/Abilities | A player ending game 1 dead retained `State.Dead` on the persistent PlayerState ASC, so GAS granted Ghost's abilities in game 2 but rejected every activation | Codex | Automated fix verified; exact manual two-game retest pending | Failure: `Saved/Logs/InteractivePlaytest/20260713-225601`; `ResetForNewMatch` clears stale effects/input/state before grants. Source GameSystems 52/52; current packaged regression PASS at `Saved/Logs/PackagedMatchReset/20260715-013904` with clean resets 2/2 and Ghost activations 5/5 |
@@ -170,19 +222,112 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 | BB-PT-034 | P1 | Eluna Q/Wisp | Initial Q stayed on the floor; tossed Q ignored allied wisps/dead-body filtering and appeared unbounded instead of following the first eligible target | Codex | Source/package rules verified; visual behavior pending | Failure reproduced in `Saved/Logs/InteractivePlaytest/20260714-123853`. Initial Q follows Eluna; toss sweeps for the first eligible allied hunter/wisp, follows it, applies wisp healing, and drops when an attached hunter dies. GameSystems 51/51 and current Eluna package outcomes PASS. |
 | BB-PT-035 | P1 | Ghost Passive/Networking | Ghost passive assumed `WaitGameplayEvent` was one-shot, then registered another persistent listener after every kill; later kills emitted increasing duplicate pulse RPCs | Codex | Package regression clean; exact multi-kill visual retest pending | Manual failure had 13 cue overflows, including 10 passive pulses. Listener is one-shot before re-registering; every fresh current-package review reports zero cue-overflow findings. |
 | BB-PT-036 | P2 | Ghost Q/R Readability | Q laser and R landing telegraphs resolve too quickly for a useful reaction window | Codex | Source tuning implemented; visual retest pending | Tester requested +0.25 to +0.4 seconds. Q now has an explicit 0.3-second thin telegraph before trace/damage; R warning increases from 0.45 to 0.75 seconds. |
-| BB-PT-037 | P1 | Movement/Networking | Remote characters and abilities are smooth in the focused local window and equally jittery in both unfocused packaged windows | Codex | Local focus behavior isolated; separate-machine confirmation required | July 15 tester confirmed the pattern across all abilities. UE 5.7 packaged `t.IdleWhenNotForeground` defaults to 0, but OS/Slate rendering of background windows still differs. Do not retune gameplay replication from this same-machine observation; compare focused clients on separate machines during the weekend smoke. Eluna Q/carried jitter reproduced in focused windows and is tracked separately in BB-PT-044. |
+| BB-PT-037 | P1 | Movement/Networking | Remote characters and abilities are smooth in the focused local window and equally jittery in both unfocused packaged windows | Codex | Engine/editor focus behavior isolated; separate-machine confirmation required | UE 5.7.4 source sets editor `bThrottleCPUWhenNotForeground=true` and disables background viewport rendering, directly explaining multi-PIE behavior. Packaged defaults are `t.IdleWhenNotForeground=0` and `r.VSync=0`, so packaged clients are not intentionally idled; three windows on one GPU/desktop remain a presentation-contention test, not valid replication evidence. Compare focused clients on separate machines during the weekend smoke. Eluna Q/carried jitter reproduced in focused windows and is tracked separately in BB-PT-044. |
 | BB-PT-038 | P1 | Networking/Readiness | Under packet loss, a client could bind its PlayerState ASC but never receive the initial owner ability-spec burst | Codex | Resolved and packaged | Recurrences: Void `20260714-133518`, Crysta `20260715-032515`. Completed grants are now re-published immediately and after owner-channel settling, with smoke preparation as a recovery point. Three focused impaired Crysta/Void runs (`033643`, `033732`, `033822`) and the full impaired roster (`034252`, `034341`, `034430`) pass. |
 | BB-PT-039 | P1 | Crysta R | A predicted client could end Crysta R before the server's first delayed salvo; the zero-delay first timer also never fired | Codex | Resolved and packaged | Non-authority now waits for server-owned completion and salvo zero fires immediately. Three focused reruns passed, then current normal and impaired 24/24 outcome suites passed at `PackagedOutcomeSmoke/20260714-142409` and `PackagedOutcomeNetworkImpairment/20260714-143034`. |
 | BB-PT-040 | P1 | Ghost Cooldowns/Passive | Ghost RMB/Shift/Q/R used obsolete transient GameplayEffects, allowing Shift to activate twice inside its six-second cooldown and leaving the kill passive nothing to reset | Codex | Resolved and manually accepted | Live failure at `InteractivePlaytest/20260715-001027`; focused retest `20260715-014500` accepted cooldowns/reset and logged one eligible removal with zero cue overflow. |
-| BB-PT-041 | P1 | Wisp Healing | Healing-started revival stopped when the heal source expired instead of continuing until enemy contest | Codex | Packaged regression pass; manual retest pending | Failure reached 76-80% then stopped in `20260715-014500`. Persistent latch plus enemy cancellation now pass exact packaged scenarios in `PackagedWispRules/20260715-030814`. |
-| BB-PT-042 | P1 | Eluna RMB | Sticky projectile passed through or repeatedly rubberbanded around its first enemy before the delayed root expanded | Codex | Packaged outcome pass; manual visual retest pending | Proxy simulation is disabled and stuck target/offset replicate explicitly. Final Eluna outcome contracts pass 4/4 at `PackagedOutcomeSmoke/20260715-030959`. |
-| BB-PT-043 | P1 | Eluna Shift | Dash refund failed to detect and collect an allied wisp along the projected path | Codex | Packaged path regression pass; manual retest pending | Authoritative point-to-segment detection and granted-tag cooldown removal compile; exact Shift-path pickup passes in `PackagedWispRules/20260715-030814`. |
+| BB-PT-041 | P1 | Wisp Healing | Healing-started revival stopped when the heal source expired instead of continuing until enemy contest | Codex | Gameplay continuity manually accepted; combined UI row still pending | Failure reached 76-80% then stopped in `20260715-014500`. Persistent latch plus enemy cancellation pass packaged scenarios, and the Jul 17 tester confirmed Q-started resurrection now completes. `WI-03` remains unchecked until its ally/healing owner-observer bar coverage is complete. |
+| BB-PT-042 | P1 | Eluna RMB | Sticky projectile passed through or repeatedly rubberbanded around its first enemy before the delayed root expanded | Codex | Resolved and manually accepted | Proxy simulation is disabled and stuck target/offset replicate explicitly. Packaged outcome contracts pass 4/4, and the Jul 17 focused tester accepted the one-time latch with no forward/back loop. |
+| BB-PT-043 | P1 | Eluna Shift | Dash refund failed to detect and collect an allied wisp along the projected path | Codex | Packaged repair passed; owner-HUD manual retest pending | Jul 17 authority logged collection while the owner retained its predicted cooldown and reported ground Shift blocked/aerial not refunded. Refund now removes the matching authoritative effect and explicitly clears the owning client's predicted copy. GameSystems 55/55 proves one charge is refunded without clearing the other. Fresh packaged wisp evidence `20260717-040413` passes 12/12 and records `GA_Eluna_AerialDash` removing exactly one seeded cooldown effect. |
 | BB-PT-044 | P1 | Eluna Q/Carry Networking | Q and carried wisps were server-teleported at 20 Hz/5 Hz, producing focused-client jitter and model/camera bouncing | Codex | Resolved and manually accepted | Q uses replicated target attachment and carried wisps attach once. Focused retest `20260715-014500` accepted smooth Q following and substantially improved carried-wisp movement. |
 | BB-PT-045 | P1 | Ghost LMB Networking | Three held-fire ticks exceeded GAS's two-GameplayCue-RPC per-net-update budget | Codex | Packaged regression resolved; manual readability retest optional | Owner predicts the muzzle cue locally and observers use the replicated projectile. Every current-package review reports zero GameplayCue-overflow findings. |
 | BB-PT-046 | P1 | Hudson Q/Networking | Hudson Q preferred actor facing over replicated aim, allowing late movement correction under 100 ms/2% loss to place barbed wire away from the target | Codex | Resolved and packaged | Q now uses `GetAimDirection()` with actor facing only as fallback. Focused normal and impaired reruns pass 4/4; full current-package outcome matrices pass 24/24 in both profiles. |
 | BB-PT-047 | P1 | Editor/Toolchain | VS Code launched Epic UE 5.7 against project and LUDUS DLLs built by source UE 5.7.4, causing a missing/different-engine module dialog | Codex | Resolved in tracked launch configuration | Build IDs proved the mismatch (`47537391` versus `6fb450cd...`); source UE 5.7.4 now launches successfully and mounts the project-local LUDUS plugin. |
+| BB-PT-048 | P1 | Editor/LUDUS | LUDUS 1.0 full-project indexing crashed on a Hudson skeleton null socket and asserted on a Unicode Fab package path | Codex | Resolved in portable project content | The guarded runner renamed the U+2013 Fab folder to `Stylized_Medieval_Well_Low_Poly_3D_Asset`, removed three null sockets from `/Game/Hunters/Hudson/Hudson_Idle/SkeletalMeshes/Hudson_Idle_Skeleton`, and passed two idempotency passes. The temporary engine guard was removed and rebuilt; stock-behavior LUDUS startup remained responsive for two minutes with no former crash markers. |
+| BB-PT-049 | P2 | Editor/Content | Full-project indexing reports stale optional sample dependencies and a legacy Hudson T-pose package path | Codex | Hudson path resolved; optional demo warnings triaged | PCG Biome Sample is disabled, VRS demo maps reference removed engine sky content, and neither is in the playtest map/candidate path. The compatibility runner moved the real T-pose to `/Game/Hunters/Hudson/Meshes/Hudson_TPOSE`, confirmed no old-package referencers, removed the redirector, and passed a second no-op pass. |
+| BB-PT-050 | P1 | Ghost Q VFX | LUDUS described railgun telegraph/fire systems but did not save either named Niagara asset | Codex + User | Primitive integration manually accepted; authored Niagara assets pending | Ghost Q sends exact start/end geometry through cue `Location`, `Normal`, and `RawMagnitude`; native cue parents write `User.BeamStart`, `User.BeamEnd`, direction, length, and lifetime. Both cue Blueprints are generated and the Jul 17 tester accepted warning timing, origin, and shot behavior with the primitive fallback. The bootstrap still refuses final `READY` until both named Niagara systems exist. |
+| BB-PT-051 | P1 | Manual Tooling | A relative interactive-playtest output root made packaged Unreal resolve `-abslog` below each executable, leaving the central session without logs to review | Codex | Resolved and regression-tested | The launcher canonicalizes and creates the output root before process launch. The reviewer recovered the stopped Jul 17 session's 4/4 legacy split logs and records their sources; `TestInteractivePlaytestReviewer.ps1` passes a two-tree synthetic recovery 2/2. |
+| BB-PT-052 | P1 | VFX Fixture/Networking | A stale placed target-dummy instance has no root or native components but inherited replication, flooding server relevancy warnings after clients join | Codex | Resolved in fresh package | The active Jul 17 session emitted over 33,000 `BBTargetDummy_0 has no root component` warnings with zero critical findings, while valid `BBTargetDummy_1` initialized normally. Malformed legacy instances are now rejected before replication; Editor build and GameSystems 55/55 pass, and fresh packaged wisp evidence `20260717-024548` has no root-component warning. |
+| BB-PT-053 | P1 | Ghost Q/GameplayCues | Q Fire, per-hit Impact, and lethal passive pulse competed for GAS's two cue multicasts per net update | Codex | Resolved in focused package | Jul 17 review recovered 4/4 logs and found five overflows: one passive pulse and four Q impacts. Fire already carries the authoritative beam endpoint and the replicated burst supplies fallback impact, so the redundant Impact multicast was removed. Fresh Ghost-versus-Eluna packaged outcome evidence `20260717-024716` passes 4/4 with zero critical and zero GameplayCue-overflow findings. |
+| BB-PT-054 | P1 | Editor/Toolchain | Source-editor startup walked into optional plugins whose modules were absent from the partial 5.7.4 engine build | Codex | Resolved in launch tooling | `PlatformCrypto` and `ChaosCloth` dialogs were unrelated to LUDUS and both plugins were already disabled in the project. `StartSourceEditor.ps1` now quotes the project path, derives every disabled plugin from the `.uproject`, guards against duplicate editors, and supports dry runs; VS Code launch profiles carry the same explicit list. PowerShell/JSON/diff checks pass and PID 21892 remains responsive with LUDUS enabled. |
+| BB-PT-055 | P1 | Animation/Content Safety | Generated animations could be assigned without enforcing the code-owned skeleton, slot, root-motion, phase, or loop contract | Codex | Code-owned safety and asset audits resolved; phase assignment deferred | Ghost routes LMB/RMB/Shift/Q/R/passive phases through C++ and replicated `UBBAbilityVisualSet`. Runtime rejects skeleton/root-motion mismatches and validation enforces slot, phase, loop, and play-rate contracts. PureLogic 47/47 passes, and all six `A_Ghost_*` assets audit as `AnimSequence` on `/Game/Characters/SK_GhostSpecOps_Skeleton`. They remain deliberately unbound until the user finishes the animation set and chooses mappings. |
+| BB-PT-056 | P1 | Source Control | The repaired VS Code source-editor launch profile was hidden by the blanket `.vscode/` ignore rule | Codex | Resolved and policy-tested | Only `.vscode/launch.json` is now eligible for source control; generated compile databases and IntelliSense files remain ignored. Repository policy now includes untracked/pending files and passes with zero large files outside LFS, rebuildable ignores PASS, LFS attributes PASS, and printable ASCII package paths PASS. All current Ghost animation, VFX, and reference-image paths resolve to LFS without staging. |
+| BB-PT-057 | P1 | Editor/Automation | Closed-editor build, test, animation-audit, and repository gates were separate manual commands with no aggregate result | Codex | Resolved and executed | `CompletePostAuthoringValidation.ps1` passed at `Saved/Logs/PostAuthoringValidation/20260717-035018`: launcher contracts 7/7, ledgers 6/6, Editor build, PureLogic 47/47, GameSystems 55/55, all six discovered Ghost animation audits, and repository policy. It stops on first failure and writes one durable summary. |
+| BB-PT-058 | P1 | Source Control | Assets staged before later LUDUS edits could leave the commit index pointing at older LFS objects, while plugin-update churn and authoring references need separate scope decisions | Codex | Review tooling resolved; final staging pending authoring close | `ReviewPendingCommitScope.ps1` parses NUL-delimited Git status safely, groups source/tooling, project content, Ludus plugin files, and authoring references, verifies pending binary LFS attributes, and flags staged-then-modified paths. The latest Jul 17 live review still finds eight stale index entries and zero pending binary paths without LFS attributes; strict mode intentionally remains red until final staging. |
+| BB-PT-059 | P1 | Manual Tooling | Range, cleanup/stress, and wisp UI batches had checklist rows but no complete launcher-backed record topology | Codex | Resolved in tooling; manual execution pending | `StartRangeIndicatorAcceptance.ps1` validates a four-client two-game six-hunter/power run at UDP 7914. `StartCleanupStressAcceptance.ps1` validates normal and 100 ms/2% loss four-client modes at UDP 7915, including Low/Medium and Grappling Hook instructions. Ghost/Eluna creates both hunter and WispUI records. Launcher contracts pass 7/7 and ledger generation 6/6 against the fresh verified package. No visual row is promoted by validation. |
 
 ## Daily updates
+
+### 2026-07-17
+
+- Closed-editor post-authoring validation PASS: Editor build, PureLogic 47/47, GameSystems 55/55,
+  six Ghost animation audits, launcher/ledger contracts, and repository policy.
+- BB-PT-048/049 repair PASS twice. Three Hudson skeleton null sockets were removed, the Unicode Fab
+  package path was replaced with ASCII, and Hudson T-pose moved below `Meshes` without referencers at
+  the old path. The temporary engine guard was removed; LUDUS-enabled stock startup survived two
+  minutes with no former assertion/crash markers.
+- Fresh client/server package completed at 03:55 and the complete package evidence refresh/verification
+  passed at 04:21 with zero critical or GameplayCue-overflow findings.
+- Gate due: focused Ghost Q cue/origin and Eluna RMB/Shift/Q owner-observer retest.
+- Status: YELLOW; the recorded three-client session is active at
+  `Saved/Logs/InteractivePlaytest/20260717-022200`.
+- Source verification: BreachborneEditor build PASS; PureLogic 44/44 PASS; initial GameSystems run
+  exposed that the new target-dummy fixture deferred replication until BeginPlay. Replication is
+  now a class default; the focused regression and full GameSystems 54/54 pass with no crash/ensure.
+- Ghost Q integration: generated and saved `GC_Hunter_Ghost_Q_Telegraph` and
+  `GC_Hunter_Ghost_Q_Fire`; cue bootstrap emitted `BB_GHOST_Q_VFX|CUES_READY`. Final `READY` remains
+  correctly blocked because LUDUS has not saved `NS_GhostRailGunTelegraph` or
+  `NS_GhostRailGunLaser`.
+- Package verification: the earlier focused Development package completed at 02:20 and was superseded
+  by the fully refreshed 03:55 client/server candidate and 04:21 complete verifier PASS.
+- Fixture closure: BB-PT-025 is no longer setup-blocked. The updated native target dummy is tested,
+  replicated, movable, and cooked with the current `TestMap`; only the corresponding manual Void
+  Shift presentation row remains to execute.
+- Evidence tooling: BB-PT-051 is fixed. Future sessions pass absolute log paths to packaged Unreal;
+  the reviewer recovered the stopped session's four executable-relative logs. The synthetic reviewer
+  recovery passes 2/2 with zero critical or cue-overflow findings.
+- Fixture warning flood: BB-PT-052 was discovered from the live server log. Correctness/visibility
+  observations remain useful, but that run is not accepted for fine-grained smoothness because the
+  stale rootless dummy wrote repeated relevancy warnings. The source guard passes the clean editor
+  build and GameSystems fixture; fresh packaged evidence `20260717-040413` proves the warning absent.
+- Manual result: Ghost Q's primitive warning/origin/shot behavior looked correct; Eluna RMB is accepted
+  as GE-08; Eluna Q-started resurrection now completes; Eluna Shift collection occurred but its owner
+  retained the predicted cooldown. Review recovered 4/4 split logs, recorded 3/3 joins, found zero
+  critical errors, and found five Ghost Q/passive cue overflows.
+- Repair verification: the owning client now receives an explicit same-tag cooldown refund, the packaged
+  wisp scenario seeds and requires removal of that cooldown, and redundant Ghost Q Impact cue traffic is
+  folded into the endpoint-aware Fire effect plus replicated fallback burst. Editor build, PureLogic
+  47/47, and GameSystems 55/55 pass. Fresh wisp evidence `20260717-040413` passes 12/12 with one exact
+  aerial-dash cooldown removed; focused Ghost outcome evidence `20260717-024716` passes 4/4 with zero
+  critical or cue-overflow findings. GE-09 remains open only for visible owner cooldown/refund feedback.
+- Source-editor launcher: BB-PT-054 is closed. Optional source-engine plugins with no built module no
+  longer block LUDUS startup; the canonical launcher derives the disabled list from `Breachborne.uproject`,
+  and both VS Code launch profiles include the same defensive override.
+- Code-owned animation safety: BB-PT-055 build, automation, and six asset audits pass. Ghost phase
+  routing is covered by lookup/validation tests, bad montage skeleton/root-motion data is rejected before
+  playback, and all generated Ghost sequences remain staged rather than integrated pending user mapping.
+- Source-control policy: BB-PT-056 is closed. The source-editor launch profile is now the only tracked
+  VS Code file; generated IDE data remains ignored. The full repository asset-policy gate passes and
+  checks pending/untracked files as well as tracked files, confirming current Ghost binary/source-media
+  additions use Git LFS rather than normal Git blobs.
+- Post-authoring automation: BB-PT-057 is executed and green. The aggregate command passed launcher
+  contracts, isolated automation, automatic `A_Ghost_*` discovery/audits, repository policy, and one
+  final summary.
+- VFX candidate accounting: `AuditVfxFoundation.ps1` remains fallback-ready with `0/8` canonical
+  masters and now inventories `/Game/FX/NS_GhostManifestation` separately. Non-master `NS_*` files
+  cannot advance authored-master completion by filename coincidence.
+- Pending commit safety: BB-PT-058 adds a read-only scope review. The live tree currently has eight
+  staged-then-modified Ghost weapon/texture assets that must be refreshed after authoring, while all
+  pending binary paths resolve to LFS. Plugin-update files and authoring references are reported in
+  separate groups instead of being swept into a blanket commit.
+- Range-indicator setup: BB-PT-009 now has a dedicated four-client launcher and generated nine-row
+  record. Validation passes for UDP 7914 and the packaged client/server paths without starting a
+  process; the real session is now freshness-ready against the verified 03:55 package.
+- Manual batch closure: BB-PT-059 provides the missing cleanup/stress launcher in normal and
+  100 ms/2% loss modes, while Ghost/Eluna now creates a separate five-row WispUI ledger. Together
+  with the pair and range wrappers, all six definition batches have an exact record-generation path.
+- Plan/tooling contract refresh: manual acceptance definition PASS with 55/55 unique rows and exact
+  documentation agreement; direct-IP reviewer PASS 4/4 with DI-01 through DI-06 unique; distribution
+  verifier PASS 8/8. These prove the runbooks/evidence contracts, not the still-unexecuted manual rows.
+- Manual launcher regression: `TestManualAcceptanceLaunchers.ps1` now runs every acceptance wrapper in
+  a child PowerShell, covers normal and impaired cleanup modes, detects any new Unreal/game process or
+  session artifact, and validates all six ledger generators in a disposable folder. This keeps the
+  complete manual topology testable while the live editor remains untouched.
+- Crysta/Void fixture instructions: the pair launcher no longer labels marked-prop swapping setup
+  blocked. It directs the tester to the placed target dummy added by BB-PT-025 and still requires
+  matching owner/observer endpoints before the visual row can pass.
+- Focused-retest provenance: future Eluna repair records now link the candidate-verification evidence
+  used by their launch instead of stamping the obsolete July 15 package timestamp.
 
 ### 2026-07-15
 
@@ -191,7 +336,7 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
 - Session launched: `Saved/Logs/InteractivePlaytest/20260715-001027`; frozen candidate preflight
   PASS before launch. Client 1 is Eluna on Team 0/Slot 0, client 2 is allied Hudson on Team 0/Slot
   1, and client 3 is opposing Ghost on Team 1/Slot 0. Storm must be disabled before match start.
-- Optional authoring route: LUDUS AI 1.0 early access may be evaluated after the technical/manual
+- Optional authoring route: LUDUS AI 1.0 early access is installed and may be evaluated after the technical/manual
   gates for shared animations and ability VFX. The user operates its Unreal Editor window while
   Codex prepares prompts/specifications and reviews outputs. It is not a deadline dependency;
   existing Niagara/primitive effects and licensed sourced assets remain fallbacks. Ludus MCP can
@@ -262,6 +407,25 @@ Mark each cell `-`, `PASS`, or `FAIL`. `Network` means owner, server, and observ
   systems. Verified UE 5.7.4's converter plugin and Content Browser conversion action in engine
   source, then documented exact seed mappings and post-conversion requirements in the LUDUS prompt
   pack. The plugin remains disabled to avoid restarting the user's active editor session.
+- UDP Messaging repair: replaced stale, unavailable `25.x` adapter/static endpoints with UE's
+  documented `0.0.0.0:0` default-adapter bind and an explicit empty static-endpoint array. The Jul
+  15 source-editor restart bound successfully on an ephemeral port with no stale-adapter warning;
+  this does not affect gameplay direct-IP on UDP 7777. BB-PT-005 is closed.
+- LUDUS 1.0 startup repair: updated both plugin copies to `1.0.0`, rebuilt against source UE 5.7.4,
+  and repaired the Unicode Fab package path that caused `StateSyncPath.cpp:94` to assert. A local
+  engine guard identified and bypasses a null socket in Hudson's idle skeleton; the editor remains
+  responsive and LUDUS writes its 1.0 workspace database. Resave a repaired skeleton before calling
+  this portable or removing the guard.
+- LUDUS warning triage: the full index reports disabled PCG sample content and old VRS demo-map sky
+  references; neither is used by the playtest candidate. A separate Hudson warning is a real but
+  simple path mismatch: the mesh exists at `/Game/Hunters/Hudson/Hudson_TPOSE`, while the legacy
+  visual set expects `/Game/Hunters/Hudson/Meshes/Hudson_TPOSE`. The closed-editor compatibility
+  pass now performs that Asset Tools rename before the unguarded launch verification.
+- Focus-jitter research: source UE 5.7.4 defaults editor background CPU throttling on and explicitly
+  disables background viewport rendering, which explains multi-PIE windows becoming uneven. The
+  packaged runtime defaults `t.IdleWhenNotForeground=0` and `r.VSync=0`, so same-machine packaged
+  degradation is not an intentional game-loop sleep. Treat three local windows as a transport and
+  rough visual test; judge movement replication only with each client focused on its own machine.
 - Tomorrow's manual retest is only: Eluna RMB latches once without forward/back looping; Shift through
   an allied wisp collects it and fully refunds; one Q heal starts resurrection that continues after Q
   expires, while enemy overlap cancels it. Do not repeat Ghost, Q-follow, or carry-smoothness checks.

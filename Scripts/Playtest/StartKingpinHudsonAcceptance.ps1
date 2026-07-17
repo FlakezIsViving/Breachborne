@@ -24,7 +24,7 @@ $global:LASTEXITCODE = 0
 	-ResY $ResY `
 	-OutputRoot $OutputRoot `
 	-SessionLabel "Kingpin/Hudson owner-observer acceptance" `
-	-VerifyCandidate `
+	-VerifyCandidate:(-not $ValidateOnly) `
 	-ValidateOnly:$ValidateOnly
 
 if ($LASTEXITCODE -ne 0) {

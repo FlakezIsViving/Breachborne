@@ -816,6 +816,40 @@ void FBBPrimitiveVFXSpec::Define()
 			BBGameplayTags::Cooldown_Hunter_Kingpin_AerialDash);
 	});
 
+	It("refunds one Eluna dash cooldown without clearing the other charge", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		AActor* Owner = TestWorld->SpawnActor<AActor>();
+		if (!TestNotNull("ASC owner spawned", Owner)) return;
+		UBBAbilitySystemComponent* ASC = NewObject<UBBAbilitySystemComponent>(Owner, TEXT("ElunaCooldownASC"));
+		Owner->AddInstanceComponent(ASC);
+		ASC->RegisterComponent();
+		ASC->InitAbilityActorInfo(Owner, Owner);
+
+		auto ApplyCooldown = [ASC](const FGameplayTag& Tag)
+		{
+			FGameplayTagContainer GrantedTags;
+			GrantedTags.AddTag(Tag);
+			GrantedTags.AddTag(BBGameplayTags::Cooldown_Dash);
+			FGameplayEffectSpecHandle Spec = UBBGameplayAbility::BuildBBCooldownSpec(ASC, 12.0f, GrantedTags);
+			return Spec.IsValid()
+				? ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get())
+				: FActiveGameplayEffectHandle();
+		};
+
+		TestTrue("Ground cooldown applied",
+			ApplyCooldown(BBGameplayTags::Cooldown_Hunter_Eluna_GroundDash).IsValid());
+		TestTrue("Aerial cooldown applied",
+			ApplyCooldown(BBGameplayTags::Cooldown_Hunter_Eluna_AerialDash).IsValid());
+		FGameplayTagContainer RefundTags;
+		RefundTags.AddTag(BBGameplayTags::Cooldown_Hunter_Eluna_AerialDash);
+		TestEqual("One matching cooldown effect removed", ASC->RefundCooldownsByTags(RefundTags), 1);
+		TestTrue("Ground charge remains on cooldown",
+			ASC->HasMatchingGameplayTag(BBGameplayTags::Cooldown_Hunter_Eluna_GroundDash));
+		TestFalse("Aerial charge is ready",
+			ASC->HasMatchingGameplayTag(BBGameplayTags::Cooldown_Hunter_Eluna_AerialDash));
+	});
+
 	It("reduces both Crysta Shift cooldowns independently", [this]()
 	{
 		if (!TestNotNull("World valid", TestWorld)) return;
@@ -968,6 +1002,27 @@ void FBBPrimitiveVFXSpec::Define()
 		TestEqual("Marked prop root becomes movable", Root->Mobility, EComponentMobility::Movable);
 		TestTrue("Marked prop replicates", Prop->GetIsReplicated());
 		TestTrue("Marked prop movement replicates", Prop->IsReplicatingMovement());
+	});
+
+	It("uses placed target dummies as the Void marked-prop fixture", [this]()
+	{
+		if (!TestNotNull("World valid", TestWorld)) return;
+		ABBTargetDummy* Fixture = TestWorld->SpawnActor<ABBTargetDummy>(
+			FVector(100.0f, 0.0f, 100.0f), FRotator::ZeroRotator);
+		if (!TestNotNull("Target dummy fixture spawned", Fixture)) return;
+
+		TestNotNull("Target dummy has Void-swappable marker",
+			Fixture->FindComponentByClass<UBBVoidSwappableComponent>());
+		TestTrue("Target dummy is eligible for Void Shift",
+			ABBVoidSwapProjectile::IsActorEligibleForSwap(Fixture));
+		if (USceneComponent* FixtureRoot = Fixture->GetRootComponent();
+			TestNotNull("Target dummy has a root component", FixtureRoot))
+		{
+			TestEqual("Target dummy root is movable",
+				FixtureRoot->Mobility, EComponentMobility::Movable);
+		}
+		TestTrue("Target dummy replicates", Fixture->GetIsReplicated());
+		TestTrue("Target dummy movement replicates", Fixture->IsReplicatingMovement());
 	});
 
 	It("recognizes Void Shift non-hunter categories and rejects unmarked props", [this]()

@@ -225,6 +225,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Character")
 	TSubclassOf<UAnimInstance> AnimInstanceClass;
 
+	/** Every ability montage must use this AnimGraph slot. None disables slot validation. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Animation")
+	FName RequiredMontageSlotName = TEXT("DefaultSlot");
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Breachborne|Visuals|Character")
 	FTransform MeshRelativeTransform = FTransform(FRotator(0.0f, -90.0f, 0.0f), FVector(0.0f, 0.0f, -90.0f), FVector(1.0f));
 
@@ -247,4 +251,8 @@ public:
 	UAnimMontage* FindPhaseMontage(FGameplayTag AbilityOrInputTag, EBBAbilityAnimationPhase Phase, float& OutPlayRate, bool& bOutLooping) const;
 
 	UAnimMontage* FindMontage(FGameplayTag AbilityOrInputTag, EBBAbilityAnimationPhase Phase, float& OutPlayRate, bool& bOutLooping) const;
+
+#if WITH_EDITOR
+	virtual EDataValidationResult IsDataValid(FDataValidationContext& Context) const override;
+#endif
 };

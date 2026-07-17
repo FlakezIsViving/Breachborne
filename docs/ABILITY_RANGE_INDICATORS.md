@@ -59,6 +59,16 @@ Run these checks in the recorded packaged owner/observer sessions from
 `docs/plans/july-31-manual-vfx-acceptance.md`. The current acceptance candidate uses a hidden
 dedicated server; do not substitute PIE or infer a PASS from source geometry.
 
+Launch the dedicated four-client, two-game range session with:
+
+```powershell
+.\Scripts\Playtest\StartRangeIndicatorAcceptance.ps1
+```
+
+The wrapper creates the nine-row acceptance record and exact role/power instructions. A real launch
+requires a fresh verified packaged candidate; `-ValidateOnly` checks topology, executables, and ports
+without launching processes or treating the current package as fresh.
+
 Hover and aiming are deliberately separate interactions. Leave the pointer over a HUD ability
 slot only to inspect the owner-centered maximum-range ring; no world target is expected while the
 pointer remains on the slot. Then move the pointer back into the world and activate the hotkey to

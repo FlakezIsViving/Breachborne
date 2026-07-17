@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Engine/SkeletalMesh.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameplayEffect.h"
@@ -311,6 +312,22 @@ float AHunterCharacter::PlayAbilityMontageLocal(FGameplayTag AbilityOrInputTag, 
 	UAnimMontage* Montage = ReplicatedHunterVisualSet->FindMontage(AbilityOrInputTag, Phase, ConfiguredPlayRate, bConfiguredLooping);
 	if (!Montage)
 	{
+		return 0.0f;
+	}
+
+	const USkeletalMesh* ActiveMesh = GetMesh()->GetSkeletalMeshAsset();
+	if (!ActiveMesh || !ActiveMesh->GetSkeleton() || Montage->GetSkeleton() != ActiveMesh->GetSkeleton())
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_ANIMATION|REJECTED|hunter=%s ability=%s phase=%d reason=skeleton_mismatch montage=%s"),
+			*GetNameSafe(this), *AbilityOrInputTag.ToString(), static_cast<int32>(Phase), *GetNameSafe(Montage));
+		return 0.0f;
+	}
+	if (Montage->HasRootMotion())
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("BB_ANIMATION|REJECTED|hunter=%s ability=%s phase=%d reason=root_motion montage=%s"),
+			*GetNameSafe(this), *AbilityOrInputTag.ToString(), static_cast<int32>(Phase), *GetNameSafe(Montage));
 		return 0.0f;
 	}
 

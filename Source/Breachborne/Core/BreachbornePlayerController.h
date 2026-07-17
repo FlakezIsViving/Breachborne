@@ -611,6 +611,7 @@ private:
 	float WispRulesSmokeStartHP = 0.0f;
 	float WispRulesSmokeStartRez = 0.0f;
 	float WispRulesNaturalHPDrain = 0.0f;
+	FGameplayTag WispRulesShiftRefundTag;
 	bool bWispRulesElunaRActivationRequested = false;
 	FTimerHandle DeathSmokeHealTimerHandle;
 	FTimerHandle OutcomeSmokeSampleTimerHandle;

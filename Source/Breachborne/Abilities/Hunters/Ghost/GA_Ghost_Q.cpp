@@ -9,6 +9,34 @@
 #include "Breachborne/Combat/BBPrimitiveBurstActor.h"
 #include "AbilitySystemComponent.h"
 #include "Breachborne/Breachborne.h"
+#include "Components/SkeletalMeshComponent.h"
+
+namespace
+{
+	FVector ResolveGhostQBeamStart(const AHunterCharacter* Hunter, const FVector& AimDirection)
+	{
+		if (Hunter)
+		{
+			if (const USkeletalMeshComponent* Mesh = Hunter->GetMesh())
+			{
+				static const FName PreferredMuzzleSocket(TEXT("Muzzle_Front"));
+				static const FName FallbackMuzzleSocket(TEXT("Muzzle"));
+				if (Mesh->DoesSocketExist(PreferredMuzzleSocket))
+				{
+					return Mesh->GetSocketLocation(PreferredMuzzleSocket);
+				}
+				if (Mesh->DoesSocketExist(FallbackMuzzleSocket))
+				{
+					return Mesh->GetSocketLocation(FallbackMuzzleSocket);
+				}
+			}
+
+			return Hunter->GetActorLocation() + FVector(0.0f, 0.0f, 70.0f) + AimDirection * 55.0f;
+		}
+
+		return FVector::ZeroVector;
+	}
+}
 
 UGA_Ghost_Q::UGA_Ghost_Q()
 {
@@ -50,12 +78,12 @@ void UGA_Ghost_Q::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 
 	const bool bIsServer = Hunter->HasAuthority();
 
-	PendingStartLocation = Hunter->GetActorLocation();
 	PendingAimDirection = GetAimDirection();
+	PendingStartLocation = ResolveGhostQBeamStart(Hunter, PendingAimDirection);
 	PendingEndLocation = PendingStartLocation + (PendingAimDirection * MaxRange);
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Start);
-	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Telegraph,
-		PendingStartLocation, PendingAimDirection);
+	ExecuteBeamVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Telegraph,
+		PendingStartLocation, PendingEndLocation);
 	if (bIsServer && BeamVisualClass)
 	{
 		FActorSpawnParameters VisualParams;
@@ -90,7 +118,7 @@ void UGA_Ghost_Q::FireLaser()
 	const FVector EndLocation = PendingEndLocation;
 	const FVector AimDir = PendingAimDirection;
 	PlayVisualMontage(BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Fire);
-	ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Fire, StartLocation, AimDir);
+	ExecuteBeamVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Fire, StartLocation, EndLocation);
 	if (BeamVisualClass)
 	{
 		FActorSpawnParameters VisualParams;
@@ -177,7 +205,6 @@ void UGA_Ghost_Q::FireLaser()
 				}
 
 				DamagedActors.Add(HitActor);
-				ExecuteVisualCue(BBGameplayTags::GameplayCue_Hunter_Ghost_Q_Impact, Hit.ImpactPoint, Hit.ImpactNormal);
 				if (BurstVisualClass)
 				{
 					FActorSpawnParameters VisualParams;

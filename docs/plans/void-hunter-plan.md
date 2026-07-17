@@ -46,10 +46,13 @@ Acceptance evidence (July 13, 2026):
   bounded hit volume, and increases length/radius/speed when empowered. The Q contract plus the
   early `Burst()` GameSystems test proves a second press destroys the live puddle and resolves the
   burst before natural expiry.
-- GameSystems 49/49 covers Shift category eligibility, actual paired teleport execution for
+- GameSystems 54/54 covers Shift category eligibility, actual paired teleport execution for
   hunters, wisps, test allies, chests, and marked props, marked-prop mobility/replication, and
   rejection of unmarked props. It also covers the Singularity warning-to-active lifecycle,
   one-time stun/pull state, completion, and empowered radius. Death/cancel/expiry cleanup remains
   a separate manual regression.
+- The Jul 17 package cooks the updated `TestMap`; placed `ABBTargetDummy` actors now provide the
+  marked-prop visual fixture and replicate actor movement from class defaults. That visual subcase
+  is no longer setup-blocked.
 - The matching impaired outcome contract passed at
   `Saved/Logs/PackagedOutcomeNetworkImpairment/20260714-002552` with `100 ms` lag and `2%` loss.

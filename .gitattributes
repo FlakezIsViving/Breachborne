@@ -27,3 +27,6 @@
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.mov filter=lfs diff=lfs merge=lfs -text
 *.avi filter=lfs diff=lfs merge=lfs -text
+
+# Prebuilt third-party tools shipped outside ignored Unreal Binaries directories
+Plugins/LudusAI/ThirdParty/**/*.dll filter=lfs diff=lfs merge=lfs -text

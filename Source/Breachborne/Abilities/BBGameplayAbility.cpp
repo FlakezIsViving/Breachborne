@@ -159,6 +159,34 @@ void UBBGameplayAbility::ExecuteVisualCue(FGameplayTag CueTag, const FVector& Lo
 	ASC->ExecuteGameplayCue(CueTag, CueParams);
 }
 
+void UBBGameplayAbility::ExecuteBeamVisualCue(FGameplayTag CueTag, const FVector& StartLocation,
+	const FVector& EndLocation) const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC || !CueTag.IsValid())
+	{
+		return;
+	}
+
+	const FVector BeamDelta = EndLocation - StartLocation;
+	if (BeamDelta.IsNearlyZero())
+	{
+		return;
+	}
+
+	FGameplayCueParameters CueParams;
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	CueParams.Instigator = Avatar;
+	CueParams.EffectCauser = Avatar;
+	CueParams.SourceObject = Avatar;
+	CueParams.AbilityLevel = GetAbilityLevel();
+	CueParams.Location = StartLocation;
+	CueParams.Normal = BeamDelta.GetSafeNormal();
+	CueParams.RawMagnitude = BeamDelta.Size();
+
+	ASC->ExecuteGameplayCue(CueTag, CueParams);
+}
+
 void UBBGameplayAbility::AddVisualCue(FGameplayTag CueTag, const FVector& Location, const FVector& Normal) const
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();

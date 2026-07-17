@@ -5,11 +5,14 @@
 #include "Breachborne/Abilities/BBHealthSet.h"
 #include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/Breachborne.h"
+#include "Breachborne/Combat/BBVoidSwappableComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 ABBTargetDummy::ABBTargetDummy()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
+	SetReplicateMovement(true);
 
 	// Collision capsule — ECC_Pawn so projectiles, grenades, and napalm zones detect it
 	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComp"));
@@ -36,11 +39,25 @@ ABBTargetDummy::ABBTargetDummy()
 	// GAS — own ASC + HealthSet (ASC lives directly on this actor, not on a PlayerState)
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	HealthSet = CreateDefaultSubobject<UBBHealthSet>(TEXT("HealthSet"));
+	VoidSwappableComponent = CreateDefaultSubobject<UBBVoidSwappableComponent>(TEXT("VoidSwappableComponent"));
 }
 
 void ABBTargetDummy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!GetRootComponent())
+	{
+		UE_LOG(LogBreachborne, Error,
+			TEXT("TargetDummy: discarding malformed placed actor without a root component: %s"),
+			*GetPathName());
+		if (HasAuthority())
+		{
+			SetReplicates(false);
+			Destroy();
+		}
+		return;
+	}
 
 	if (AbilitySystemComponent)
 	{
@@ -54,6 +71,10 @@ void ABBTargetDummy::BeginPlay()
 		UE_LOG(LogBreachborne, Warning, TEXT("  Team: %d"), TeamID);
 		UE_LOG(LogBreachborne, Warning, TEXT("  Health: %.0f / %.0f"), HealthSet ? HealthSet->GetHealth() : -1.0f, HealthSet ? HealthSet->GetMaxHealth() : -1.0f);
 		UE_LOG(LogBreachborne, Warning, TEXT("  AutoReset: %s (%.1fs delay)"), bAutoResetHealth ? TEXT("YES") : TEXT("NO"), HealthResetDelay);
+		UE_LOG(LogBreachborne, Warning, TEXT("  VoidSwappable: %s (replicates=%d movement=%d)"),
+			VoidSwappableComponent ? TEXT("YES") : TEXT("NO"),
+			GetIsReplicated() ? 1 : 0,
+			IsReplicatingMovement() ? 1 : 0);
 		UE_LOG(LogBreachborne, Warning, TEXT("========================================"));
 		UE_LOG(LogBreachborne, Warning, TEXT(""));
 	}

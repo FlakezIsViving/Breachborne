@@ -64,9 +64,22 @@ Success means:
 - LUDUS AI 1.0 early access is an optional post-technical-gate tool for shared skill animations and
   authored ability VFX inside Unreal Editor. It is an accelerator experiment, not a July 31
   dependency and does not move the July 23 feature/VFX freeze.
-- The currently installed project plugin identifies itself as beta `0.13.2` (`Version 27`) in
-  `Plugins/LudusAI/LudusAI.uplugin`, despite access to the 1.0 program. Confirm or install the
-  intended 1.0 build before evaluating output so results are attributed to the correct version.
+- Both the project-local and source-engine plugin copies are installed as `1.0.0` (`Version 28`)
+  and the project copy is rebuilt against source UE 5.7.4. Keep those versions aligned.
+- LUDUS 1.0's full-project index requires printable ASCII package paths. The Fab well content was
+  moved through Unreal Asset Tools from a U+2013 package path to
+  `/Game/Fab/Stylized_Medieval_Well_Low_Poly_3D_Asset`; do not reintroduce Unicode content paths.
+- The first 1.0 index also exposed a null socket in Hudson's imported idle skeleton. A local
+  source-engine guard keeps the editor usable, but the skeleton must be repaired and resaved before
+  this setup is portable to an unpatched 5.7.4 engine.
+- After closing every Unreal Editor process, run
+  `Scripts/Debug/RepairLudus10Content.ps1`. It builds the editor commandlet with source UE 5.7.4,
+  runs the ASCII/Hudson path repair and null-socket repair twice, and requires idempotency markers
+  before reporting success. Do not bypass its live-editor guard.
+- The index also loads optional sample and marketplace demo packages. Missing PCG Biome Sample and
+  legacy EngineSky dependencies are accepted editor warnings because those assets are not used by
+  TestMap or the packaged playtest. The legacy Hudson visual set's T-pose path is not accepted as
+  missing: the compatibility pass moves the existing mesh into its expected `Meshes` package.
 - The user operates the LUDUS editor window. Codex supplies concise, ability-specific prompts,
   parameter contracts, timing/radius references, export/import instructions, and review feedback.
   Direct prompt injection is allowed only if the installed version exposes a documented API,
@@ -78,9 +91,28 @@ Success means:
   replace the user-operated plugin workflow for generating or editing assets.
 - Generated animation remains optional. Shared animations and hunter recolors are still the
   accepted baseline, and VFX must carry gameplay readability even when an animation is reused.
+- Animation control remains code-owned. LUDUS may author or retarget animation sequences and
+  montages, but it must not add ability timing, traces, damage, cooldowns, replication, or state
+  transitions to Blueprints or an Animation Blueprint. Ability C++ selects explicit visual phases
+  (`Start`, `Fire`, `Loop`, `Impact`, `Success`, `Cancel`), and the replicated
+  `UBBAbilityVisualSet` maps those phases to reviewed assets. Ghost is the first integration fixture;
+  do not connect a generated asset until its skeleton, montage slots, root motion, looping flag,
+  and editor reopen safety have been validated independently.
+- Generated `A_Ghost_*` assets under `/Game/Animations` are staged animation sequences, not integrated
+  ability montages. The closed-editor gate discovers and audits every matching sequence so later variants
+  cannot bypass review. Convert or retarget only after review, then assign through a Ghost visual-set
+  phase rather than from Blueprint logic. Visual-set validation rejects missing/mismatched skeletons, missing required
+  slots, root motion, duplicate phases, invalid play rates, and Loop phases without a self-looping
+  montage section. Runtime playback also rejects skeleton mismatches and root motion before play.
 - Generated VFX must use the existing GameplayCue/visual-set integration and preserve authoritative
   gameplay timing, direction, radius, hit result, lifetime, cleanup, and owner/observer agreement.
   Validate every accepted result at 1080p Low and Medium and against the applicable manual row.
+- Ghost Q's LUDUS railgun route uses canonical assets
+  `/Game/GameplayCues/Hunters/Ghost/FX/NS_GhostRailGunTelegraph` and
+  `/Game/GameplayCues/Hunters/Ghost/FX/NS_GhostRailGunLaser`. The cue payload is the authoritative
+  beam start plus normalized direction and length; cue handlers reconstruct the endpoint and write
+  `User.BeamStart` and `User.BeamEnd`. Do not add a second Blueprint line trace or attach a moving
+  telegraph after activation, because either would diverge from the cached piercing sweep.
 - Keep source prompts and relevant generation settings with the asset handoff so another session
   can reproduce or revise the output. Generated assets are not accepted merely because they import.
 - Directly forwardable project-context, eight-master, six-hunter, and asset-review prompts are saved
@@ -135,11 +167,16 @@ Success means:
   subsequent green network batches checkpointed before broad manual testing.
 - The eight reusable Niagara master assets remain editor work. Compiled primitive fallbacks
   cover the roster and are the accepted deadline fallback.
-- A UDP Messaging plugin socket bind error exists for `25.18.80.222`. GameNetDriver still
-  connects successfully, so treat it as a separate environment warning unless it blocks
-  the direct-IP test.
+- UDP Messaging previously bound to stale adapter `25.18.80.222` and static endpoint
+  `25.18.62.236`. The project now uses UE's documented default-adapter endpoint `0.0.0.0:0` and no
+  static messaging endpoint. The Jul 15 source-editor restart verified a successful ephemeral bind;
+  `GameNetDriver` direct-IP traffic remains separate on UDP 7777.
 - Wisp bars, range indicators, Hudson sustained fire, and every hunter's owner/observer
   readability still require the manual acceptance matrix.
+- UE 5.7.4 editor multi-PIE is not a valid movement-smoothness benchmark while another application
+  owns focus: editor background throttling defaults on and disables background viewport rendering.
+  Packaged clients default `t.IdleWhenNotForeground=0` and `r.VSync=0`; use separate machines with
+  each game focused to distinguish replication behavior from single-GPU/window presentation load.
 - Wisp gameplay priority now has deterministic source and packaged coverage: natural decay,
   ally freeze/fill, enemy stomp, ally/enemy contest, healing acceleration and persistence, healing
   overridden by contest, carried protection, Eluna Shift/passive pickup, CC drop, and full-channel

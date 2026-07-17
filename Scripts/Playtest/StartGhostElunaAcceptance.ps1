@@ -24,7 +24,7 @@ $global:LASTEXITCODE = 0
 	-ResY $ResY `
 	-OutputRoot $OutputRoot `
 	-SessionLabel "Ghost/Eluna owner-observer acceptance" `
-	-VerifyCandidate `
+	-VerifyCandidate:(-not $ValidateOnly) `
 	-ValidateOnly:$ValidateOnly
 
 if ($LASTEXITCODE -ne 0) {
@@ -41,10 +41,14 @@ $LatestSessionPath = Join-Path $OutputRoot "LatestSession.txt"
 $RunDirectory = (Get-Content -LiteralPath $LatestSessionPath -Raw).Trim()
 $InstructionsPath = Join-Path $RunDirectory "GhostElunaInstructions.txt"
 $AcceptanceRecordPath = Join-Path $RunDirectory "GhostEluna-ManualAcceptance.md"
+$WispAcceptanceRecordPath = Join-Path $RunDirectory "WispUI-ManualAcceptance.md"
 
 & (Join-Path $PSScriptRoot "NewManualAcceptanceRecord.ps1") `
 	-SessionDirectory $RunDirectory `
 	-Batch GhostEluna
+& (Join-Path $PSScriptRoot "NewManualAcceptanceRecord.ps1") `
+	-SessionDirectory $RunDirectory `
+	-Batch WispUI
 
 $Instructions = @(
 	"Breachborne Ghost/Eluna manual acceptance",
@@ -81,7 +85,8 @@ $Instructions = @(
 	"",
 	"Stop and review:",
 	"  .\Scripts\Playtest\StopPackagedLocalSmoke.ps1",
-	"  Record results: $AcceptanceRecordPath",
+	"  Ghost/Eluna results: $AcceptanceRecordPath",
+	"  Wisp UI results: $WispAcceptanceRecordPath",
 	"",
 	"Do not mark a row PASS unless owner/observer presentation, gameplay result, and cleanup agree."
 )
@@ -94,7 +99,8 @@ Write-Host "  Client 2: Hudson, Team 0 / Slot 1 (helper)"
 Write-Host "  Client 3: Ghost,  Team 1 / Slot 0"
 Write-Host "  Client 1: uncheck Storm and confirm the lobby status says Storm: Off before start"
 Write-Host "  Instructions: $InstructionsPath"
-Write-Host "  Result record: $AcceptanceRecordPath"
+Write-Host "  Ghost/Eluna record: $AcceptanceRecordPath"
+Write-Host "  Wisp UI record: $WispAcceptanceRecordPath"
 Write-Host "Do not close clients individually; use StopPackagedLocalSmoke.ps1 so logs are reviewed."
 
 exit 0

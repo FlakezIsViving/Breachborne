@@ -24,7 +24,7 @@ $global:LASTEXITCODE = 0
 	-ResY $ResY `
 	-OutputRoot $OutputRoot `
 	-SessionLabel "Crysta/Void owner-observer acceptance" `
-	-VerifyCandidate `
+	-VerifyCandidate:(-not $ValidateOnly) `
 	-ValidateOnly:$ValidateOnly
 
 if ($LASTEXITCODE -ne 0) {
@@ -56,8 +56,8 @@ $Instructions = @(
 	"Test Crysta R at close and far convergence, and hold/release RMB while changing aim.",
 	"Build Void empowered with three confirmed hits before empowered RMB/Q/R comparisons.",
 	"Use a wall for charged LMB and nearby chest/unmarked props for Shift eligibility checks.",
-	"The frozen package has no placed UBBVoidSwappableComponent prop fixture; record that marked-prop",
-	"visual subcase as SETUP BLOCKED, not PASS. Deterministic category teleport coverage is separate.",
+	"Use a placed target dummy as the marked-prop Shift fixture. Confirm both endpoints and movement",
+	"match on owner and observer; deterministic category coverage alone does not complete this row.",
 	"",
 	"Crysta checks: LMB/mark, RMB curve/return, Shift charges, Q, X/V R.",
 	"Void checks: LMB, passive, RMB cone, Shift endpoints/swap, Q, R.",
@@ -74,7 +74,7 @@ Write-Host "  Client 1: Crysta, Team 0 / Slot 0"
 Write-Host "  Client 2: Void,   Team 1 / Slot 0"
 Write-Host "  Instructions: $InstructionsPath"
 Write-Host "  Result record: $AcceptanceRecordPath"
-Write-Host "Marked-prop visual swap is setup-blocked in this frozen package; do not infer PASS."
+Write-Host "Use a placed target dummy for the marked-prop visual swap subcase."
 Write-Host "Do not close clients individually; use StopPackagedLocalSmoke.ps1 so logs are reviewed."
 
 exit 0

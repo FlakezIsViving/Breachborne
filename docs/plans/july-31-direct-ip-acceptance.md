@@ -76,6 +76,12 @@ On the second machine, from a directory containing `WindowsClient` and the copie
 The scripts create isolated evidence under `Saved/Logs/DirectIPServer/<timestamp>` and
 `Saved/Logs/DirectIPClient/<timestamp>`. Preserve both directories.
 
+For movement-smoothness acceptance, each tester must judge the game window focused on their own
+machine. Do not use an unfocused host-side window as replication evidence. UE 5.7.4 deliberately
+throttles background editor/PIE rendering, and multiple packaged windows on one GPU can still
+compete in the desktop presentation path even though packaged `t.IdleWhenNotForeground` defaults
+to `0`. Record separately whether any jitter remains when both physical-machine clients are focused.
+
 For the reconnect check on the remote machine, stop only its recorded client and relaunch with the
 same address within 60 seconds:
 

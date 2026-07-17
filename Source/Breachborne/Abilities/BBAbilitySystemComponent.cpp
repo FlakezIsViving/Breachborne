@@ -193,3 +193,27 @@ void UBBAbilitySystemComponent::RefreshAbilitySpecReplication()
 
 	ForceReplication();
 }
+
+int32 UBBAbilitySystemComponent::RefundCooldownsByTags(const FGameplayTagContainer& CooldownTags)
+{
+	if (CooldownTags.IsEmpty())
+	{
+		return 0;
+	}
+
+	const int32 RemovedCount = RemoveActiveEffectsWithGrantedTags(CooldownTags);
+	if (IsOwnerActorAuthoritative())
+	{
+		ForceReplication();
+		if (AActor* NetOwnerActor = GetOwnerActor(); NetOwnerActor && NetOwnerActor->GetNetOwningPlayer())
+		{
+			ClientRefundCooldownsByTags(CooldownTags);
+		}
+	}
+	return RemovedCount;
+}
+
+void UBBAbilitySystemComponent::ClientRefundCooldownsByTags_Implementation(FGameplayTagContainer CooldownTags)
+{
+	RemoveActiveEffectsWithGrantedTags(CooldownTags);
+}

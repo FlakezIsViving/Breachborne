@@ -22,6 +22,10 @@ if ($ClientCount -lt 1 -or $ClientCount -gt 4) {
 	throw "ClientCount must be between 1 and 4."
 }
 
+$OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
+New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
+$OutputRoot = (Resolve-Path -LiteralPath $OutputRoot).ProviderPath
+
 $LatestSessionPath = Join-Path $OutputRoot "LatestSession.txt"
 if (Test-Path -LiteralPath $LatestSessionPath) {
 	$PreviousDirectory = (Get-Content -LiteralPath $LatestSessionPath -Raw).Trim()

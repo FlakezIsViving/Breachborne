@@ -108,8 +108,8 @@ Ghost/Eluna rows:
 ```
 
 It creates `ElunaRepairRetestInstructions.txt` and a three-row `ElunaRepairRetest.md` result record.
-Run it with `-ValidateOnly` to check the candidate, paths, stale-session state, and port without
-opening windows.
+Run it with `-ValidateOnly` to check paths, stale-session state, and the port without opening windows.
+The real launch performs the candidate-freshness gate before it starts any process.
 
 The structured definition covers all 55 presentation rows, including cleanup/stress, range, and
 wisp UI. Verify that it still matches both checklist documents with:
@@ -117,6 +117,16 @@ wisp UI. Verify that it still matches both checklist documents with:
 ```powershell
 .\Scripts\Playtest\TestManualAcceptanceDefinition.ps1
 ```
+
+Validate every manual launcher and ledger generator without starting Unreal or writing a session:
+
+```powershell
+.\Scripts\Playtest\TestManualAcceptanceLaunchers.ps1
+```
+
+The launcher contract covers normal and 100 ms/2% loss cleanup modes, compares Unreal/game process
+IDs before and after every case, rejects session artifacts, and validates all six record batches in
+an isolated temporary folder.
 
 Create a global-row record inside any relevant session without launching another process:
 
@@ -133,13 +143,24 @@ The remaining hunter-pair launchers are:
 .\Scripts\Playtest\StartCrystaVoidAcceptance.ps1
 ```
 
-Append `-ValidateOnly` to any pair launcher to check the candidate, executable discovery,
-55-row definition, stale-session guard, and assigned UDP port without opening clients or creating
-a session record.
+Append `-ValidateOnly` to any pair launcher to check executable discovery, the 55-row definition,
+the stale-session guard, and assigned UDP port without opening clients or creating a session record.
+The real launch additionally requires the current candidate and post-build evidence to verify.
 
-Kingpin/Hudson opens a third enemy target so the chain visual is testable. Crysta/Void records the
-current marked-prop fixture limitation explicitly; the frozen package must not be credited with a
-visual prop-swap PASS based only on deterministic tests.
+Kingpin/Hudson opens a third enemy target so the chain visual is testable. Crysta/Void uses a placed
+target dummy as the marked-prop fixture; the visual prop-swap row still requires matching owner and
+observer endpoints and must not be credited from deterministic tests alone.
+
+Use `StartRangeIndicatorAcceptance.ps1` for the owner-only range matrix. It launches four clients,
+creates the `RangeIndicators` record, and supplies a two-game six-hunter plan plus built-in F/G power
+console commands. Real launch still requires a current verified package; use `-ValidateOnly` only to
+check launcher topology without starting processes.
+
+Use `StartCleanupStressAcceptance.ps1` for CS-01 through CS-05. Run it once normally for death cleanup,
+Low/Medium quality, and Grappling Hook, then once with `-PktLag 100 -PktLoss 2` for the impaired Hudson
+and persistent-zone row. Each session gets its own `CleanupStress` record and reviewed logs. The
+Ghost/Eluna wrapper creates both `GhostEluna` and `WispUI` records because those checks share its
+three-client ally/enemy topology.
 
 Useful log filters:
 
@@ -165,7 +186,9 @@ Distinguish a primitive-fallback-ready candidate from completed Niagara authorin
 
 The report is written to `Builds/VfxFoundationAudit.txt`. Missing master `.uasset` files are
 reported explicitly without failing the primitive fallback baseline; missing cue roots, template
-contract, scalability, or primitive fallback files do fail the audit.
+contract, scalability, or primitive fallback files do fail the audit. Any project `NS_*.uasset`
+outside the eight canonical paths is listed separately as an inventory-only candidate and never
+increments the authored-master count.
 
 ## Distribution Preparation
 

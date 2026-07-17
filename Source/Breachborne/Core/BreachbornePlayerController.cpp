@@ -1673,6 +1673,28 @@ void ABreachbornePlayerController::ConfigureWispRulesSmokeStage()
 				UGA_Eluna_GroundDash* DashAbility = Cast<UGA_Eluna_GroundDash>(Spec.GetPrimaryInstance());
 				if (DashAbility)
 				{
+					const FGameplayTagContainer* CooldownTags = DashAbility->GetCooldownTags();
+					WispRulesShiftRefundTag = FGameplayTag();
+					if (CooldownTags)
+					{
+						for (const FGameplayTag& CooldownTag : *CooldownTags)
+						{
+							WispRulesShiftRefundTag = CooldownTag;
+							break;
+						}
+					}
+					if (WispRulesShiftRefundTag.IsValid())
+					{
+						FGameplayTagContainer GrantedTags;
+						GrantedTags.AddTag(WispRulesShiftRefundTag);
+						GrantedTags.AddTag(BBGameplayTags::Cooldown_Dash);
+						FGameplayEffectSpecHandle CooldownSpec = UBBGameplayAbility::BuildBBCooldownSpec(
+							ElunaASC, 30.0f, GrantedTags);
+						if (CooldownSpec.IsValid())
+						{
+							ElunaASC->ApplyGameplayEffectSpecToSelf(*CooldownSpec.Data.Get());
+						}
+					}
 					bCollected = DashAbility->TryCollectWispAlongPath(
 						DashStart, DashStart + FVector(700.0f, 0.0f, 0.0f));
 					break;
@@ -1840,6 +1862,7 @@ bool ABreachbornePlayerController::EvaluateWispRulesSmokeStage(float HPAfter, fl
 {
 	const ABBWispPawn* Wisp = WispRulesWisp.Get();
 	const AHunterCharacter* Eluna = Cast<AHunterCharacter>(GetPawn());
+	const UBBAbilitySystemComponent* ElunaASC = GetBBASC();
 	const float HPDrain = WispRulesSmokeStartHP - HPAfter;
 	const float RezGain = RezAfter - WispRulesSmokeStartRez;
 
@@ -1862,7 +1885,10 @@ bool ABreachbornePlayerController::EvaluateWispRulesSmokeStage(float HPAfter, fl
 	case WispRules_CarriedContested:
 		return Wisp && Wisp->GetCarrier() == Eluna && FMath::Abs(HPDrain) < 0.7f && RezGain > 0.10f;
 	case WispRules_ElunaShiftPickup:
-		return Wisp && Wisp->GetCarrier() == Eluna;
+		return Wisp && Wisp->GetCarrier() == Eluna
+			&& WispRulesShiftRefundTag.IsValid()
+			&& ElunaASC
+			&& !ElunaASC->HasMatchingGameplayTag(WispRulesShiftRefundTag);
 	case WispRules_ElunaPickup:
 		return Wisp && Wisp->GetCarrier() == Eluna;
 	case WispRules_ElunaCCDrop:

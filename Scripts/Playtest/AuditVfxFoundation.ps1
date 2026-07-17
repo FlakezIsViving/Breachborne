@@ -27,6 +27,21 @@ $TemplateResults = foreach ($Template in $Templates) {
 	$Path = Join-Path $TemplateRoot "$Template.uasset"
 	[pscustomobject]@{ Name = $Template; Path = $Path; Present = Test-Path -LiteralPath $Path }
 }
+$TemplatePathSet = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+$TemplateResults | ForEach-Object { [void]$TemplatePathSet.Add([IO.Path]::GetFullPath($_.Path)) }
+$NiagaraCandidates = @(
+	Get-ChildItem -LiteralPath $ContentRoot -Recurse -File -Filter "NS_*.uasset" -ErrorAction SilentlyContinue |
+		Where-Object { -not $TemplatePathSet.Contains($_.FullName) } |
+		ForEach-Object {
+			$RelativePath = $_.FullName.Substring($ContentRoot.Length + 1).Replace("\", "/")
+			[pscustomobject]@{
+				Name = $_.BaseName
+				AssetPath = "/Game/$($RelativePath.Substring(0, $RelativePath.Length - $_.Extension.Length))"
+				FilePath = $_.FullName
+			}
+		} |
+		Sort-Object AssetPath
+)
 
 $GameConfig = Get-Content -LiteralPath $GameConfigPath -Raw
 $Scalability = Get-Content -LiteralPath $ScalabilityPath -Raw
@@ -68,10 +83,18 @@ $Lines = @(
 	"Primitive fallback files: $(if ($FallbacksPassed) { 'PASS' } else { 'FAIL' })",
 	"Low/Medium Niagara scalability: $(if ($LowQualityConfigured -and $MediumQualityConfigured) { 'PASS' } else { 'FAIL' })",
 	"Authored Niagara masters: $AuthoredCount/$($Templates.Count)",
+	"Non-master Niagara candidates: $($NiagaraCandidates.Count)",
 	"",
 	"Master assets:"
 )
 $Lines += $TemplateResults | ForEach-Object { "- $($_.Name): $(if ($_.Present) { 'PRESENT' } else { 'MISSING' }) [$($_.Path)]" }
+$Lines += ""
+$Lines += "Non-master Niagara candidates (inventory only; not counted as masters):"
+$Lines += if ($NiagaraCandidates.Count -gt 0) {
+	$NiagaraCandidates | ForEach-Object { "- $($_.AssetPath) [$($_.FilePath)]" }
+} else {
+	"- NONE"
+}
 $Lines += ""
 $Lines += "Cue roots:"
 $Lines += $CueRootResults | ForEach-Object { "- $($_.Name): $(if ($_.Present) { 'PASS' } else { 'MISSING' })" }

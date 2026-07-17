@@ -107,6 +107,9 @@ protected:
 	/** Fire a one-shot GameplayCue through the owning ASC. */
 	void ExecuteVisualCue(FGameplayTag CueTag, const FVector& Location = FVector::ZeroVector, const FVector& Normal = FVector::UpVector) const;
 
+	/** Fire a one-shot beam cue. Location is the start, Normal is its direction, and RawMagnitude is its length. */
+	void ExecuteBeamVisualCue(FGameplayTag CueTag, const FVector& StartLocation, const FVector& EndLocation) const;
+
 	/** Start a looping GameplayCue through the owning ASC. Call RemoveVisualCue when the loop ends. */
 	void AddVisualCue(FGameplayTag CueTag, const FVector& Location = FVector::ZeroVector, const FVector& Normal = FVector::UpVector) const;
 

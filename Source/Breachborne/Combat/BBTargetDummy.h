@@ -7,6 +7,7 @@
 
 class UAbilitySystemComponent;
 class UBBHealthSet;
+class UBBVoidSwappableComponent;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 
@@ -43,6 +44,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|TargetDummy")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+	/** Makes placed test dummies an observable marked-prop fixture for Void Shift. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Breachborne|TargetDummy")
+	TObjectPtr<UBBVoidSwappableComponent> VoidSwappableComponent;
 
 	UPROPERTY()
 	TObjectPtr<UBBHealthSet> HealthSet;

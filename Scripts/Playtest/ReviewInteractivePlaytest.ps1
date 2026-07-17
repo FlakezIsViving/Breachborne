@@ -18,6 +18,37 @@ $SessionPath = Join-Path $ResolvedSession "Session.json"
 $Session = if (Test-Path -LiteralPath $SessionPath) {
 	Get-Content -LiteralPath $SessionPath -Raw | ConvertFrom-Json
 } else { $null }
+
+$RecoveredLogs = @()
+if ($Session -and $Session.Processes) {
+	foreach ($Entry in $Session.Processes) {
+		$RecordedLog = [string]$Entry.Log
+		$LogName = [IO.Path]::GetFileName($RecordedLog)
+		if ([string]::IsNullOrWhiteSpace($LogName) -or -not $LogName.EndsWith(".log", [StringComparison]::OrdinalIgnoreCase)) {
+			continue
+		}
+
+		$Destination = Join-Path $ResolvedSession $LogName
+		if (Test-Path -LiteralPath $Destination) {
+			continue
+		}
+
+		$Candidates = @()
+		if ([IO.Path]::IsPathRooted($RecordedLog)) {
+			$Candidates += [IO.Path]::GetFullPath($RecordedLog)
+		} elseif (-not [string]::IsNullOrWhiteSpace([string]$Entry.Executable)) {
+			$ExecutableDirectory = Split-Path -Parent ([string]$Entry.Executable)
+			$Candidates += [IO.Path]::GetFullPath((Join-Path $ExecutableDirectory $RecordedLog))
+		}
+
+		$Source = $Candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+		if ($Source) {
+			Copy-Item -LiteralPath $Source -Destination $Destination
+			$RecoveredLogs += "$LogName <- $Source"
+		}
+	}
+}
+
 $Logs = Get-ChildItem -LiteralPath $ResolvedSession -Filter "*.log" -File
 if (-not $Logs) {
 	throw "No logs found in $ResolvedSession"
@@ -52,6 +83,7 @@ $Summary = @(
 	"Session: $ResolvedSession",
 	"Session label: $SessionLabel",
 	"Logs reviewed: $($Logs.Count)",
+	"Recovered logs: $($RecoveredLogs.Count)",
 	"Server joins: $JoinText",
 	"Server extra args: $ServerArgsText",
 	"Client extra args: $ClientArgsText",
@@ -59,6 +91,10 @@ $Summary = @(
 	"GameplayCue overflow findings: $($CueOverflowFindings.Count)",
 	"Relevant events: $EvidencePath"
 )
+if ($RecoveredLogs.Count -gt 0) {
+	$Summary += "Recovered log sources:"
+	$Summary += $RecoveredLogs | ForEach-Object { "- $_" }
+}
 if (-not $JoinCheckPassed) {
 	$Summary += "Join check failed: expected at least $ExpectedJoins clients, observed $JoinCount."
 }

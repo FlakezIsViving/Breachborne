@@ -23,7 +23,7 @@ $global:LASTEXITCODE = 0
 	-ResY $ResY `
 	-OutputRoot $OutputRoot `
 	-SessionLabel "Eluna RMB Shift Q repair retest" `
-	-VerifyCandidate `
+	-VerifyCandidate:(-not $ValidateOnly) `
 	-ValidateOnly:$ValidateOnly
 
 if ($LASTEXITCODE -ne 0) {
@@ -39,6 +39,8 @@ if ($ValidateOnly) {
 $RunDirectory = (Get-Content -LiteralPath (Join-Path $OutputRoot "LatestSession.txt") -Raw).Trim()
 $InstructionsPath = Join-Path $RunDirectory "ElunaRepairRetestInstructions.txt"
 $ResultPath = Join-Path $RunDirectory "ElunaRepairRetest.md"
+$CandidateEvidencePath = (Resolve-Path -LiteralPath (
+	Join-Path $PSScriptRoot "..\..\Builds\PlaytestCandidateVerification.txt")).ProviderPath
 
 $Instructions = @(
 	"Breachborne focused Eluna repair retest",
@@ -81,7 +83,7 @@ $Record = @(
 	"# Eluna Repair Retest",
 	"",
 	"Session: ``$RunDirectory``",
-	"Candidate: July 15 03:36 package / 04:07 verifier",
+	"Candidate: verified by launcher preflight; evidence ``$CandidateEvidencePath``",
 	"",
 	"Use ``PASS`` or ``FAIL``. A clean log review does not replace owner/observer visual confirmation.",
 	"",

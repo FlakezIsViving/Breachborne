@@ -16,10 +16,14 @@
 #if WITH_AUTOMATION_TESTS
 
 #include "CoreMinimal.h"
+#include "Animation/AnimMontage.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/DataValidation.h"
 
 // --- Types under test ---
 #include "Breachborne/Core/BreachborneTypes.h"
+#include "Breachborne/Abilities/BBAbilityVisualSet.h"
+#include "Breachborne/Abilities/BBGameplayTags.h"
 #include "Breachborne/PvE/BBContractSubsystem.h"
 #include "Breachborne/Storm/StormTypes.h"
 
@@ -451,6 +455,81 @@ void FBBDayNightToggleSpec::Define()
 			TestEqual("Three toggles -> Night", Phase, EBBDayNightPhase::Night);
 		});
 	});
+}
+
+// ============================================================================
+// 8. Code-owned ability animation routing
+// ============================================================================
+
+DEFINE_SPEC(FBBAbilityVisualSetSpec, "Breachborne.PureLogic.AbilityVisualSet",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+void FBBAbilityVisualSetSpec::Define()
+{
+	Describe("phase montage lookup", [this]()
+	{
+		It("prefers an exact phase and returns its playback policy", [this]()
+		{
+			UBBAbilityVisualSet* VisualSet = NewObject<UBBAbilityVisualSet>();
+			UAnimMontage* FallbackMontage = NewObject<UAnimMontage>(VisualSet);
+			UAnimMontage* FireMontage = NewObject<UAnimMontage>(VisualSet);
+
+			FBBAbilitySlotVisuals Slot;
+			Slot.AbilityOrInputTag = BBGameplayTags::Ability_Hunter_Ghost_Q;
+			Slot.Montage = FallbackMontage;
+			FBBAbilityMontageVisual Fire;
+			Fire.Phase = EBBAbilityAnimationPhase::Fire;
+			Fire.Montage = FireMontage;
+			Fire.PlayRate = 1.25f;
+			Slot.PhaseMontages.Add(Fire);
+			VisualSet->AbilityVisuals.Add(Slot);
+
+			float PlayRate = 0.0f;
+			bool bLooping = true;
+			TestEqual("Exact fire montage", VisualSet->FindMontage(
+				BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Fire, PlayRate, bLooping), FireMontage);
+			TestEqual("Configured play rate", PlayRate, 1.25f);
+			TestFalse("Fire phase is not looping", bLooping);
+		});
+
+		It("uses the fallback montage when the requested phase is absent", [this]()
+		{
+			UBBAbilityVisualSet* VisualSet = NewObject<UBBAbilityVisualSet>();
+			UAnimMontage* FallbackMontage = NewObject<UAnimMontage>(VisualSet);
+			FBBAbilitySlotVisuals Slot;
+			Slot.AbilityOrInputTag = BBGameplayTags::Ability_Hunter_Ghost_Q;
+			Slot.Montage = FallbackMontage;
+			VisualSet->AbilityVisuals.Add(Slot);
+
+			float PlayRate = 0.0f;
+			bool bLooping = true;
+			TestEqual("Fallback montage", VisualSet->FindMontage(
+				BBGameplayTags::Ability_Hunter_Ghost_Q, EBBAbilityAnimationPhase::Impact, PlayRate, bLooping), FallbackMontage);
+			TestEqual("Fallback play rate", PlayRate, 1.0f);
+			TestFalse("Fallback does not loop", bLooping);
+		});
+	});
+
+#if WITH_EDITOR
+	Describe("asset validation", [this]()
+	{
+		It("rejects duplicate phases and unreviewed montage configuration", [this]()
+		{
+			UBBAbilityVisualSet* VisualSet = NewObject<UBBAbilityVisualSet>();
+			FBBAbilitySlotVisuals Slot;
+			Slot.AbilityOrInputTag = BBGameplayTags::Ability_Hunter_Ghost_Q;
+			FBBAbilityMontageVisual Fire;
+			Fire.Phase = EBBAbilityAnimationPhase::Fire;
+			Fire.Montage = NewObject<UAnimMontage>(VisualSet);
+			Slot.PhaseMontages = { Fire, Fire };
+			VisualSet->AbilityVisuals.Add(Slot);
+
+			FDataValidationContext Context;
+			TestEqual("Invalid result", VisualSet->IsDataValid(Context), EDataValidationResult::Invalid);
+			TestTrue("Validation errors recorded", Context.GetNumErrors() > 0);
+		});
+	});
+#endif
 }
 
 #endif // WITH_AUTOMATION_TESTS

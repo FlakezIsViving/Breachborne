@@ -1,0 +1,51 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Unreal Editor (Breachborne)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\Win64\\UnrealEditor.exe",
+            "args": [
+                "C:\\Unreal Projects\\Breachborne\\Breachborne.uproject",
+                "-DisablePlugins=Interchange,InterchangeEditor,ChaosCaching,ChaosCloth,ChaosFlesh,GeometryCache,PlatformCrypto,MediaCompositing,MediaPlate,Aura",
+                "-log",
+                "-trace=cpu,frame,bookmark,loadtime,file",
+                "-statnamedevents"
+            ],
+            "stopAtEntry": false,
+            "cwd": "C:\\UnrealEngine-5.7.4-release",
+            "console": "internalConsole"
+        },
+        {
+            "name": "Attach to Unreal Editor",
+            "type": "cppvsdbg",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        },
+        {
+            "name": "Headless TestMap Repro",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "C:\\UnrealEngine-5.7.4-release\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe",
+            "args": [
+                "C:\\Unreal Projects\\Breachborne\\Breachborne.uproject",
+                "-DisablePlugins=Interchange,InterchangeEditor,ChaosCaching,ChaosCloth,ChaosFlesh,GeometryCache,PlatformCrypto,MediaCompositing,MediaPlate,Aura",
+                "/Game/Maps/TestMap",
+                "-game",
+                "-log",
+                "-nop4",
+                "-unattended",
+                "-NoSplash",
+                "-nullrhi",
+                "-nosound",
+                "-trace=cpu,frame,bookmark,loadtime,file",
+                "-statnamedevents",
+                "-ExecCmds=quit"
+            ],
+            "stopAtEntry": false,
+            "cwd": "C:\\UnrealEngine-5.7.4-release",
+            "console": "integratedTerminal"
+        }
+    ]
+}

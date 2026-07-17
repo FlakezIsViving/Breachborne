@@ -11,7 +11,8 @@ Builds/
 *.vcxproj.user
 
 # VS Code
-.vscode/
+.vscode/*
+!.vscode/launch.json
 
 # OS
 Thumbs.db
@@ -31,3 +32,7 @@ nul
 # Misc logs
 *.txt
 !devblog.txt
+
+# Python generated
+__pycache__/
+*.py[cod]
